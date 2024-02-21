@@ -1,58 +1,41 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import initNear from "../config/near";
+import React, { useState } from "react";
 import { Account } from "near-api-js";
 import Loader from "@/components/Loader";
+import { sign } from "@/utils/near";
+import useInitNear from "@/hooks/useInitNear";
 
 export default function Home() {
-  const [account, setAccount] = useState<Account | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const init = async () => {
-      const { account } = await initNear();
-      setAccount(account);
-    };
-
-    init();
-  }, []);
+  const { account, isLoading: isNearLoading } = useInitNear();
 
   async function callContractFunction(account: Account) {
     setIsLoading(true);
-    const result = await account.functionCall({
-      contractId: "multichain-testnet-2.testnet",
-      methodName: "sign",
-      args: {
-        payload: Array.from({ length: 32 }, () =>
-          Math.floor(Math.random() * 64)
-        ),
-        path: "test",
-      },
-      gas: "100000000000000",
-      attachedDeposit: "0",
-    });
-
-    if ("SuccessValue" in (result.status as any)) {
-      const successValue = (result.status as any).SuccessValue;
-      const decodedValue = Buffer.from(successValue, "base64").toString(
-        "utf-8"
+    try {
+      const result = await sign(
+        account,
+        [
+          0, 1, 2, 3, 4, 5, 6, 77, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2,
+          3, 4, 5, 6, 7, 8, 9, 0, 1,
+        ],
+        "test"
       );
 
-      console.log(JSON.parse(decodedValue));
+      if (result) {
+        console.log(JSON.parse(result));
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
-      {!account || isLoading ? (
+      {!account || isLoading || isNearLoading ? (
         <Loader />
       ) : (
-        <button onClick={() => callContractFunction(account)}>
-          Send transaction
-        </button>
+        <button onClick={() => callContractFunction(account)}>Call Sign</button>
       )}
     </div>
   );
