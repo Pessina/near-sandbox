@@ -5,6 +5,7 @@ import { Account } from "near-api-js";
 import Loader from "@/components/Loader";
 import { sign } from "@/utils/near";
 import useInitNear from "@/hooks/useInitNear";
+import { createAndTransfer } from "@/utils/etherium";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +36,12 @@ export default function Home() {
       {!account || isLoading || isNearLoading ? (
         <Loader />
       ) : (
-        <button onClick={() => callContractFunction(account)}>Call Sign</button>
+        <div className="flex flex-col gap-4">
+          <button onClick={() => callContractFunction(account)}>
+            Call Sign
+          </button>
+          <button onClick={() => createAndTransfer()}>Log ETH Accounts</button>
+        </div>
       )}
     </div>
   );
