@@ -39,9 +39,8 @@ export async function recoverSenderAddress() {
     gasLimit: 21000,
     gasPrice: ethers.utils.parseUnits("10", "gwei"),
     to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-    from: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
     value: ethers.utils.parseEther("0.01"),
-    chainId: 11155111,
+    chainId: 1,
   };
 
   const mnemonic = process.env.NEXT_PUBLIC_MNEMONIC;
@@ -52,9 +51,14 @@ export async function recoverSenderAddress() {
   const wallet = ethers.Wallet.fromMnemonic(mnemonic);
   const signature = await wallet.signTransaction(transaction);
   try {
-    const { r, s, v } = ethers.utils.splitSignature(signature);
+    const { r, s, v } = ethers.utils.parseTransaction(signature);
     const serializedTx = ethers.utils.serializeTransaction(transaction);
     const msgHash = ethers.utils.keccak256(serializedTx);
+
+    if (!r || !s || !v) {
+      throw new Error("Invalid signature");
+    }
+
     const recoveredAddress = ethers.utils.recoverAddress(msgHash, { r, s, v });
 
     console.log(`Recovered Address: ${recoveredAddress}`);
