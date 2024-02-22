@@ -5,7 +5,9 @@ import { Account } from "near-api-js";
 import Loader from "@/components/Loader";
 import { sign } from "@/utils/near";
 import useInitNear from "@/hooks/useInitNear";
-import { createAndTransfer } from "@/utils/etherium";
+import { recoverAddressFromSignature } from "@/utils/etherium";
+import { serializeKeyPath } from "@/utils/keys";
+import { ethers } from "ethers";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,17 +16,41 @@ export default function Home() {
   async function callContractFunction(account: Account) {
     setIsLoading(true);
     try {
-      const result = await sign(
-        account,
-        [
-          0, 1, 2, 3, 4, 5, 6, 77, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2,
-          3, 4, 5, 6, 7, 8, 9, 0, 1,
-        ],
-        "test"
-      );
+      const transaction = {
+        nonce: 0,
+        gasLimit: ethers.utils.hexlify(21000),
+        gasPrice: ethers.utils.hexlify(ethers.utils.parseUnits("10", "gwei")),
+        to: "0x4174678c78fEaFd378c1ff319D5D326701439b25",
+        value: ethers.utils.parseEther("0.01"),
+      };
+
+      const serializedTransaction =
+        ethers.utils.serializeTransaction(transaction);
+      const transactionHash = ethers.utils.keccak256(serializedTransaction);
+      const uint8Array = Array.from(ethers.utils.arrayify(transactionHash));
+
+      const keyPath = serializeKeyPath("ETH", "near.org");
+
+      console.log({
+        transaction,
+        transactionHash,
+        uint8Array,
+        keyPath,
+      });
+
+      const result = await sign(account, uint8Array, keyPath);
 
       if (result) {
-        console.log(JSON.parse(result));
+        const parsedResult = JSON.parse(result);
+        console.log({ parsedResult });
+
+        const path = recoverAddressFromSignature(
+          transactionHash,
+          parsedResult[0],
+          parsedResult[1]
+        );
+
+        console.log(path);
       }
     } finally {
       setIsLoading(false);
@@ -40,7 +66,7 @@ export default function Home() {
           <button onClick={() => callContractFunction(account)}>
             Call Sign
           </button>
-          <button onClick={() => createAndTransfer()}>Log ETH Accounts</button>
+          {/* <button onClick={() => createAndTransfer()}>Log ETH Accounts</button> */}
         </div>
       )}
     </div>
