@@ -5,10 +5,10 @@ export async function sign(account: Account, payload: number[], path: string) {
     contractId: "multichain-testnet-2.testnet",
     methodName: "sign",
     args: {
-      payload: payload.map((num) => Math.max(0, num)), // Ensure all numbers are positive
+      payload: payload,
       path,
     },
-    gas: "100000000000000",
+    gas: "300000000000000",
     attachedDeposit: "0",
   });
 
