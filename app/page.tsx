@@ -5,7 +5,11 @@ import { Account } from "near-api-js";
 import Loader from "@/components/Loader";
 import { sign } from "@/utils/near";
 import useInitNear from "@/hooks/useInitNear";
-import { recoverAddressFromSignature } from "@/utils/etherium";
+import {
+  logAccountAddress,
+  recoverAddressFromSignature,
+  recoverSenderAddress,
+} from "@/utils/etherium";
 import { serializeKeyPath } from "@/utils/keys";
 import { ethers } from "ethers";
 
@@ -20,8 +24,9 @@ export default function Home() {
         nonce: 0,
         gasLimit: ethers.utils.hexlify(21000),
         gasPrice: ethers.utils.hexlify(ethers.utils.parseUnits("10", "gwei")),
-        to: "0x4174678c78fEaFd378c1ff319D5D326701439b25",
+        to: "0x2122f00f79f10Fd378d1e3319f533267024f9b07",
         value: ethers.utils.parseEther("0.01"),
+        chainId: 11155111,
       };
 
       const serializedTransaction =
@@ -38,16 +43,14 @@ export default function Home() {
         keyPath,
       });
 
-      const result = await sign(account, uint8Array, keyPath);
+      const result = await sign(account, uint8Array, ",ethereum,,");
 
       if (result) {
-        const parsedResult = JSON.parse(result);
-        console.log({ parsedResult });
-
+        console.log(result);
         const path = recoverAddressFromSignature(
           transactionHash,
-          parsedResult[0],
-          parsedResult[1]
+          result.r,
+          result.s
         );
 
         console.log(path);
@@ -66,7 +69,12 @@ export default function Home() {
           <button onClick={() => callContractFunction(account)}>
             Call Sign
           </button>
-          {/* <button onClick={() => createAndTransfer()}>Log ETH Accounts</button> */}
+          <button onClick={() => recoverSenderAddress()}>
+            Log sender address
+          </button>
+          <button onClick={() => logAccountAddress()}>
+            Log account address
+          </button>
         </div>
       )}
     </div>
