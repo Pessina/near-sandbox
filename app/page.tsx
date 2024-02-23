@@ -78,6 +78,7 @@ export default function Home() {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <Select
             {...register("chain")}
+            placeholder="Select chain"
             className="mb-2"
             options={[
               { value: "ETH", label: "Ethereum" },
