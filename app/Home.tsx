@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
@@ -10,17 +9,8 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
-import { deriveEpsilon, deriveKey } from "@/utils/kdf";
-
-// import { generateEthereumAddress } from "@/utils/kdf";
-interface FormValues {
-  chain: string;
-  gasPrice: string;
-  to: string;
-  value: string;
-}
-
-const KEY_PATH = ",ethereum,near.org";
+import { deriveKey } from "@/utils/kdf";
+import { FormValues, KEY_PATH } from "./page";
 
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
@@ -107,11 +97,10 @@ export default function Home() {
     };
 
     const epsilon = deriveEpsilon(data.accountId, data.path);
-    const address = deriveKey(data.publicKey, epsilon);
 
-    console.log({
-      address,
-    });
+    const derivedPublicKey = deriveKey(data.publicKey, epsilon);
+
+    // console.log(derivedPublicKey);
   };
 
   return (

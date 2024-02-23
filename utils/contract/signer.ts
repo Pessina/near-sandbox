@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import { Account } from "near-api-js";
 
 /**
@@ -26,8 +27,8 @@ export async function signMPC(
       payload: payload,
       path,
     },
-    gas: "300000000000000",
-    attachedDeposit: "0",
+    gas: new BN("300000000000000"),
+    attachedDeposit: new BN("0"),
   });
 
   if ("SuccessValue" in (result.status as any)) {
@@ -63,8 +64,8 @@ export async function getRootPublicKey(
     contractId: "signer.canhazgas.testnet",
     methodName: "public_key",
     args: {},
-    gas: "300000000000000",
-    attachedDeposit: "0",
+    gas: new BN("300000000000000"),
+    attachedDeposit: new BN("0"),
   });
 
   if ("SuccessValue" in (result.status as any)) {
