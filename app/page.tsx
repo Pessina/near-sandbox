@@ -100,7 +100,7 @@ export default function Home() {
     if (!account) return;
 
     const data = {
-      publicKey: `secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u`,
+      publicKey: "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
       accountId: account?.accountId,
       path: KEY_PATH,
       debug: true,
