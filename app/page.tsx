@@ -5,10 +5,11 @@ import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
 import { ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
-import { signMPC } from "@/utils/near";
+import { signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
-import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/Ethereum";
+import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
+import Button from "@/components/Button";
 interface FormValues {
   chain: string;
   gasPrice: string;
@@ -73,6 +74,8 @@ export default function Home() {
     }
   }
 
+  const fetchPublicKey = () => {};
+
   return (
     <div className="h-screen w-full flex justify-center items-center">
       {!account || isLoading || isNearLoading ? (
@@ -98,9 +101,9 @@ export default function Home() {
               className="mb-2"
             />
           )}
-          <button type="submit" className="btn">
+          <Button type="submit" className="btn">
             Send Transaction
-          </button>
+          </Button>
         </form>
       )}
     </div>
