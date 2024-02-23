@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
 import { ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
-import { signMPC } from "@/utils/contract/signer";
+import { getRootPublicKey, signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
@@ -20,6 +20,10 @@ interface FormValues {
 export default function Home() {
   const { register, handleSubmit, watch } = useForm<FormValues>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingPublicKey, setIsFetchingPublicKey] = useState(false);
+  const [rootPublicKey, setRootPublicKey] = useState<string | undefined>(
+    undefined
+  );
   const { account, isLoading: isNearLoading } = useInitNear();
   const chain = watch("chain");
 
@@ -74,7 +78,23 @@ export default function Home() {
     }
   }
 
-  const fetchPublicKey = () => {};
+  const fetchPublicKey = async () => {
+    if (!account) return;
+    setIsFetchingPublicKey(true);
+    try {
+      const publicKey = await getRootPublicKey(account);
+      if (publicKey) {
+        console.log({ publicKey });
+        setRootPublicKey(publicKey);
+      } else {
+        console.error("Failed to fetch root public key");
+      }
+    } catch (error) {
+      console.error("Error fetching root public key:", error);
+    } finally {
+      setIsFetchingPublicKey(false);
+    }
+  };
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
@@ -94,15 +114,13 @@ export default function Home() {
           />
           <Input {...register("to")} placeholder="To Address" />
           <Input {...register("value")} placeholder="Value" />
-          {chain === "ETH" && (
-            <Input
-              {...register("gasPrice")}
-              placeholder="Gas Price (Gwei)"
-              className="mb-2"
-            />
-          )}
-          <Button type="submit" className="btn">
-            Send Transaction
+          <Button type="submit">Send Transaction</Button>
+          <Button
+            type="button"
+            onClick={fetchPublicKey}
+            isLoading={isFetchingPublicKey}
+          >
+            Fetch Public Key
           </Button>
         </form>
       )}

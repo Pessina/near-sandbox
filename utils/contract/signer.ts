@@ -56,7 +56,9 @@ export async function signMPC(
  * @param {Account} account - The NEAR account object used to interact with the blockchain.
  * @returns {Promise<string | undefined>} The public key as a string if the call is successful, otherwise undefined.
  */
-export async function getPublicKey(account: Account) {
+export async function getRootPublicKey(
+  account: Account
+): Promise<string | undefined> {
   const result = await account.functionCall({
     contractId: "signer.canhazgas.testnet",
     methodName: "public_key",
@@ -68,7 +70,8 @@ export async function getPublicKey(account: Account) {
   if ("SuccessValue" in (result.status as any)) {
     const successValue = (result.status as any).SuccessValue;
     const publicKey = Buffer.from(successValue, "base64").toString("utf-8");
-    return publicKey;
+
+    return publicKey.replace(/^"|"$/g, "");
   }
 
   return undefined;
