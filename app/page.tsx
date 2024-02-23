@@ -22,22 +22,23 @@ export default function Home() {
   const { account, isLoading: isNearLoading } = useInitNear();
   const chain = watch("chain");
 
+  const ethereum = new Ethereum({
+    providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
+    chainId: SEPOLIA_CHAIN_ID,
+  });
+
   async function onSubmit(data: FormValues) {
     setIsLoading(true);
     try {
       let transactionHash;
       switch (data.chain) {
         case "ETH":
-          transactionHash = Ethereum.prepareTransactionForSignature({
-            nonce: 11,
-            gasLimit: ethers.utils.hexlify(21000),
-            gasPrice: ethers.utils.hexlify(
-              ethers.utils.parseUnits("0.03", "gwei")
-            ),
-            to: "0x4374678c78fEaFd778c10f319e5D226702449b25",
-            value: ethers.utils.parseEther("0.11"),
-            chainId: SEPOLIA_CHAIN_ID,
-          });
+          transactionHash = Ethereum.prepareTransactionForSignature(
+            await ethereum.attachGasAndNonce({
+              to: "0x4374678c78fEaFd778c10f319e5D226702449b25",
+              value: ethers.utils.parseEther("0.11"),
+            })
+          );
           break;
         case "BTC":
         case "BNB":

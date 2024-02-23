@@ -4,16 +4,19 @@ export const SEPOLIA_CHAIN_ID = 11155111;
 
 class Ethereum {
   provider: ethers.providers.JsonRpcProvider;
+  chainId: number;
 
   /**
-   * Constructs an Ethereum instance with a JSON RPC provider.
+   * Initializes an Ethereum object with a specified JSON RPC provider and chain ID.
    *
-   * @param {string} [providerUrl] - The URL of the Ethereum JSON RPC provider. If not provided, it defaults to the NEXT_PUBLIC_INFURA_URL environment variable.
+   * @param {string} [providerUrl] - Optional. The URL for the Ethereum JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
+   * @param {number} [chainId] - Optional. The chain ID for the Ethereum network. Defaults to 1 (mainnet) if not specified.
    */
-  constructor(providerUrl?: string) {
+  constructor(config: { providerUrl?: string; chainId?: number }) {
     this.provider = new ethers.providers.JsonRpcProvider(
-      providerUrl || process.env.NEXT_PUBLIC_INFURA_URL
+      config.providerUrl || process.env.NEXT_PUBLIC_INFURA_URL
     );
+    this.chainId = config.chainId || 1;
   }
 
   /**
@@ -83,24 +86,28 @@ class Ethereum {
   }
 
   /**
-   * Retrieves the current gas price from the provider.
+   * Enhances a transaction with current gas price, estimated gas limit, and chain ID.
    *
-   * @returns {Promise<ethers.BigNumber>} The current gas price as a BigNumber.
-   */
-  async getCurrentGasPrice(): Promise<ethers.BigNumber> {
-    return this.provider.getGasPrice();
-  }
-
-  /**
-   * Estimates the gas limit for a given transaction.
+   * This method fetches the current gas price and estimates the gas limit required for the transaction.
+   * It then returns a new transaction object that includes the original transaction details
+   * along with the fetched gas price, estimated gas limit, and the chain ID of the Ethereum object.
    *
-   * @param {ethers.providers.TransactionRequest} transaction - The transaction for which to estimate the gas limit.
-   * @returns {Promise<ethers.BigNumber>} The estimated gas limit as a BigNumber.
+   * @param {ethers.providers.TransactionRequest} transaction - The initial transaction object without gas details.
+   * @returns {Promise<ethers.providers.TransactionRequest>} A new transaction object augmented with gas price, gas limit, and chain ID.
    */
-  async estimateGasLimit(
+  async attachGasAndNonce(
     transaction: ethers.providers.TransactionRequest
-  ): Promise<ethers.BigNumber> {
-    return this.provider.estimateGas(transaction);
+  ): Promise<UnsignedTransaction> {
+    const gasPrice = await this.provider.getGasPrice();
+    const gasLimit = await this.provider.estimateGas(transaction);
+
+    return {
+      ...transaction,
+      gasLimit,
+      gasPrice,
+      chainId: this.chainId,
+      nonce: 11,
+    };
   }
 }
 
