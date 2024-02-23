@@ -19,6 +19,7 @@ export async function sign(account: Account, payload: number[], path: string) {
     const parsedJSON = JSON.parse(decodedValue) as [string, string];
 
     return {
+      v: parsedJSON[0].slice(0, 2) === "02" ? 0 : 1,
       r: `0x${parsedJSON[0].slice(2)}`,
       s: `0x${parsedJSON[1]}`,
     };

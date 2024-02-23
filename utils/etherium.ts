@@ -78,23 +78,19 @@ export async function recoverSenderAddress() {
 export function recoverAddressFromSignature(
   messageHash: string,
   r: string,
-  s: string
+  s: string,
+  v: number
 ): string | undefined {
-  const chainId = 11155111;
-  const possibleVs = [chainId * 2 + 35, chainId * 2 + 36];
+  try {
+    const recoveredAddress = ethers.utils.recoverAddress(messageHash, {
+      r,
+      s,
+      v,
+    });
 
-  for (let v of possibleVs) {
-    try {
-      const recoveredAddress = ethers.utils.recoverAddress(messageHash, {
-        r,
-        s,
-        v,
-      });
-
-      console.log(recoveredAddress);
-    } catch (error) {
-      console.error(`Recovery with v=${v} failed:`, error);
-    }
+    console.log(recoveredAddress);
+  } catch (error) {
+    console.error(`Recovery with v=${v} failed:`, error);
   }
 
   return undefined;

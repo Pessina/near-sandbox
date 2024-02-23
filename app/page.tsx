@@ -50,7 +50,8 @@ export default function Home() {
         const path = recoverAddressFromSignature(
           transactionHash,
           result.r,
-          result.s
+          result.s,
+          result.v
         );
 
         console.log(path);
