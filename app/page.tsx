@@ -4,14 +4,11 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
 import { ethers } from "ethers";
-import {
-  prepareTransactionForSignature,
-  recoverAddressFromSignature,
-} from "@/utils/etherium";
 import useInitNear from "@/hooks/useInitNear";
 import { signMPC } from "@/utils/near";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
+import Ethereum from "@/utils/Ethereum";
 
 export default function Home() {
   const { register, handleSubmit, watch } = useForm();
@@ -22,11 +19,10 @@ export default function Home() {
   async function onSubmit(data: any) {
     setIsLoading(true);
     try {
-      // Placeholder for transaction preparation based on selected chain
       let transactionHash;
       switch (data.chain) {
         case "ETH":
-          transactionHash = prepareTransactionForSignature({
+          transactionHash = Ethereum.prepareTransactionForSignature({
             nonce: 11,
             gasLimit: ethers.utils.hexlify(21000),
             gasPrice: ethers.utils.hexlify(
@@ -55,7 +51,7 @@ export default function Home() {
         );
 
         if (result) {
-          const path = recoverAddressFromSignature(
+          const path = Ethereum.recoverAddressFromSignature(
             transactionHash,
             result.r,
             result.s,
