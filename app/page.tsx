@@ -8,15 +8,21 @@ import useInitNear from "@/hooks/useInitNear";
 import { signMPC } from "@/utils/near";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
-import Ethereum from "@/utils/Ethereum";
+import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/Ethereum";
+interface FormValues {
+  chain: string;
+  gasPrice: string;
+  to: string;
+  value: string;
+}
 
 export default function Home() {
-  const { register, handleSubmit, watch } = useForm();
+  const { register, handleSubmit, watch } = useForm<FormValues>();
   const [isLoading, setIsLoading] = useState(false);
   const { account, isLoading: isNearLoading } = useInitNear();
   const chain = watch("chain");
 
-  async function onSubmit(data: any) {
+  async function onSubmit(data: FormValues) {
     setIsLoading(true);
     try {
       let transactionHash;
@@ -26,11 +32,11 @@ export default function Home() {
             nonce: 11,
             gasLimit: ethers.utils.hexlify(21000),
             gasPrice: ethers.utils.hexlify(
-              ethers.utils.parseUnits(data.gasPrice, "gwei")
+              ethers.utils.parseUnits("0.03", "gwei")
             ),
-            to: data.to,
-            value: ethers.utils.parseEther(data.value),
-            chainId: 1, // Mainnet
+            to: "0x4374678c78fEaFd778c10f319e5D226702449b25",
+            value: ethers.utils.parseEther("0.11"),
+            chainId: SEPOLIA_CHAIN_ID,
           });
           break;
         case "BTC":
@@ -47,7 +53,7 @@ export default function Home() {
         const result = await signMPC(
           account,
           Array.from(ethers.utils.arrayify(transactionHash)),
-          ",ethereum,felipe.near,"
+          ",ethereum,near.org,"
         );
 
         if (result) {
