@@ -1,6 +1,10 @@
 import { Account } from "near-api-js";
 
-export async function sign(account: Account, payload: number[], path: string) {
+export async function signMPC(
+  account: Account,
+  payload: number[],
+  path: string
+) {
   const result = await account.functionCall({
     // contractId: "multichain-testnet-2.testnet",
     contractId: "signer.canhazgas.testnet",

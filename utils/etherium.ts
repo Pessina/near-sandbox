@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { UnsignedTransaction, ethers } from "ethers";
 
 export async function logAccountAddress() {
   if (
@@ -70,9 +70,10 @@ export async function recoverSenderAddress() {
 /**
  * Attempts to recover the signer's address from a signature using r, s, and the original message.
  *
- * @param {string} message - The original message that was signed.
+ * @param {string} messageHash - The original message that was signed.
  * @param {string} r - The r component of the signature.
  * @param {string} s - The s component of the signature.
+ * @param {string} v - The v component of the signature.
  * @returns {string | undefined} The recovered address, or undefined if address could not be recovered.
  */
 export function recoverAddressFromSignature(
@@ -88,10 +89,25 @@ export function recoverAddressFromSignature(
       v,
     });
 
-    console.log(recoveredAddress);
+    return recoveredAddress;
   } catch (error) {
-    console.error(`Recovery with v=${v} failed:`, error);
+    console.error(`Address recovery failed:`, error);
   }
 
   return undefined;
+}
+
+/**
+ * Prepares a transaction object for signature by serializing and hashing it.
+ *
+ * @param {object} transaction - The transaction object to prepare.
+ * @returns {string} The hashed transaction ready for signature.
+ */
+export function prepareTransactionForSignature(
+  transaction: UnsignedTransaction
+): string {
+  const serializedTransaction = ethers.utils.serializeTransaction(transaction);
+  const transactionHash = ethers.utils.keccak256(serializedTransaction);
+
+  return transactionHash;
 }

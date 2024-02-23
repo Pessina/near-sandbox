@@ -3,14 +3,14 @@
 import React, { useState } from "react";
 import { Account } from "near-api-js";
 import Loader from "@/components/Loader";
-import { sign } from "@/utils/near";
+import { signMPC } from "@/utils/near";
 import useInitNear from "@/hooks/useInitNear";
 import {
   logAccountAddress,
+  prepareTransactionForSignature,
   recoverAddressFromSignature,
   recoverSenderAddress,
 } from "@/utils/etherium";
-import { serializeKeyPath } from "@/utils/keys";
 import { ethers } from "ethers";
 
 export default function Home() {
@@ -20,33 +20,22 @@ export default function Home() {
   async function callContractFunction(account: Account) {
     setIsLoading(true);
     try {
-      const transaction = {
-        nonce: 0,
+      const transactionHash = prepareTransactionForSignature({
+        nonce: 11,
         gasLimit: ethers.utils.hexlify(21000),
         gasPrice: ethers.utils.hexlify(ethers.utils.parseUnits("10", "gwei")),
-        to: "0x2122f00f79f10Fd378d1e3319f533267024f9b07",
-        value: ethers.utils.parseEther("0.01"),
+        to: "0x2033f00f70f103d378d1e231ff533267024f9b07",
+        value: ethers.utils.parseEther("0.04"),
         chainId: 11155111,
-      };
-
-      const serializedTransaction =
-        ethers.utils.serializeTransaction(transaction);
-      const transactionHash = ethers.utils.keccak256(serializedTransaction);
-      const uint8Array = Array.from(ethers.utils.arrayify(transactionHash));
-
-      const keyPath = serializeKeyPath("ETH", "near.org");
-
-      console.log({
-        transaction,
-        transactionHash,
-        uint8Array,
-        keyPath,
       });
 
-      const result = await sign(account, uint8Array, ",ethereum,,");
+      const result = await signMPC(
+        account,
+        Array.from(ethers.utils.arrayify(transactionHash)),
+        ",ethereum,felipe.near,"
+      );
 
       if (result) {
-        console.log(result);
         const path = recoverAddressFromSignature(
           transactionHash,
           result.r,
