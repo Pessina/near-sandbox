@@ -45,8 +45,8 @@ export default function Home() {
         case "ETH":
           transactionHash = Ethereum.prepareTransactionForSignature(
             await ethereum.attachGasAndNonce({
-              to: "0xC5fFedAd2701BeB8F70F4a7887A63f8E95db607a",
-              value: ethers.utils.parseEther("0.001"),
+              to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+              value: ethers.utils.parseEther("0.021"),
             })
           );
           break;
@@ -75,7 +75,7 @@ export default function Home() {
             result.v
           );
 
-          console.log(path);
+          console.log(`BE Address: ${path}`);
         }
       }
     } finally {
@@ -111,9 +111,7 @@ export default function Home() {
     // const address = deriveKey(data.publicKey, epsilon);
     const address = getPublicKeyAndEvmAddress(data.accountId, data.path);
 
-    console.log({
-      address,
-    });
+    console.log(`FE Address: ${address.evmAddress}`);
   };
 
   return (

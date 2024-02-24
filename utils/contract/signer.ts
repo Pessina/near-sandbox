@@ -18,7 +18,14 @@ export async function signMPC(
   account: Account,
   payload: number[],
   path: string
-) {
+): Promise<
+  | {
+      v: number;
+      r: string;
+      s: string;
+    }
+  | undefined
+> {
   const result = await account.functionCall({
     // contractId: "multichain-testnet-2.testnet",
     contractId: "signer.canhazgas.testnet",
