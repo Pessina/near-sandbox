@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
-import { UnsignedTransaction, ethers } from "ethers";
+import { ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
 import { getRootPublicKey, signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
@@ -12,9 +12,7 @@ import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
 import { deriveEpsilon, deriveKey } from "@/utils/kdf/kdf";
 import { getEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
-import { assert } from "console";
 
-// import { generateEthereumAddress } from "@/utils/kdf";
 interface FormValues {
   chain: string;
   gasPrice: string;
@@ -49,8 +47,8 @@ export default function Home() {
         case "ETH":
           const transaction = await ethereum.attachGasAndNonce({
             from: getEvmAddress(account?.accountId, KEY_PATH),
-            to: "0xC5fFedAd2701BeB8F70F4a7887A63f8E95db607a",
-            value: ethers.utils.hexlify(ethers.utils.parseEther("0.01")),
+            to: data.to,
+            value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
           });
 
           const transactionHash =
