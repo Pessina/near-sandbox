@@ -9,7 +9,7 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
-import { deriveKey } from "@/utils/kdf";
+import { deriveKey } from "@/utils/kdf/kdf";
 import { FormValues, KEY_PATH } from "./page";
 
 export default function Home() {

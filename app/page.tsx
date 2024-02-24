@@ -10,7 +10,8 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
-import { deriveEpsilon, deriveKey } from "@/utils/kdf";
+import { deriveEpsilon, deriveKey } from "@/utils/kdf/kdf";
+import { getPublicKeyAndEvmAddress } from "@/utils/kdf/kdf-fake-contract";
 
 // import { generateEthereumAddress } from "@/utils/kdf";
 interface FormValues {
@@ -100,14 +101,16 @@ export default function Home() {
     if (!account) return;
 
     const data = {
-      publicKey: "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
+      publicKey:
+        "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
       accountId: account?.accountId,
       path: KEY_PATH,
       debug: true,
     };
 
-    const epsilon = deriveEpsilon(data.accountId, data.path);
-    const address = deriveKey(data.publicKey, epsilon);
+    // const epsilon = deriveEpsilon(data.accountId, data.path);
+    // const address = deriveKey(data.publicKey, epsilon);
+    const address = getPublicKeyAndEvmAddress(data.accountId, data.path);
 
     console.log({
       address,
