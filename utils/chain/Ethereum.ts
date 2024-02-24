@@ -19,7 +19,7 @@ class Ethereum {
     );
 
     const hdNode = ethers.utils.HDNode.fromMnemonic(
-       process.env.NEXT_PUBLIC_ETH_MNEMONIC!
+      process.env.NEXT_PUBLIC_ETH_MNEMONIC!
     );
     const path = "m/44'/60'/0'/0/0";
     const privateKey = hdNode.derivePath(path).privateKey;
@@ -122,7 +122,7 @@ class Ethereum {
 
     const { from, ...rest } = transaction;
 
-    return  {
+    return {
       ...rest,
       gasLimit: ethers.utils.hexlify(gasLimit),
       gasPrice: ethers.utils.hexlify(gasPrice),

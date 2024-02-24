@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
-import { ethers } from "ethers";
+import { UnsignedTransaction, ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
 import { getRootPublicKey, signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
@@ -45,15 +45,16 @@ export default function Home() {
     setIsSendingTransaction(true);
     try {
       let transactionHash;
+      let transaction;
       switch (data.chain) {
         case "ETH":
-          transactionHash = Ethereum.prepareTransactionForSignature(
-            await ethereum.attachGasAndNonce({
-              from: getEvmAddress(account?.accountId, KEY_PATH),
-              to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-              value: ethers.utils.hexlify(ethers.utils.parseEther("0.01")),
-            })
-          );
+          transaction = await ethereum.attachGasAndNonce({
+            from: getEvmAddress(account?.accountId, KEY_PATH),
+            to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+            value: ethers.utils.hexlify(ethers.utils.parseEther("0.01")),
+          });
+          transactionHash =
+            Ethereum.prepareTransactionForSignature(transaction);
           break;
         case "BTC":
         case "BNB":
@@ -65,7 +66,7 @@ export default function Home() {
           console.error("Unsupported chain selected");
       }
 
-      if (transactionHash && account) {
+      if (transactionHash && account && transaction) {
         const signature = await signMPC(
           account,
           Array.from(ethers.utils.arrayify(transactionHash)),
@@ -84,8 +85,12 @@ export default function Home() {
           console.log(`BE Address: ${path}`);
 
           const reconstructedSignature = ethers.utils.joinSignature(signature);
-          const txHash = await ethereum.sendSignedTransaction(
+          const serializedTransaction = ethers.utils.serializeTransaction(
+            transaction,
             reconstructedSignature
+          );
+          const txHash = await ethereum.sendSignedTransaction(
+            serializedTransaction
           );
           console.log(`Transaction sent! Hash: ${txHash}`);
         }
