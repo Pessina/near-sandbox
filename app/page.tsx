@@ -12,6 +12,7 @@ import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
 import { deriveEpsilon, deriveKey } from "@/utils/kdf/kdf";
 import { getEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
+import { assert } from "console";
 
 // import { generateEthereumAddress } from "@/utils/kdf";
 interface FormValues {
@@ -44,17 +45,37 @@ export default function Home() {
 
     setIsSendingTransaction(true);
     try {
-      let transactionHash;
-      let transaction;
       switch (data.chain) {
         case "ETH":
-          transaction = await ethereum.attachGasAndNonce({
+          const transaction = await ethereum.attachGasAndNonce({
             from: getEvmAddress(account?.accountId, KEY_PATH),
-            to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+            to: "0xC5fFedAd2701BeB8F70F4a7887A63f8E95db607a",
             value: ethers.utils.hexlify(ethers.utils.parseEther("0.01")),
           });
-          transactionHash =
+
+          const transactionHash =
             Ethereum.prepareTransactionForSignature(transaction);
+
+          const signature = await signMPC(
+            account,
+            Array.from(ethers.utils.arrayify(transactionHash)),
+            KEY_PATH
+          );
+
+          if (signature) {
+            const serializedTransaction = ethers.utils.serializeTransaction(
+              transaction,
+              ethers.utils.joinSignature(signature)
+            );
+
+            const txHash = await ethereum.sendSignedTransaction(
+              serializedTransaction
+            );
+
+            console.log(
+              `Transaction ${JSON.stringify(transaction)} sent! Hash: ${txHash}`
+            );
+          }
           break;
         case "BTC":
         case "BNB":
@@ -64,36 +85,6 @@ export default function Home() {
           break;
         default:
           console.error("Unsupported chain selected");
-      }
-
-      if (transactionHash && account && transaction) {
-        const signature = await signMPC(
-          account,
-          Array.from(ethers.utils.arrayify(transactionHash)),
-          KEY_PATH
-        );
-
-        if (signature) {
-          const { r, s, v } = signature;
-          const path = Ethereum.recoverAddressFromSignature(
-            transactionHash,
-            r,
-            s,
-            v
-          );
-
-          console.log(`BE Address: ${path}`);
-
-          const reconstructedSignature = ethers.utils.joinSignature(signature);
-          const serializedTransaction = ethers.utils.serializeTransaction(
-            transaction,
-            reconstructedSignature
-          );
-          const txHash = await ethereum.sendSignedTransaction(
-            serializedTransaction
-          );
-          console.log(`Transaction sent! Hash: ${txHash}`);
-        }
       }
     } catch (e) {
       console.error(e);
