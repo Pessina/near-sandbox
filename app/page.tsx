@@ -25,7 +25,7 @@ const KEY_PATH = ",ethereum,near.org";
 
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const [isFetchingPublicKey, setIsFetchingPublicKey] = useState(false);
   const [rootPublicKey, setRootPublicKey] = useState<string | undefined>(
     undefined
@@ -38,7 +38,7 @@ export default function Home() {
   });
 
   async function onSubmit(data: FormValues) {
-    setIsLoading(true);
+    setIsSendingTransaction(true);
     try {
       let transactionHash;
       switch (data.chain) {
@@ -79,7 +79,7 @@ export default function Home() {
         }
       }
     } finally {
-      setIsLoading(false);
+      setIsSendingTransaction(false);
     }
   }
 
@@ -116,7 +116,7 @@ export default function Home() {
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
-      {!account || isLoading || isNearLoading ? (
+      {!account || isNearLoading ? (
         <Loader />
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -132,7 +132,9 @@ export default function Home() {
           />
           <Input {...register("to")} placeholder="To Address" />
           <Input {...register("value")} placeholder="Value" />
-          <Button type="submit">Send Transaction</Button>
+          <Button type="submit" isLoading={isSendingTransaction}>
+            Send Transaction
+          </Button>
           <Button
             type="button"
             onClick={fetchPublicKey}
