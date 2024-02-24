@@ -4,7 +4,7 @@ export const SEPOLIA_CHAIN_ID = 11155111;
 
 class Ethereum {
   provider: ethers.providers.JsonRpcProvider;
-  chainId: number;
+  wallet: ethers.Wallet;
 
   /**
    * Initializes an Ethereum object with a specified configuration.
@@ -17,7 +17,14 @@ class Ethereum {
     this.provider = new ethers.providers.JsonRpcProvider(
       config.providerUrl || process.env.NEXT_PUBLIC_INFURA_URL
     );
-    this.chainId = config.chainId || 1;
+
+    const hdNode = ethers.utils.HDNode.fromMnemonic(
+       process.env.NEXT_PUBLIC_ETH_MNEMONIC!
+    );
+    const path = "m/44'/60'/0'/0/0";
+    const privateKey = hdNode.derivePath(path).privateKey;
+
+    this.wallet = new ethers.Wallet(privateKey, this.provider);
   }
 
   /**
@@ -115,12 +122,13 @@ class Ethereum {
 
     const { from, ...rest } = transaction;
 
-    return {
+    return  {
       ...rest,
       gasLimit: ethers.utils.hexlify(gasLimit),
       gasPrice: ethers.utils.hexlify(gasPrice),
-      chainId: this.chainId,
+      chainId: this.provider.network.chainId,
       nonce,
+      type: 0,
     };
   }
 }
