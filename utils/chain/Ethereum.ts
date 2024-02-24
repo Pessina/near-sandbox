@@ -7,10 +7,11 @@ class Ethereum {
   chainId: number;
 
   /**
-   * Initializes an Ethereum object with a specified JSON RPC provider and chain ID.
+   * Initializes an Ethereum object with a specified configuration.
    *
-   * @param {string} [providerUrl] - Optional. The URL for the Ethereum JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
-   * @param {number} [chainId] - Optional. The chain ID for the Ethereum network. Defaults to 1 (mainnet) if not specified.
+   * @param {object} config - The configuration object for the Ethereum instance.
+   * @param {string} [config.providerUrl] - Optional. The URL for the Ethereum JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
+   * @param {number} [config.chainId] - Optional. The chain ID for the Ethereum network. Defaults to 1 (mainnet) if not specified.
    */
   constructor(config: { providerUrl?: string; chainId?: number }) {
     this.provider = new ethers.providers.JsonRpcProvider(
@@ -96,17 +97,30 @@ class Ethereum {
    * @returns {Promise<ethers.providers.TransactionRequest>} A new transaction object augmented with gas price, gas limit, and chain ID.
    */
   async attachGasAndNonce(
-    transaction: ethers.providers.TransactionRequest
+    transaction: Omit<ethers.providers.TransactionRequest, "from"> & {
+      from: string;
+    }
   ): Promise<UnsignedTransaction> {
+    const balance = await this.provider.getBalance(transaction.from);
+    console.log(
+      `Account current balance: ${ethers.utils.formatEther(balance)}ETH`
+    );
+
     const gasPrice = await this.provider.getGasPrice();
     const gasLimit = await this.provider.estimateGas(transaction);
+    const nonce = await this.provider.getTransactionCount(
+      transaction.from,
+      "latest"
+    );
+
+    const { from, ...rest } = transaction;
 
     return {
-      ...transaction,
-      gasLimit,
-      gasPrice,
+      ...rest,
+      gasLimit: ethers.utils.hexlify(gasLimit),
+      gasPrice: ethers.utils.hexlify(gasPrice),
       chainId: this.chainId,
-      nonce: 11,
+      nonce,
     };
   }
 }

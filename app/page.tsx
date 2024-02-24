@@ -38,6 +38,10 @@ export default function Home() {
   });
 
   async function onSubmit(data: FormValues) {
+    if (!account?.accountId) {
+      throw new Error("Account not found");
+    }
+
     setIsSendingTransaction(true);
     try {
       let transactionHash;
@@ -45,8 +49,9 @@ export default function Home() {
         case "ETH":
           transactionHash = Ethereum.prepareTransactionForSignature(
             await ethereum.attachGasAndNonce({
+              from: getEvmAddress(account?.accountId, KEY_PATH),
               to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-              value: ethers.utils.parseEther("0.021"),
+              value: ethers.utils.hexlify(ethers.utils.parseEther("0.0001")),
             })
           );
           break;
