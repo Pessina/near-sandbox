@@ -30,9 +30,7 @@ export default function Home() {
   const [rootPublicKey, setRootPublicKey] = useState<string | undefined>(
     undefined
   );
-  const { account, isLoading: isNearLoading } = useInitNear(
-    "felipe-sandbox.testnet"
-  );
+  const { account, isLoading: isNearLoading } = useInitNear();
 
   const ethereum = new Ethereum({
     providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,

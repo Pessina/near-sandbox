@@ -16,9 +16,13 @@ const config = {
   helperUrl: "https://helper.testnet.near.org",
 };
 
-async function initNear(accountId: string) {
+async function initNear() {
+  if (!process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID) {
+    throw new Error("No account found in environment");
+  }
+
   const near = await connect(config);
-  const account = await near.account(accountId);
+  const account = await near.account(process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID);
   return { near, account };
 }
 
