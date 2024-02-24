@@ -10,12 +10,9 @@ export function constructSpoofKey(
   return signingKey;
 }
 
-export function getPublicKeyAndEvmAddress(
-  predecessor: string,
-  path: string
-): { publicKey: string; evmAddress: string } {
+export function getEvmAddress(predecessor: string, path: string): string {
   const signingKey = constructSpoofKey(predecessor, path);
   const publicKey = signingKey.publicKey;
   const evmAddress = ethers.utils.computeAddress(publicKey);
-  return { publicKey, evmAddress };
+  return evmAddress;
 }

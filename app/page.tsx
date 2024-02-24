@@ -11,7 +11,7 @@ import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
 import { deriveEpsilon, deriveKey } from "@/utils/kdf/kdf";
-import { getPublicKeyAndEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
+import { getEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
 
 // import { generateEthereumAddress } from "@/utils/kdf";
 interface FormValues {
@@ -109,9 +109,9 @@ export default function Home() {
 
     // const epsilon = deriveEpsilon(data.accountId, data.path);
     // const address = deriveKey(data.publicKey, epsilon);
-    const address = getPublicKeyAndEvmAddress(data.accountId, data.path);
+    const address = getEvmAddress(data.accountId, data.path);
 
-    console.log(`FE Address: ${address.evmAddress}`);
+    console.log(`FE Address: ${address}`);
   };
 
   return (
