@@ -51,7 +51,7 @@ export default function Home() {
             await ethereum.attachGasAndNonce({
               from: getEvmAddress(account?.accountId, KEY_PATH),
               to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-              value: ethers.utils.hexlify(ethers.utils.parseEther("0.0001")),
+              value: ethers.utils.hexlify(ethers.utils.parseEther("0.01")),
             })
           );
           break;
@@ -66,23 +66,32 @@ export default function Home() {
       }
 
       if (transactionHash && account) {
-        const result = await signMPC(
+        const signature = await signMPC(
           account,
           Array.from(ethers.utils.arrayify(transactionHash)),
           KEY_PATH
         );
 
-        if (result) {
+        if (signature) {
+          const { r, s, v } = signature;
           const path = Ethereum.recoverAddressFromSignature(
             transactionHash,
-            result.r,
-            result.s,
-            result.v
+            r,
+            s,
+            v
           );
 
           console.log(`BE Address: ${path}`);
+
+          const reconstructedSignature = ethers.utils.joinSignature(signature);
+          const txHash = await ethereum.sendSignedTransaction(
+            reconstructedSignature
+          );
+          console.log(`Transaction sent! Hash: ${txHash}`);
         }
       }
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsSendingTransaction(false);
     }
