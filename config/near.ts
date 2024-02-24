@@ -16,9 +16,9 @@ const config = {
   helperUrl: "https://helper.testnet.near.org",
 };
 
-async function initNear() {
+async function initNear(accountId: string) {
   const near = await connect(config);
-  const account = await near.account("felipe-sandbox.testnet");
+  const account = await near.account(accountId);
   return { near, account };
 }
 

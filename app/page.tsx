@@ -11,7 +11,7 @@ import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
 import { deriveEpsilon, deriveKey } from "@/utils/kdf/kdf";
-import { getPublicKeyAndEvmAddress } from "@/utils/kdf/kdf-fake-contract";
+import { getPublicKeyAndEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
 
 // import { generateEthereumAddress } from "@/utils/kdf";
 interface FormValues {
@@ -30,7 +30,9 @@ export default function Home() {
   const [rootPublicKey, setRootPublicKey] = useState<string | undefined>(
     undefined
   );
-  const { account, isLoading: isNearLoading } = useInitNear();
+  const { account, isLoading: isNearLoading } = useInitNear(
+    "felipe-sandbox.testnet"
+  );
 
   const ethereum = new Ethereum({
     providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
