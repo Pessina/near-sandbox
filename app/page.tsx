@@ -105,7 +105,6 @@ export default function Home() {
         "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
       accountId: account?.accountId,
       path: KEY_PATH,
-      debug: true,
     };
 
     // const epsilon = deriveEpsilon(data.accountId, data.path);
