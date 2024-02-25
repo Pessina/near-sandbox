@@ -10,7 +10,7 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
-import { deriveEpsilon, deriveKey } from "@/utils/kdf/kdf";
+import { deriveEpsilon, deriveEthAddress, deriveKey } from "@/utils/kdf/kdf";
 import { getEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
 import { generateEthereumAddress } from "@/utils/kdf/kdf-osman";
 
@@ -21,7 +21,7 @@ interface FormValues {
   value: string;
 }
 
-const KEY_PATH = ",ethereum,near.org";
+const KEY_PATH = ",bitcoin,near.org";
 
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
@@ -117,18 +117,19 @@ export default function Home() {
     };
 
     // Felipe MPC real contract
-    // const epsilon = deriveEpsilon(data.accountId, data.path);
-    // const address = deriveKey(data.publicKey, epsilon);
+    const epsilon = deriveEpsilon(data.accountId, data.path);
+    const derivedKey = deriveKey(data.publicKey, epsilon);
+    const address = deriveEthAddress(derivedKey);
 
     // Felipe MPC fake contract
     // const address = getEvmAddress(data.accountId, data.path);
 
     // Osman MPC real contract
-    const address = await generateEthereumAddress({
-      publicKey: `secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u`,
-      accountId: `felipe-sandbox.testnet`,
-      path: `,ethereum,near.org`,
-    });
+    // const address = await generateEthereumAddress({
+    //   publicKey: `secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u`,
+    //   accountId: `felipe-sandbox.testnet`,
+    //   path: `,ethereum,near.org`,
+    // });
 
     console.log(`FE Address: ${address}`);
   };
