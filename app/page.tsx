@@ -10,6 +10,8 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
+import { LuCopy } from "react-icons/lu";
+import { toast } from "react-toastify";
 
 interface FormValues {
   chain: string;
@@ -25,8 +27,8 @@ export default function Home() {
     undefined
   );
   const { account, isLoading: isNearLoading } = useInitNear();
-  const [derivedAddress, setDerivedAddress] = useState<string>("");
   const [derivePath, setDerivePath] = useState<string>("");
+  const [accountBalance, setAccountBalance] = useState<string>("");
 
   const ethereum = useMemo(
     () =>
@@ -119,7 +121,7 @@ export default function Home() {
     }
   }, [account]);
 
-  const getDerivedKey = useCallback(async () => {
+  const derivedAddress = useMemo(() => {
     if (!account || !derivePath) return;
 
     const data = {
@@ -143,14 +145,22 @@ export default function Home() {
     );
 
     // Osman MPC real contract
-    // const osmanAddress = await generateEthereumAddress({
+    // const osmanAddress =  generateEthereumAddress({
     //   publicKey: data.publicKey,
     //   accountId: data.accountId,
     //   path: data.path,
     // });
 
-    setDerivedAddress(address);
+    return address;
   }, [account, derivePath]);
+
+  const getAccountBalance = async () => {
+    if (!derivedAddress) {
+      return;
+    }
+
+    setAccountBalance(await ethereum.getBalance(derivedAddress));
+  };
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
@@ -158,12 +168,34 @@ export default function Home() {
         <Loader />
       ) : (
         <div className="flex flex-col gap-4">
-          <Input
-            label="Path"
-            name="derivedPath"
-            value={derivePath}
-            onChange={(e) => setDerivePath(e.target.value)}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Path"
+              name="derivedPath"
+              value={derivePath}
+              onChange={(e) => setDerivePath(e.target.value)}
+            />
+            <Input
+              label="Derived Address"
+              name="derivedAddress"
+              value={derivedAddress}
+              disabled
+              icon={{
+                icon: <LuCopy />,
+                onClick: () => {
+                  navigator.clipboard.writeText(derivedAddress ?? "");
+                  toast.success("Text copied!");
+                },
+              }}
+            />
+            <Button onClick={getAccountBalance}>Check Balance</Button>
+            <Input
+              label="Balance"
+              name="balance"
+              value={accountBalance}
+              disabled
+            />
+          </div>
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-4"
@@ -196,14 +228,6 @@ export default function Home() {
               Fetch Public Key
             </Button>
           </form>
-          <div>
-            <p>
-              {derivedAddress} for path {derivePath}
-            </p>
-            <Button type="button" onClick={getDerivedKey}>
-              Get derived address
-            </Button>
-          </div>
         </div>
       )}
     </div>

@@ -1,21 +1,37 @@
-import React, { forwardRef } from "react";
+import React, { forwardRef, ReactNode } from "react";
 import Label from "./Label"; // Import the Label component
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   label?: string;
+  disabled?: boolean;
+  icon?: {
+    icon: ReactNode;
+    onClick: (event: React.MouseEvent<HTMLDivElement>) => void;
+  };
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, ...rest }, ref) => {
+  ({ label, disabled, icon, onClick, ...rest }, ref) => {
     return (
       <div>
         {label && <Label>{label}</Label>}
-        <input
-          {...rest}
-          ref={ref}
-          className="block appearance-none w-full bg-gray-800 text-white border border-gray-600 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
-        />
+        <div className="flex items-center gap-1">
+          <input
+            {...rest}
+            ref={ref}
+            disabled={disabled}
+            className={`block appearance-none w-full bg-gray-800 text-white border border-gray-600 ${
+              !disabled ? "hover:border-gray-500" : ""
+            } px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline ${
+              disabled ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          />
+          {icon && (
+            <div className="ml-2 cursor-pointer" onClick={icon.onClick}>
+              {icon.icon}
+            </div>
+          )}
+        </div>
       </div>
     );
   }

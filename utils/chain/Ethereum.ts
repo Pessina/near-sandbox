@@ -114,11 +114,6 @@ class Ethereum {
       from: string;
     }
   ): Promise<UnsignedTransaction> {
-    const balance = await this.provider.getBalance(transaction.from);
-    console.log(
-      `Account current balance: ${ethers.utils.formatEther(balance)}ETH`
-    );
-
     const gasPrice = await this.provider.getGasPrice();
     const gasLimit = await this.provider.estimateGas(transaction);
     const nonce = await this.provider.getTransactionCount(
@@ -136,6 +131,25 @@ class Ethereum {
       nonce,
       type: 0,
     };
+  }
+
+  /**
+   * Fetches the balance of the given Ethereum address.
+   *
+   * This method uses the current provider to query the balance of the specified address.
+   * The balance is returned in ethers as a string.
+   *
+   * @param {string} address - The Ethereum address to fetch the balance for.
+   * @returns {Promise<string>} The balance of the address in ethers.
+   */
+  async getBalance(address: string): Promise<string> {
+    try {
+      const balance = await this.provider.getBalance(address);
+      return ethers.utils.formatEther(balance);
+    } catch (error) {
+      console.error(`Failed to fetch balance for address ${address}:`, error);
+      throw new Error("Failed to fetch balance.");
+    }
   }
 
   /**
