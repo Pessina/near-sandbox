@@ -58,7 +58,7 @@ export default function Home() {
       try {
         switch (chain) {
           case "BNB":
-            bsc.handleTransaction(
+            await bsc.handleTransaction(
               data,
               account,
               derivedPath,
@@ -67,7 +67,7 @@ export default function Home() {
             );
             break;
           case "ETH":
-            ethereum.handleTransaction(
+            await ethereum.handleTransaction(
               data,
               account,
               derivedPath,
@@ -98,8 +98,6 @@ export default function Home() {
     let address = "";
     switch (chain) {
       case "ETH":
-        const publicKey =
-          "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
         // Felipe MPC real contract
         // address = EVM.deriveProductionAddress(
         //   data.accountId,
