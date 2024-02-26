@@ -1,73 +1,135 @@
-// import { ECPair, payments, Psbt, networks } from 'bitcoinjs-lib';
-// import * as crypto from 'crypto';
+import * as bitcoin from "bitcoinjs-lib";
+import axios from "axios";
 
-// class BitcoinTransactionUtilV6 {
-//   network: networks.Network;
+export class Bitcoin {
+  private network: bitcoin.networks.Network;
+  private explorerUrl: string;
 
-//   constructor(network: networks.Network) {
-//     this.network = network;
-//   }
+  constructor(config: {
+    networkType: "bitcoin" | "testnet";
+    explorerUrl: string;
+  }) {
+    this.network =
+      config.networkType === "testnet"
+        ? bitcoin.networks.testnet
+        : bitcoin.networks.bitcoin;
+    this.explorerUrl = config.explorerUrl;
+  }
 
-//   createSerializeHashAndConvertToByteArray(
-//     inputs: Array<{ txId: string; vout: number; amount: number }>, // Include amount for inputs
-//     outputs: Array<{ address: string; satoshis: number }>,
-//     privateKey: string // Private key in WIF format
-//   ): Buffer {
-//     const keyPair = ECPair.fromWIF(privateKey, this.network);
-//     const psbt = new Psbt({ network: this.network });
+  async fetchUTXOs(
+    address: string
+  ): Promise<Array<{ txid: string; vout: number; value: number }>> {
+    try {
+      const response = await axios.get(
+        `${this.explorerUrl}/address/${address}/utxo`
+      );
+      const utxos = response.data.map((utxo: any) => ({
+        txid: utxo.txid,
+        vout: utxo.vout,
+        value: utxo.value,
+      }));
+      return utxos;
+    } catch (error) {
+      console.error("Failed to fetch UTXOs:", error);
+      return [];
+    }
+  }
 
-//     // Add inputs
-//     inputs.forEach(input => {
-//       psbt.addInput({
-//         hash: input.txId,
-//         index: input.vout,
-//         nonWitnessUtxo: Buffer.alloc(0), // Placeholder, in real use you need the actual UTXO transaction
-//         // For segwit inputs, use witnessUtxo instead of nonWitnessUtxo
-//       });
-//     });
+  async fetchFeeRate(): Promise<number> {
+    try {
+      const response = await axios.get(`${this.explorerUrl}/fee-estimates`);
+      // Assuming the goal is to fetch a fee rate for a specific confirmation target, e.g., 6 blocks
+      const confirmationTarget = 6; // Example confirmation target
+      if (response.data && response.data[confirmationTarget]) {
+        return response.data[confirmationTarget];
+      } else {
+        throw new Error(
+          `Fee rate data for ${confirmationTarget} blocks confirmation target is missing in the response`
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Failed to fetch fee rate for the specified confirmation target:`,
+        error
+      );
+      throw error;
+    }
+  }
 
-//     // Add outputs
-//     outputs.forEach(output => {
-//       psbt.addOutput({
-//         address: output.address,
-//         value: output.satoshis,
-//       });
-//     });
+  // Function to create a transaction
+  async createTransaction(
+    fromAddress: string,
+    toAddress: string,
+    amountToSend: number,
+    changeAddress: string
+  ) {
+    const utxos = await this.fetchUTXOs(fromAddress);
+    const feeRate = await this.fetchFeeRate();
 
-//     // Sign inputs
-//     inputs.forEach((input, index) => {
-//       psbt.signInput(index, keyPair);
-//     });
+    const psbt = new bitcoin.Psbt({ network: this.network });
 
-//     // Finalize the inputs
-//     inputs.forEach((input, index) => {
-//       psbt.finalizeInput(index);
-//     });
+    let totalInput = 0;
+    utxos.forEach((utxo) => {
+      totalInput += utxo.value;
+      psbt.addInput({
+        hash: utxo.txid,
+        index: utxo.vout,
+        nonWitnessUtxo: Buffer.alloc(0), // This should be replaced with the actual transaction buffer
+      });
+    });
 
-//     // Extract the transaction
-//     const tx = psbt.extractTransaction();
+    // Add the output for the recipient
+    psbt.addOutput({
+      address: toAddress,
+      value: amountToSend,
+    });
 
-//     // Serialize the transaction
-//     const txHex = tx.toHex();
+    // Calculate the transaction size to estimate the fee
+    // Note: This is a simplified estimation
+    const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
+    const fee = estimatedSize * feeRate;
 
-//     // Hash the serialized transaction using SHA256
-//     const txHash = crypto.createHash('sha256').update(Buffer.from(txHex, 'hex')).digest();
+    // Add change output if needed
+    const change = totalInput - amountToSend - fee;
+    if (change > 0) {
+      psbt.addOutput({
+        address: changeAddress,
+        value: change,
+      });
+    }
 
-//     return txHash;
-//   }
-// }
+    // Implementing transaction signing
+    // utxos.forEach((utxo, index) => {
+    //   const privateKey = this.getPrivateKeyForAddress(utxo.address);
+    //   if (!privateKey) {
+    //     throw new Error(`Missing private key for address ${utxo.address}`);
+    //   }
+    //   psbt.signInput(index, privateKey);
+    // });
+    // psbt.finalizeAllInputs();
 
-// // Example usage
-// const network = networks.testnet; // Use networks.bitcoin for mainnet
-// const bitcoinUtil = new BitcoinTransactionUtilV6(network);
+    // Constructing the transaction hex
+    const txHex = psbt.extractTransaction().toHex();
 
-// const inputs = [
-//   { txId: 'your_utxo_txid', vout: 0, amount: 100000 } // Amount in satoshis
-// ];
-// const outputs = [
-//   { address: 'recipient_BTC_address', satoshis: 90000 } // Amount in satoshis
-// ];
-// const privateKey = 'your_private_key_WIF';
+    console.log(`Transaction Fee: ${fee} satoshis`);
+    // console.log(`Transaction Hex: ${txHex}`);
+  }
 
-// const txHashBuffer = bitcoinUtil.createSerializeHashAndConvertToByteArray(inputs, outputs, privateKey);
-// console.log('Serialized, Hashed, and Converted Transaction:', txHashBuffer);
+  // Example usage
+  // static async exampleUsage() {
+  //   const bitcoinInstance = new Bitcoin({
+  //     networkType: "testnet",
+  //     explorerUrl: "https://api.blockcypher.com/v1/btc/test3/addrs/",
+  //   });
+  //   const fromAddress = "your_from_address";
+  //   const toAddress = "recipient_address";
+  //   const amountToSend = 100000;
+  //   const changeAddress = "your_change_address";
+  //   await bitcoinInstance.createTransaction(
+  //     fromAddress,
+  //     toAddress,
+  //     amountToSend,
+  //     changeAddress
+  //   );
+  // }
+}

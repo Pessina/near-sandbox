@@ -10,6 +10,7 @@ import EVM from "@/utils/chain/EVM";
 import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
+import { Bitcoin } from "@/utils/chain/Bitcoin";
 
 const MPC_PUBLIC_KEY =
   "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
@@ -43,6 +44,16 @@ export default function Home() {
   const bsc = useMemo(() => {
     return new EVM(chainsConfig.bsc);
   }, []);
+
+  const bitcoin = useMemo(
+    () =>
+      new Bitcoin({
+        networkType: "testnet",
+        // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
+        explorerUrl: "https://blockstream.info/testnet/api/",
+      }),
+    []
+  );
 
   const onSubmit = useCallback(
     async (data: Transaction) => {
@@ -130,6 +141,7 @@ export default function Home() {
           (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
         break;
       case "BTC":
+        balance = (await bitcoin.fetchFeeRate()).toString();
         break;
       case "BNB":
         balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " tBNB";
@@ -137,7 +149,7 @@ export default function Home() {
     }
 
     setAccountBalance(balance);
-  }, [bsc, chain, derivedAddress, ethereum]);
+  }, [bitcoin, bsc, chain, derivedAddress, ethereum]);
 
   return (
     <div className="h-screen w-full flex justify-center items-center">

@@ -9,9 +9,9 @@ import Link from "next/link";
 import { toast } from "react-toastify";
 
 class EVM {
-  provider: ethers.providers.JsonRpcProvider;
-  scanUrl: string;
-  name: string;
+  private provider: ethers.providers.JsonRpcProvider;
+  private scanUrl: string;
+  private name: string;
 
   /**
    * Initializes an EVM object with a specified configuration.

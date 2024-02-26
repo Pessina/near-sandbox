@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "axios": "^1.6.7",
     "bitcoinjs-lib": "^6.1.5",
     "bn.js": "^5.2.1",
     "borsh": "^2.0.0",
