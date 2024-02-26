@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
 import { ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
-import { getRootPublicKey, signMPC } from "@/utils/contract/signer";
+import { signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
@@ -14,7 +14,6 @@ import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 
 interface FormValues {
-  chain: string;
   to: string;
   value: string;
 }
@@ -22,13 +21,10 @@ interface FormValues {
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
-  const [isFetchingPublicKey, setIsFetchingPublicKey] = useState(false);
-  const [rootPublicKey, setRootPublicKey] = useState<string | undefined>(
-    undefined
-  );
   const { account, isLoading: isNearLoading } = useInitNear();
   const [derivePath, setDerivePath] = useState<string>("");
   const [accountBalance, setAccountBalance] = useState<string>("");
+  const [chain, setChain] = useState<string>("ETH");
 
   const ethereum = useMemo(
     () =>
@@ -47,7 +43,7 @@ export default function Home() {
 
       setIsSendingTransaction(true);
       try {
-        switch (data.chain) {
+        switch (chain) {
           case "ETH":
             const transaction = await ethereum.attachGasAndNonce({
               from: Ethereum.deriveCanhazgasMPCAddress(
@@ -82,10 +78,17 @@ export default function Home() {
 
               console.log(`BE Address: ${address}`);
 
-              console.log(
-                `Transaction ${JSON.stringify(transaction)} sent! Hash: ${
-                  transactionResponse.hash
-                }`
+              toast.success(
+                <span>
+                  View on Sepolia:{" "}
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${transactionResponse.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Transaction Details
+                  </a>
+                </span>
               );
             }
             break;
@@ -104,62 +107,66 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account, derivePath, ethereum]
+    [account, chain, derivePath, ethereum]
   );
-
-  const fetchPublicKey = useCallback(async () => {
-    if (!account) return;
-    setIsFetchingPublicKey(true);
-    try {
-      const publicKey = await getRootPublicKey(account);
-      console.log({ publicKey });
-      setRootPublicKey(publicKey);
-    } catch (error) {
-      console.error("Error fetching root public key:", error);
-    } finally {
-      setIsFetchingPublicKey(false);
-    }
-  }, [account]);
 
   const derivedAddress = useMemo(() => {
     if (!account || !derivePath) return;
 
-    const data = {
-      publicKey:
-        "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
-      accountId: account?.accountId,
-      path: derivePath,
-    };
+    switch (chain) {
+      case "ETH":
+        const data = {
+          publicKey:
+            "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
+          accountId: account?.accountId,
+          path: derivePath,
+        };
 
-    // Felipe MPC real contract
-    // const address = Ethereum.deriveProductionAddress(
-    //   data.accountId,
-    //   data.path,
-    //   data.publicKey
-    // );
+        // Felipe MPC real contract
+        // const address = Ethereum.deriveProductionAddress(
+        //   data.accountId,
+        //   data.path,
+        //   data.publicKey
+        // );
 
-    // Felipe MPC fake contract
-    const address = Ethereum.deriveCanhazgasMPCAddress(
-      data.accountId,
-      data.path
-    );
+        // Felipe MPC fake contract
+        const address = Ethereum.deriveCanhazgasMPCAddress(
+          data.accountId,
+          data.path
+        );
 
-    // Osman MPC real contract
-    // const osmanAddress =  generateEthereumAddress({
-    //   publicKey: data.publicKey,
-    //   accountId: data.accountId,
-    //   path: data.path,
-    // });
+        // Osman MPC real contract
+        // const osmanAddress =  generateEthereumAddress({
+        //   publicKey: data.publicKey,
+        //   accountId: data.accountId,
+        //   path: data.path,
+        // });
 
-    return address;
-  }, [account, derivePath]);
+        return address;
+      case "BTC":
+        return "BTC Address Derivation Not Implemented";
+      case "BNB":
+        return "BNB Address Derivation Not Implemented";
+    }
+  }, [account, chain, derivePath]);
 
   const getAccountBalance = async () => {
     if (!derivedAddress) {
       return;
     }
 
-    setAccountBalance(await ethereum.getBalance(derivedAddress));
+    let balance = "";
+    switch (chain) {
+      case "ETH":
+        balance =
+          (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
+        break;
+      case "BTC":
+      case "BNB":
+        break;
+    }
+
+    setAccountBalance(balance);
   };
 
   return (
@@ -168,6 +175,18 @@ export default function Home() {
         <Loader />
       ) : (
         <div className="flex flex-col gap-4">
+          <Select
+            label="Chain"
+            placeholder="Select chain"
+            className="mb-2"
+            value={chain}
+            onChange={(e) => setChain(e.target.value)}
+            options={[
+              { value: "ETH", label: "ETH" },
+              { value: "BTC", label: "BTC" },
+              { value: "BNB", label: "BNB" },
+            ]}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Path"
@@ -188,7 +207,9 @@ export default function Home() {
                 },
               }}
             />
-            <Button onClick={getAccountBalance}>Check Balance</Button>
+            <Button onClick={getAccountBalance} className="h-[38px] self-end">
+              Check Balance
+            </Button>
             <Input
               label="Balance"
               name="balance"
@@ -196,20 +217,11 @@ export default function Home() {
               disabled
             />
           </div>
+          <h2 className="text-white text-2xl font-bold">Transaction</h2>
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-4"
           >
-            <Select
-              {...register("chain")}
-              placeholder="Select chain"
-              className="mb-2"
-              options={[
-                { value: "ETH", label: "Ethereum" },
-                { value: "BTC", label: "Bitcoin" },
-                { value: "BNB", label: "Binance" },
-              ]}
-            />
             <Input
               label="Address"
               {...register("to")}
@@ -218,14 +230,6 @@ export default function Home() {
             <Input label="Value" {...register("value")} placeholder="Value" />
             <Button type="submit" isLoading={isSendingTransaction}>
               Send Transaction
-            </Button>
-            <Button
-              type="button"
-              onClick={fetchPublicKey}
-              isLoading={isFetchingPublicKey}
-              variant="primary"
-            >
-              Fetch Public Key
             </Button>
           </form>
         </div>
