@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
 import { ethers } from "ethers";
@@ -13,12 +13,9 @@ import Button from "@/components/Button";
 
 interface FormValues {
   chain: string;
-  gasPrice: string;
   to: string;
   value: string;
 }
-
-const KEY_PATH = ",ethereum,near.org";
 
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
@@ -28,78 +25,87 @@ export default function Home() {
     undefined
   );
   const { account, isLoading: isNearLoading } = useInitNear();
+  const [derivedAddress, setDerivedAddress] = useState<string>("");
+  const [derivePath, setDerivePath] = useState<string>("");
 
-  const ethereum = new Ethereum({
-    providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
-    chainId: SEPOLIA_CHAIN_ID,
-  });
+  const ethereum = useMemo(
+    () =>
+      new Ethereum({
+        providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
+        chainId: SEPOLIA_CHAIN_ID,
+      }),
+    []
+  );
 
-  async function onSubmit(data: FormValues) {
-    if (!account?.accountId) {
-      throw new Error("Account not found");
-    }
-
-    setIsSendingTransaction(true);
-    try {
-      switch (data.chain) {
-        case "ETH":
-          const transaction = await ethereum.attachGasAndNonce({
-            from: Ethereum.deriveCanhazgasMPCAddress(
-              account?.accountId,
-              KEY_PATH
-            ),
-            to: data.to,
-            value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
-          });
-
-          const transactionHash =
-            Ethereum.prepareTransactionForSignature(transaction);
-
-          const signature = await signMPC(
-            account,
-            Array.from(ethers.utils.arrayify(transactionHash)),
-            KEY_PATH
-          );
-
-          if (signature) {
-            const transactionResponse = await ethereum.sendSignedTransaction(
-              transaction,
-              ethers.utils.joinSignature(signature)
-            );
-
-            const address = Ethereum.recoverAddressFromSignature(
-              transactionHash,
-              signature.r,
-              signature.s,
-              signature.v
-            );
-
-            console.log(`BE Address: ${address}`);
-
-            console.log(
-              `Transaction ${JSON.stringify(transaction)} sent! Hash: ${
-                transactionResponse.hash
-              }`
-            );
-          }
-          break;
-        case "BTC":
-        case "BNB":
-          console.log(
-            "Transaction preparation for BTC and BNB is not implemented yet."
-          );
-          break;
-        default:
-          console.error("Unsupported chain selected");
+  const onSubmit = useCallback(
+    async (data: FormValues) => {
+      if (!account?.accountId || !derivePath) {
+        throw new Error("Account not found");
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSendingTransaction(false);
-    }
-  }
 
-  const fetchPublicKey = async () => {
+      setIsSendingTransaction(true);
+      try {
+        switch (data.chain) {
+          case "ETH":
+            const transaction = await ethereum.attachGasAndNonce({
+              from: Ethereum.deriveCanhazgasMPCAddress(
+                account?.accountId,
+                derivePath
+              ),
+              to: data.to,
+              value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
+            });
+
+            const transactionHash =
+              Ethereum.prepareTransactionForSignature(transaction);
+
+            const signature = await signMPC(
+              account,
+              Array.from(ethers.utils.arrayify(transactionHash)),
+              derivePath
+            );
+
+            if (signature) {
+              const transactionResponse = await ethereum.sendSignedTransaction(
+                transaction,
+                ethers.utils.joinSignature(signature)
+              );
+
+              const address = Ethereum.recoverAddressFromSignature(
+                transactionHash,
+                signature.r,
+                signature.s,
+                signature.v
+              );
+
+              console.log(`BE Address: ${address}`);
+
+              console.log(
+                `Transaction ${JSON.stringify(transaction)} sent! Hash: ${
+                  transactionResponse.hash
+                }`
+              );
+            }
+            break;
+          case "BTC":
+          case "BNB":
+            console.log(
+              "Transaction preparation for BTC and BNB is not implemented yet."
+            );
+            break;
+          default:
+            console.error("Unsupported chain selected");
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsSendingTransaction(false);
+      }
+    },
+    [account, derivePath, ethereum]
+  );
+
+  const fetchPublicKey = useCallback(async () => {
     if (!account) return;
     setIsFetchingPublicKey(true);
     try {
@@ -111,30 +117,30 @@ export default function Home() {
     } finally {
       setIsFetchingPublicKey(false);
     }
-  };
+  }, [account]);
 
-  const getDerivedKey = async () => {
-    if (!account) return;
+  const getDerivedKey = useCallback(async () => {
+    if (!account || !derivePath) return;
 
     const data = {
       publicKey:
         "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
       accountId: account?.accountId,
-      path: KEY_PATH,
+      path: derivePath,
     };
 
     // Felipe MPC real contract
-    const address = Ethereum.deriveProductionAddress(
-      data.accountId,
-      data.path,
-      data.publicKey
-    );
+    // const address = Ethereum.deriveProductionAddress(
+    //   data.accountId,
+    //   data.path,
+    //   data.publicKey
+    // );
 
     // Felipe MPC fake contract
-    // const address = Ethereum.deriveCanhazgasMPCAddress(
-    //   data.accountId,
-    //   data.path
-    // );
+    const address = Ethereum.deriveCanhazgasMPCAddress(
+      data.accountId,
+      data.path
+    );
 
     // Osman MPC real contract
     // const osmanAddress = await generateEthereumAddress({
@@ -143,41 +149,62 @@ export default function Home() {
     //   path: data.path,
     // });
 
-    console.log(`FE Address: ${address}`);
-  };
+    setDerivedAddress(address);
+  }, [account, derivePath]);
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
       {!account || isNearLoading ? (
         <Loader />
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <Select
-            {...register("chain")}
-            placeholder="Select chain"
-            className="mb-2"
-            options={[
-              { value: "ETH", label: "Ethereum" },
-              { value: "BTC", label: "Bitcoin" },
-              { value: "BNB", label: "Binance" },
-            ]}
+        <div className="flex flex-col gap-4">
+          <Input
+            label="Path"
+            name="derivedPath"
+            value={derivePath}
+            onChange={(e) => setDerivePath(e.target.value)}
           />
-          <Input {...register("to")} placeholder="To Address" />
-          <Input {...register("value")} placeholder="Value" />
-          <Button type="submit" isLoading={isSendingTransaction}>
-            Send Transaction
-          </Button>
-          <Button
-            type="button"
-            onClick={fetchPublicKey}
-            isLoading={isFetchingPublicKey}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-4"
           >
-            Fetch Public Key
-          </Button>
-          <Button type="button" onClick={getDerivedKey}>
-            Get Derived Key
-          </Button>
-        </form>
+            <Select
+              {...register("chain")}
+              placeholder="Select chain"
+              className="mb-2"
+              options={[
+                { value: "ETH", label: "Ethereum" },
+                { value: "BTC", label: "Bitcoin" },
+                { value: "BNB", label: "Binance" },
+              ]}
+            />
+            <Input
+              label="Address"
+              {...register("to")}
+              placeholder="To Address"
+            />
+            <Input label="Value" {...register("value")} placeholder="Value" />
+            <Button type="submit" isLoading={isSendingTransaction}>
+              Send Transaction
+            </Button>
+            <Button
+              type="button"
+              onClick={fetchPublicKey}
+              isLoading={isFetchingPublicKey}
+              variant="primary"
+            >
+              Fetch Public Key
+            </Button>
+          </form>
+          <div>
+            <p>
+              {derivedAddress} for path {derivePath}
+            </p>
+            <Button type="button" onClick={getDerivedKey}>
+              Get derived address
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
