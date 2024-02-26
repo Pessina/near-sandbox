@@ -8,7 +8,7 @@ import useInitNear from "@/hooks/useInitNear";
 import { signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
-import Ethereum from "@/utils/chain/Ethereum";
+import EVM from "@/utils/chain/EVM";
 import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
@@ -23,44 +23,105 @@ export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, isLoading: isNearLoading } = useInitNear();
-  const [derivePath, setDerivePath] = useState<string>("");
+  const [derivedPath, setDerivedPath] = useState<string>("");
   const [accountBalance, setAccountBalance] = useState<string>("");
   const [chain, setChain] = useState<string>("ETH");
 
-  const ethereum = useMemo(
-    () =>
-      new Ethereum({
-        providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
-      }),
-    []
-  );
+  const ethereum = useMemo(() => {
+    if (!process.env.NEXT_PUBLIC_INFURA_URL) {
+      throw new Error("Invalid ETH config");
+    }
+
+    return new EVM({
+      providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
+      mnemonic: process.env.NEXT_PUBLIC_ETH_MNEMONIC,
+    });
+  }, []);
+
+  const bsc = useMemo(() => {
+    if (!process.env.NEXT_PUBLIC_BSC_RPC_ENDPOINT) {
+      throw new Error("Invalid BSC config");
+    }
+
+    return new EVM({
+      providerUrl: process.env.NEXT_PUBLIC_BSC_RPC_ENDPOINT,
+    });
+  }, []);
 
   const onSubmit = useCallback(
     async (data: FormValues) => {
-      if (!account?.accountId || !derivePath) {
+      if (!account?.accountId || !derivedPath) {
         throw new Error("Account not found");
       }
 
       setIsSendingTransaction(true);
       try {
         switch (chain) {
+          case "BNB":
+            const transactionBSC = await bsc.attachGasAndNonce({
+              from: EVM.deriveCanhazgasMPCAddress(
+                account?.accountId,
+                derivedPath
+              ),
+              to: data.to,
+              value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
+            });
+
+            const transactionHashBSC =
+              EVM.prepareTransactionForSignature(transactionBSC);
+
+            const signatureBSC = await signMPC(
+              account,
+              Array.from(ethers.utils.arrayify(transactionHashBSC)),
+              derivedPath
+            );
+
+            if (signatureBSC) {
+              const transactionResponse = await bsc.sendSignedTransaction(
+                transactionBSC,
+                ethers.utils.joinSignature(signatureBSC)
+              );
+
+              const address = EVM.recoverAddressFromSignature(
+                transactionHashBSC,
+                signatureBSC.r,
+                signatureBSC.s,
+                signatureBSC.v
+              );
+
+              console.log(`BE Address: ${address}`);
+
+              toast.success(
+                <span>
+                  View on Sepolia:{" "}
+                  <Link
+                    href={`https://sepolia.etherscan.io/tx/${transactionResponse.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Transaction Details
+                  </Link>
+                </span>
+              );
+            }
+            break;
           case "ETH":
             const transaction = await ethereum.attachGasAndNonce({
-              from: Ethereum.deriveCanhazgasMPCAddress(
+              from: EVM.deriveCanhazgasMPCAddress(
                 account?.accountId,
-                derivePath
+                derivedPath
               ),
               to: data.to,
               value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
             });
 
             const transactionHash =
-              Ethereum.prepareTransactionForSignature(transaction);
+              EVM.prepareTransactionForSignature(transaction);
 
             const signature = await signMPC(
               account,
               Array.from(ethers.utils.arrayify(transactionHash)),
-              derivePath
+              derivedPath
             );
 
             if (signature) {
@@ -69,7 +130,7 @@ export default function Home() {
                 ethers.utils.joinSignature(signature)
               );
 
-              const address = Ethereum.recoverAddressFromSignature(
+              const address = EVM.recoverAddressFromSignature(
                 transactionHash,
                 signature.r,
                 signature.s,
@@ -93,9 +154,8 @@ export default function Home() {
             }
             break;
           case "BTC":
-          case "BNB":
             console.log(
-              "Transaction preparation for BTC and BNB is not implemented yet."
+              "Transaction preparation for BTC is not implemented yet."
             );
             break;
           default:
@@ -107,54 +167,46 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account, chain, derivePath, ethereum]
+    [account, chain, derivedPath, ethereum]
   );
 
   const derivedAddress = useMemo(() => {
-    if (!account || !derivePath) return;
+    if (!account) return "Invalid account";
 
+    let address = "";
     switch (chain) {
       case "ETH":
-        const data = {
-          publicKey:
-            "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u",
-          accountId: account?.accountId,
-          path: derivePath,
-        };
-
+        const publicKey =
+          "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
         // Felipe MPC real contract
-        // const address = Ethereum.deriveProductionAddress(
+        // address = EVM.deriveProductionAddress(
         //   data.accountId,
         //   data.path,
         //   data.publicKey
         // );
 
         // Felipe MPC fake contract
-        const address = Ethereum.deriveCanhazgasMPCAddress(
-          data.accountId,
-          data.path
-        );
+        address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
 
         // Osman MPC real contract
-        // const osmanAddress =  generateEthereumAddress({
+        //  osmanAddress =  generateEthereumAddress({
         //   publicKey: data.publicKey,
         //   accountId: data.accountId,
         //   path: data.path,
         // });
 
-        return address;
+        break;
       case "BTC":
         return "BTC Address Derivation Not Implemented";
       case "BNB":
-        return "BNB Address Derivation Not Implemented";
-    }
-  }, [account, chain, derivePath]);
-
-  const getAccountBalance = async () => {
-    if (!derivedAddress) {
-      return;
+        address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
+        break;
     }
 
+    return address;
+  }, [account, chain, derivedPath]);
+
+  const getAccountBalance = useCallback(async () => {
     let balance = "";
     switch (chain) {
       case "ETH":
@@ -162,12 +214,14 @@ export default function Home() {
           (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
         break;
       case "BTC":
+        break;
       case "BNB":
+        balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " tBNB";
         break;
     }
 
     setAccountBalance(balance);
-  };
+  }, [bsc, chain, derivedAddress, ethereum]);
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
@@ -191,8 +245,8 @@ export default function Home() {
             <Input
               label="Path"
               name="derivedPath"
-              value={derivePath}
-              onChange={(e) => setDerivePath(e.target.value)}
+              value={derivedPath}
+              onChange={(e) => setDerivedPath(e.target.value)}
             />
             <Input
               label="Derived Address"

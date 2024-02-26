@@ -4,28 +4,19 @@ import bs58 from "bs58";
 import BN from "bn.js";
 import crypto from "crypto";
 
-class Ethereum {
+class EVM {
   provider: ethers.providers.JsonRpcProvider;
-  wallet: ethers.Wallet;
 
   /**
-   * Initializes an Ethereum object with a specified configuration.
+   * Initializes an EVM object with a specified configuration.
    *
-   * @param {object} config - The configuration object for the Ethereum instance.
-   * @param {string} [config.providerUrl] - Optional. The URL for the Ethereum JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
+   * @param {object} config - The configuration object for the EVM instance.
+   * @param {string} [config.providerUrl] - The URL for the EVM JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
+   *
+   * @param {string} [config.mnemonic] - The mnemonic phrase used to generate the wallet's private key. If not specified, a new mnemonic will be generated.
    */
-  constructor(config: { providerUrl?: string }) {
-    this.provider = new ethers.providers.JsonRpcProvider(
-      config.providerUrl || process.env.NEXT_PUBLIC_INFURA_URL
-    );
-
-    const hdNode = ethers.utils.HDNode.fromMnemonic(
-      process.env.NEXT_PUBLIC_ETH_MNEMONIC!
-    );
-    const path = "m/44'/60'/0'/0/0";
-    const privateKey = hdNode.derivePath(path).privateKey;
-
-    this.wallet = new ethers.Wallet(privateKey, this.provider);
+  constructor(config: { providerUrl: string; mnemonic?: string }) {
+    this.provider = new ethers.providers.JsonRpcProvider(config.providerUrl);
   }
 
   /**
@@ -101,7 +92,7 @@ class Ethereum {
    *
    * This method fetches the current gas price and estimates the gas limit required for the transaction.
    * It then returns a new transaction object that includes the original transaction details
-   * along with the fetched gas price, estimated gas limit, and the chain ID of the Ethereum object.
+   * along with the fetched gas price, estimated gas limit, and the chain ID of the EVM object.
    *
    * @param {ethers.providers.TransactionRequest} transaction - The initial transaction object without gas details.
    * @returns {Promise<ethers.providers.TransactionRequest>} A new transaction object augmented with gas price, gas limit, and chain ID.
@@ -131,12 +122,12 @@ class Ethereum {
   }
 
   /**
-   * Fetches the balance of the given Ethereum address.
+   * Fetches the balance of the given EVM address.
    *
    * This method uses the current provider to query the balance of the specified address.
    * The balance is returned in ethers as a string.
    *
-   * @param {string} address - The Ethereum address to fetch the balance for.
+   * @param {string} address - The EVM address to fetch the balance for.
    * @returns {Promise<string>} The balance of the address in ethers.
    */
   async getBalance(address: string): Promise<string> {
@@ -150,16 +141,16 @@ class Ethereum {
   }
 
   /**
-   * Derives an Ethereum address from a given signer ID, derivation path, and public key.
+   * Derives an EVM address from a given signer ID, derivation path, and public key.
    *
    * This method combines the provided signer ID and path to generate an epsilon value,
-   * which is then used to derive a new public key. The Ethereum address is then computed
+   * which is then used to derive a new public key. The EVM address is then computed
    * from this derived public key.
    *
    * @param {string} signerId - The unique identifier of the signer.
    * @param {string} path - The derivation path.
    * @param {string} publicKey - The public key in base58 format.
-   * @returns {string} The derived Ethereum address.
+   * @returns {string} The derived EVM address.
    *
    * @example
    * const signerId = "felipe.near";
@@ -220,12 +211,12 @@ class Ethereum {
 
   /**
    * Derives a fake MPC (Multi-Party Computation) address for testing purposes.
-   * This method simulates the derivation of an Ethereum address from a given signer ID and path,
+   * This method simulates the derivation of an EVM address from a given signer ID and path,
    * using a spoofed key generation process.
    *
    * @param {string} signerId - The unique identifier of the signer.
    * @param {string} path - The derivation path used for generating the address.
-   * @returns {string} A promise that resolves to the derived Ethereum address.
+   * @returns {string} A promise that resolves to the derived EVM address.
    */
   static deriveCanhazgasMPCAddress(signerId: string, path: string): string {
     function constructSpoofKey(
@@ -241,12 +232,11 @@ class Ethereum {
     function getEvmAddress(predecessor: string, path: string): string {
       const signingKey = constructSpoofKey(predecessor, path);
       const publicKey = signingKey.publicKey;
-      const evmAddress = ethers.utils.computeAddress(publicKey);
-      return evmAddress;
+      return ethers.utils.computeAddress(publicKey);
     }
 
     return getEvmAddress(signerId, path);
   }
 }
 
-export default Ethereum;
+export default EVM;

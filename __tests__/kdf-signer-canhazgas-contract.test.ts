@@ -5,7 +5,7 @@ import initNear from "../config/near";
 import { getEvmAddress } from "../utils/kdf/kdf-signer-canhazgas-contract";
 import { ethers } from "ethers";
 import { signMPC } from "../utils/contract/signer";
-import Ethereum from "../utils/chain/Ethereum";
+import Ethereum from "../utils/chain/EVM";
 
 let account: Account;
 

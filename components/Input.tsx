@@ -1,5 +1,5 @@
 import React, { forwardRef, ReactNode } from "react";
-import Label from "./Label"; // Import the Label component
+import Label from "./Label";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
