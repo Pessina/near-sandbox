@@ -16,6 +16,11 @@ export class Bitcoin {
     this.explorerUrl = config.explorerUrl;
   }
 
+  async fetchBalance(address: string): Promise<string> {
+    const utxos = await this.fetchUTXOs(address);
+    return utxos.reduce((acc, utxo) => acc + utxo.value, 0).toString();
+  }
+
   async fetchUTXOs(
     address: string
   ): Promise<Array<{ txid: string; vout: number; value: number }>> {
@@ -38,8 +43,7 @@ export class Bitcoin {
   async fetchFeeRate(): Promise<number> {
     try {
       const response = await axios.get(`${this.explorerUrl}fee-estimates`);
-      // Assuming the goal is to fetch a fee rate for a specific confirmation target, e.g., 6 blocks
-      const confirmationTarget = 6; // Example confirmation target
+      const confirmationTarget = 6;
       if (response.data && response.data[confirmationTarget]) {
         return response.data[confirmationTarget];
       } else {
@@ -56,7 +60,6 @@ export class Bitcoin {
     }
   }
 
-  // Function to create a transaction
   async createTransaction(
     fromAddress: string,
     toAddress: string,
@@ -74,22 +77,18 @@ export class Bitcoin {
       psbt.addInput({
         hash: utxo.txid,
         index: utxo.vout,
-        nonWitnessUtxo: Buffer.alloc(0), // This should be replaced with the actual transaction buffer
+        nonWitnessUtxo: Buffer.alloc(0),
       });
     });
 
-    // Add the output for the recipient
     psbt.addOutput({
       address: toAddress,
       value: amountToSend,
     });
 
-    // Calculate the transaction size to estimate the fee
-    // Note: This is a simplified estimation
     const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
     const fee = estimatedSize * feeRate;
 
-    // Add change output if needed
     const change = totalInput - amountToSend - fee;
     if (change > 0) {
       psbt.addOutput({
