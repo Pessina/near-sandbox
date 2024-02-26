@@ -62,7 +62,7 @@ export default function Home() {
           );
 
           if (signature) {
-            const txHash = await ethereum.sendSignedTransaction(
+            const transactionResponse = await ethereum.sendSignedTransaction(
               transaction,
               ethers.utils.joinSignature(signature)
             );
@@ -77,7 +77,9 @@ export default function Home() {
             console.log(`BE Address: ${address}`);
 
             console.log(
-              `Transaction ${JSON.stringify(transaction)} sent! Hash: ${txHash}`
+              `Transaction ${JSON.stringify(transaction)} sent! Hash: ${
+                transactionResponse.hash
+              }`
             );
           }
           break;
