@@ -1,4 +1,8 @@
 import { UnsignedTransaction, ethers } from "ethers";
+import { ec as EC } from "elliptic";
+import bs58 from "bs58";
+import BN from "bn.js";
+import crypto from "crypto";
 
 export const SEPOLIA_CHAIN_ID = 11155111;
 
@@ -130,6 +134,105 @@ class Ethereum {
       nonce,
       type: 0,
     };
+  }
+
+  /**
+   * Derives an Ethereum address from a given signer ID, derivation path, and public key.
+   *
+   * This method combines the provided signer ID and path to generate an epsilon value,
+   * which is then used to derive a new public key. The Ethereum address is then computed
+   * from this derived public key.
+   *
+   * @param {string} signerId - The unique identifier of the signer.
+   * @param {string} path - The derivation path.
+   * @param {string} publicKey - The public key in base58 format.
+   * @returns {string} The derived Ethereum address.
+   *
+   * @example
+   * const signerId = "felipe.near";
+   * const path = ",ethereum,near.org";
+   * const publicKey = "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
+   * const address = deriveAddress(signerId, path, publicKey);
+   * console.log(address); // 0x...
+   */
+  static deriveProductionAddress(
+    signerId: string,
+    path: string,
+    publicKey: string
+  ): string {
+    const EPSILON_DERIVATION_PREFIX =
+      "near-mpc-recovery v0.1.0 epsilon derivation:";
+
+    const secp256k1 = new EC("secp256k1");
+
+    function deriveEpsilon(signerId: string, path: string): string {
+      const derivationPath = `${EPSILON_DERIVATION_PREFIX}${signerId},${path}`;
+      const hash = crypto.createHash("sha256").update(derivationPath).digest();
+      const ret = new BN(hash, "le").toString("hex");
+
+      return ret;
+    }
+
+    function deriveKey(publicKeyStr: string, epsilon: string): string {
+      const base58PublicKey = publicKeyStr.split(":")[1];
+
+      const decodedPublicKey = Buffer.from(
+        bs58.decode(base58PublicKey)
+      ).toString("hex");
+
+      const publicKey = secp256k1.keyFromPublic("04" + decodedPublicKey, "hex");
+      const derivedPoint = publicKey.getPublic().add(secp256k1.g.mul(epsilon));
+      const derivedPublicKey = derivedPoint.encode("hex", false);
+
+      return derivedPublicKey;
+    }
+
+    function deriveEthAddress(derivedPublicKeyStr: string): string {
+      const publicKeyNoPrefix = derivedPublicKeyStr.startsWith("04")
+        ? derivedPublicKeyStr.substring(2)
+        : derivedPublicKeyStr;
+      const hash = ethers.utils.keccak256(
+        Buffer.from(publicKeyNoPrefix, "hex")
+      );
+
+      return "0x" + hash.substring(hash.length - 40);
+    }
+
+    const epsilon = deriveEpsilon(signerId, path);
+    const derivedKey = deriveKey(publicKey, epsilon);
+    const address = deriveEthAddress(derivedKey);
+
+    return address;
+  }
+
+  /**
+   * Derives a fake MPC (Multi-Party Computation) address for testing purposes.
+   * This method simulates the derivation of an Ethereum address from a given signer ID and path,
+   * using a spoofed key generation process.
+   *
+   * @param {string} signerId - The unique identifier of the signer.
+   * @param {string} path - The derivation path used for generating the address.
+   * @returns {string} A promise that resolves to the derived Ethereum address.
+   */
+  static deriveCanhazgasMPCAddress(signerId: string, path: string): string {
+    function constructSpoofKey(
+      predecessor: string,
+      path: string
+    ): ethers.utils.SigningKey {
+      const data = ethers.utils.toUtf8Bytes(`${predecessor},${path}`);
+      const hash = ethers.utils.sha256(data);
+      const signingKey = new ethers.utils.SigningKey(hash);
+      return signingKey;
+    }
+
+    function getEvmAddress(predecessor: string, path: string): string {
+      const signingKey = constructSpoofKey(predecessor, path);
+      const publicKey = signingKey.publicKey;
+      const evmAddress = ethers.utils.computeAddress(publicKey);
+      return evmAddress;
+    }
+
+    return getEvmAddress(signerId, path);
   }
 }
 

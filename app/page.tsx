@@ -10,9 +10,6 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
-import { deriveEpsilon, deriveEthAddress, deriveKey } from "@/utils/kdf/kdf";
-import { getEvmAddress } from "@/utils/kdf/kdf-signer-canhazgas-contract";
-import { generateEthereumAddress } from "@/utils/kdf/kdf-osman";
 
 interface FormValues {
   chain: string;
@@ -21,7 +18,7 @@ interface FormValues {
   value: string;
 }
 
-const KEY_PATH = ",bitcoin,near.org";
+const KEY_PATH = ",bitcoin,felipe.org";
 
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
@@ -47,7 +44,10 @@ export default function Home() {
       switch (data.chain) {
         case "ETH":
           const transaction = await ethereum.attachGasAndNonce({
-            from: getEvmAddress(account?.accountId, KEY_PATH),
+            from: Ethereum.deriveCanhazgasMPCAddress(
+              account?.accountId,
+              KEY_PATH
+            ),
             to: data.to,
             value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
           });
@@ -70,6 +70,15 @@ export default function Home() {
             const txHash = await ethereum.sendSignedTransaction(
               serializedTransaction
             );
+
+            const address = Ethereum.recoverAddressFromSignature(
+              transactionHash,
+              signature.r,
+              signature.s,
+              signature.v
+            );
+
+            console.log(`BE Address: ${address}`);
 
             console.log(
               `Transaction ${JSON.stringify(transaction)} sent! Hash: ${txHash}`
@@ -117,12 +126,17 @@ export default function Home() {
     };
 
     // Felipe MPC real contract
-    const epsilon = deriveEpsilon(data.accountId, data.path);
-    const derivedKey = deriveKey(data.publicKey, epsilon);
-    const address = deriveEthAddress(derivedKey);
+    const address = Ethereum.deriveProductionAddress(
+      data.accountId,
+      data.path,
+      data.publicKey
+    );
 
     // Felipe MPC fake contract
-    // const address = getEvmAddress(data.accountId, data.path);
+    // const address = Ethereum.deriveCanhazgasMPCAddress(
+    //   data.accountId,
+    //   data.path
+    // );
 
     // Osman MPC real contract
     // const address = await generateEthereumAddress({
