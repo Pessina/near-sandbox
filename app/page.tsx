@@ -10,7 +10,6 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
-import { generateEthereumAddress } from "@/utils/kdf/kdf-osman";
 
 interface FormValues {
   chain: string;
@@ -19,7 +18,7 @@ interface FormValues {
   value: string;
 }
 
-const KEY_PATH = ",bitcoin,felipe.org";
+const KEY_PATH = ",ethereum,near.org";
 
 export default function Home() {
   const { register, handleSubmit } = useForm<FormValues>();
@@ -63,13 +62,9 @@ export default function Home() {
           );
 
           if (signature) {
-            const serializedTransaction = ethers.utils.serializeTransaction(
+            const txHash = await ethereum.sendSignedTransaction(
               transaction,
               ethers.utils.joinSignature(signature)
-            );
-
-            const txHash = await ethereum.sendSignedTransaction(
-              serializedTransaction
             );
 
             const address = Ethereum.recoverAddressFromSignature(

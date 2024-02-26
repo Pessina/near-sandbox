@@ -83,14 +83,16 @@ class Ethereum {
    * @param {string} signedTransaction - The signed transaction payload as a hex string.
    * @returns {Promise<string>} The transaction hash of the executed transaction.
    */
-  async sendSignedTransaction(signedTransaction: string): Promise<string> {
+  async sendSignedTransaction(
+    transaction: UnsignedTransaction,
+    signature: string
+  ): Promise<ethers.providers.TransactionResponse> {
     try {
-      const transactionResponse = await this.provider.sendTransaction(
-        signedTransaction
+      const serializedTransaction = ethers.utils.serializeTransaction(
+        transaction,
+        ethers.utils.joinSignature(signature)
       );
-      const transactionHash = transactionResponse.hash;
-
-      return transactionHash;
+      return this.provider.sendTransaction(serializedTransaction);
     } catch (error) {
       console.error(`Transaction execution failed:`, error);
       throw new Error("Failed to send signed transaction.");
