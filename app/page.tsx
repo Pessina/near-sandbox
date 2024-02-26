@@ -8,7 +8,7 @@ import useInitNear from "@/hooks/useInitNear";
 import { signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
-import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
+import Ethereum from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
@@ -31,7 +31,6 @@ export default function Home() {
     () =>
       new Ethereum({
         providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
-        chainId: SEPOLIA_CHAIN_ID,
       }),
     []
   );

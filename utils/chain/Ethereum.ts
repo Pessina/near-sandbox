@@ -4,8 +4,6 @@ import bs58 from "bs58";
 import BN from "bn.js";
 import crypto from "crypto";
 
-export const SEPOLIA_CHAIN_ID = 11155111;
-
 class Ethereum {
   provider: ethers.providers.JsonRpcProvider;
   wallet: ethers.Wallet;
@@ -15,9 +13,8 @@ class Ethereum {
    *
    * @param {object} config - The configuration object for the Ethereum instance.
    * @param {string} [config.providerUrl] - Optional. The URL for the Ethereum JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
-   * @param {number} [config.chainId] - Optional. The chain ID for the Ethereum network. Defaults to 1 (mainnet) if not specified.
    */
-  constructor(config: { providerUrl?: string; chainId?: number }) {
+  constructor(config: { providerUrl?: string }) {
     this.provider = new ethers.providers.JsonRpcProvider(
       config.providerUrl || process.env.NEXT_PUBLIC_INFURA_URL
     );
