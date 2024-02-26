@@ -8,7 +8,9 @@ interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
 const Link: React.FC<LinkProps> = ({ children, className, ...props }) => {
   return (
     <a
-      className={`text-blue-500 hover:text-blue-700 underline ${className}`}
+      className={`text-blue-500 hover:text-blue-700 underline ${
+        className ? className : ""
+      }`}
       {...props}
     >
       {children}
