@@ -3,20 +3,26 @@ import { ec as EC } from "elliptic";
 import bs58 from "bs58";
 import BN from "bn.js";
 import crypto from "crypto";
+import { signMPC } from "../contract/signer";
+import { Account } from "near-api-js";
+import Link from "next/link";
+import { toast } from "react-toastify";
 
 class EVM {
   provider: ethers.providers.JsonRpcProvider;
+  scanUrl: string;
+  name: string;
 
   /**
    * Initializes an EVM object with a specified configuration.
    *
    * @param {object} config - The configuration object for the EVM instance.
    * @param {string} [config.providerUrl] - The URL for the EVM JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
-   *
-   * @param {string} [config.mnemonic] - The mnemonic phrase used to generate the wallet's private key. If not specified, a new mnemonic will be generated.
    */
-  constructor(config: { providerUrl: string; mnemonic?: string }) {
+  constructor(config: { providerUrl: string; scanUrl: string; name: string }) {
     this.provider = new ethers.providers.JsonRpcProvider(config.providerUrl);
+    this.scanUrl = config.scanUrl;
+    this.name = config.name;
   }
 
   /**
@@ -236,6 +242,80 @@ class EVM {
     }
 
     return getEvmAddress(signerId, path);
+  }
+
+  /**
+   * Orchestrates the transaction execution process by attaching necessary gas and nonce, signing, and then sending the transaction.
+   * This method leverages the provided chain instance, transaction details, account credentials, and a specific derived path
+   * to facilitate the execution of a transaction on the blockchain network.
+   *
+   * @param {Transaction} data - Contains the transaction details such as the recipient's address and the transaction value.
+   * @param {Account} account - Holds the account credentials including the unique account ID.
+   * @param {string} derivedPath - Specifies the derived path utilized for the transaction signing process.
+   * @param {string} publicKey - The public key associated with the account, used in address derivation.
+   * @param {string} contract - Indicates the contract environment, either "production" or "canhazgas", to determine the address derivation method.
+   * @returns {Promise<void>} A promise that is fulfilled once the transaction has been successfully processed.
+   */
+  async handleTransaction(
+    data: Transaction,
+    account: Account,
+    derivedPath: string,
+    publicKey: string,
+    contract: "production" | "canhazgas"
+  ): Promise<ethers.providers.TransactionResponse | undefined> {
+    const transaction = await this.attachGasAndNonce({
+      from:
+        contract === "production"
+          ? EVM.deriveProductionAddress(
+              account?.accountId,
+              derivedPath,
+              publicKey
+            )
+          : EVM.deriveCanhazgasMPCAddress(account?.accountId, derivedPath),
+      to: data.to,
+      value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
+    });
+
+    const transactionHash = EVM.prepareTransactionForSignature(transaction);
+
+    const signature = await signMPC(
+      account,
+      Array.from(ethers.utils.arrayify(transactionHash)),
+      derivedPath
+    );
+
+    if (signature) {
+      const transactionResponse = await this.sendSignedTransaction(
+        transaction,
+        ethers.utils.joinSignature(signature)
+      );
+
+      const address = EVM.recoverAddressFromSignature(
+        transactionHash,
+        signature.r,
+        signature.s,
+        signature.v
+      );
+
+      console.log(`BE Address: ${address}`);
+
+      toast.success(
+        <span>
+          View on {this.name}:{" "}
+          <Link
+            href={`${this.scanUrl}/tx/${transactionResponse.hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Transaction Details
+          </Link>
+        </span>
+      );
+
+      return transactionResponse;
+    }
+
+    return undefined;
   }
 }
 

@@ -12,15 +12,12 @@ import EVM from "@/utils/chain/EVM";
 import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
-import Link from "@/components/Link";
 
-interface FormValues {
-  to: string;
-  value: string;
-}
+const MPC_PUBLIC_KEY =
+  "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
 
 export default function Home() {
-  const { register, handleSubmit } = useForm<FormValues>();
+  const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, isLoading: isNearLoading } = useInitNear();
   const [derivedPath, setDerivedPath] = useState<string>("");
@@ -34,7 +31,8 @@ export default function Home() {
 
     return new EVM({
       providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
-      mnemonic: process.env.NEXT_PUBLIC_ETH_MNEMONIC,
+      scanUrl: "https://sepolia.etherscan.io",
+      name: "ETH",
     });
   }, []);
 
@@ -45,11 +43,13 @@ export default function Home() {
 
     return new EVM({
       providerUrl: process.env.NEXT_PUBLIC_BSC_RPC_ENDPOINT,
+      scanUrl: "https://testnet.bscscan.com",
+      name: "BNB",
     });
   }, []);
 
   const onSubmit = useCallback(
-    async (data: FormValues) => {
+    async (data: Transaction) => {
       if (!account?.accountId || !derivedPath) {
         throw new Error("Account not found");
       }
@@ -58,100 +58,22 @@ export default function Home() {
       try {
         switch (chain) {
           case "BNB":
-            const transactionBSC = await bsc.attachGasAndNonce({
-              from: EVM.deriveCanhazgasMPCAddress(
-                account?.accountId,
-                derivedPath
-              ),
-              to: data.to,
-              value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
-            });
-
-            const transactionHashBSC =
-              EVM.prepareTransactionForSignature(transactionBSC);
-
-            const signatureBSC = await signMPC(
+            bsc.handleTransaction(
+              data,
               account,
-              Array.from(ethers.utils.arrayify(transactionHashBSC)),
-              derivedPath
+              derivedPath,
+              MPC_PUBLIC_KEY,
+              "canhazgas"
             );
-
-            if (signatureBSC) {
-              const transactionResponse = await bsc.sendSignedTransaction(
-                transactionBSC,
-                ethers.utils.joinSignature(signatureBSC)
-              );
-
-              const address = EVM.recoverAddressFromSignature(
-                transactionHashBSC,
-                signatureBSC.r,
-                signatureBSC.s,
-                signatureBSC.v
-              );
-
-              console.log(`BE Address: ${address}`);
-
-              toast.success(
-                <span>
-                  View on Sepolia:{" "}
-                  <Link
-                    href={`https://sepolia.etherscan.io/tx/${transactionResponse.hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Transaction Details
-                  </Link>
-                </span>
-              );
-            }
             break;
           case "ETH":
-            const transaction = await ethereum.attachGasAndNonce({
-              from: EVM.deriveCanhazgasMPCAddress(
-                account?.accountId,
-                derivedPath
-              ),
-              to: data.to,
-              value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
-            });
-
-            const transactionHash =
-              EVM.prepareTransactionForSignature(transaction);
-
-            const signature = await signMPC(
+            ethereum.handleTransaction(
+              data,
               account,
-              Array.from(ethers.utils.arrayify(transactionHash)),
-              derivedPath
+              derivedPath,
+              MPC_PUBLIC_KEY,
+              "canhazgas"
             );
-
-            if (signature) {
-              const transactionResponse = await ethereum.sendSignedTransaction(
-                transaction,
-                ethers.utils.joinSignature(signature)
-              );
-
-              const address = EVM.recoverAddressFromSignature(
-                transactionHash,
-                signature.r,
-                signature.s,
-                signature.v
-              );
-
-              console.log(`BE Address: ${address}`);
-
-              toast.success(
-                <span>
-                  View on Sepolia:{" "}
-                  <Link
-                    href={`https://sepolia.etherscan.io/tx/${transactionResponse.hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Transaction Details
-                  </Link>
-                </span>
-              );
-            }
             break;
           case "BTC":
             console.log(
@@ -167,7 +89,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account, chain, derivedPath, ethereum]
+    [account, bsc, chain, derivedPath, ethereum]
   );
 
   const derivedAddress = useMemo(() => {
