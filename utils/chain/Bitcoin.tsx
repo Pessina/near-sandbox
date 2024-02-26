@@ -1,5 +1,7 @@
 import * as bitcoin from "bitcoinjs-lib";
 import axios from "axios";
+import * as bitcore from "bitcore-lib";
+import crypto from "crypto";
 
 export class Bitcoin {
   private network: bitcoin.networks.Network;
@@ -41,22 +43,14 @@ export class Bitcoin {
   }
 
   async fetchFeeRate(): Promise<number> {
-    try {
-      const response = await axios.get(`${this.explorerUrl}fee-estimates`);
-      const confirmationTarget = 6;
-      if (response.data && response.data[confirmationTarget]) {
-        return response.data[confirmationTarget];
-      } else {
-        throw new Error(
-          `Fee rate data for ${confirmationTarget} blocks confirmation target is missing in the response`
-        );
-      }
-    } catch (error) {
-      console.error(
-        `Failed to fetch fee rate for the specified confirmation target:`,
-        error
+    const response = await axios.get(`${this.explorerUrl}fee-estimates`);
+    const confirmationTarget = 6;
+    if (response.data && response.data[confirmationTarget]) {
+      return response.data[confirmationTarget];
+    } else {
+      throw new Error(
+        `Fee rate data for ${confirmationTarget} blocks confirmation target is missing in the response`
       );
-      throw error;
     }
   }
 
@@ -130,5 +124,41 @@ export class Bitcoin {
   //     amountToSend,
   //     changeAddress
   //   );
+  // }
+  
+  // async createTransaction(
+  //   fromAddress: string,
+  //   toAddress: string,
+  //   amountToSend: number,
+  //   changeAddress: string
+  // ) {
+  //   const utxos = await this.fetchUTXOs(fromAddress);
+  //   const feeRate = await this.fetchFeeRate();
+
+  //   let transaction = new bitcore.Transaction()
+  //     .from(
+  //       utxos.map((utxo) => ({
+  //         txId: utxo.txid,
+  //         outputIndex: utxo.vout,
+  //         address: fromAddress,
+  //         script: new bitcore.Script(new bitcore.Address(fromAddress)).toHex(),
+  //         satoshis: utxo.value,
+  //       }))
+  //     )
+  //     .to(toAddress, amountToSend)
+  //     .change(changeAddress)
+  //     .feePerKb(feeRate * 1000); // Fee rate is specified in satoshis per kilobyte in bitcore-lib
+
+  //   // Serialize the transaction to get its raw format
+  //   const serializedTx = transaction.uncheckedSerialize();
+    
+
+  //   // Hash the serialized transaction using SHA-256
+  //   const hash = crypto.createHash("sha256").update(serializedTx).digest("hex");
+
+  //   // // Send the hash to the third-party service for signing
+  //   // const signedHash = await this.sendHashToThirdPartyServiceForSigning(hash);
+
+  //   // console.log(`Signed Hash: ${signedHash}`);
   // }
 }

@@ -12,6 +12,7 @@
   "dependencies": {
     "axios": "^1.6.7",
     "bitcoinjs-lib": "^6.1.5",
+    "bitcore-lib": "^10.0.23",
     "bn.js": "^5.2.1",
     "borsh": "^2.0.0",
     "bs58": "^5.0.0",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@testing-library/react": "^14.2.1",
+    "@types/bitcore-lib": "^0.15.6",
     "@types/bn.js": "^5.1.5",
     "@types/bs58": "^4.0.4",
     "@types/elliptic": "^6.4.18",

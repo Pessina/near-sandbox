@@ -138,15 +138,10 @@ export default function Home() {
           (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
         break;
       case "BTC":
-        let a = (await bitcoin.fetchFeeRate()).toString();
-        let b = (
-          await bitcoin.fetchUTXOs("tb1q2c92hr26cm964kqql5ycfy92xkl50mycc7la9e")
-        ).toString();
         balance =
           (await bitcoin.fetchBalance(
             "tb1q2c92hr26cm964kqql5ycfy92xkl50mycc7la9e"
           )) + " BTC";
-        console.log({ a, b });
         break;
       case "BNB":
         balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " BNB";
