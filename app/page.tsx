@@ -12,6 +12,7 @@ import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
+import Link from "@/components/Link";
 
 interface FormValues {
   to: string;
@@ -81,13 +82,13 @@ export default function Home() {
               toast.success(
                 <span>
                   View on Sepolia:{" "}
-                  <a
+                  <Link
                     href={`https://sepolia.etherscan.io/tx/${transactionResponse.hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     Transaction Details
-                  </a>
+                  </Link>
                 </span>
               );
             }
