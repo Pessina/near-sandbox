@@ -21,7 +21,7 @@ export class Bitcoin {
   ): Promise<Array<{ txid: string; vout: number; value: number }>> {
     try {
       const response = await axios.get(
-        `${this.explorerUrl}/address/${address}/utxo`
+        `${this.explorerUrl}address/${address}/utxo`
       );
       const utxos = response.data.map((utxo: any) => ({
         txid: utxo.txid,
@@ -37,7 +37,7 @@ export class Bitcoin {
 
   async fetchFeeRate(): Promise<number> {
     try {
-      const response = await axios.get(`${this.explorerUrl}/fee-estimates`);
+      const response = await axios.get(`${this.explorerUrl}fee-estimates`);
       // Assuming the goal is to fetch a fee rate for a specific confirmation target, e.g., 6 blocks
       const confirmationTarget = 6; // Example confirmation target
       if (response.data && response.data[confirmationTarget]) {

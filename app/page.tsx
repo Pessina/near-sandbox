@@ -27,6 +27,11 @@ const chainsConfig = {
     scanUrl: "https://testnet.bscscan.com",
     name: "BNB",
   },
+  btc: {
+    networkType: "testnet" as const,
+    // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
+    explorerUrl: "https://blockstream.info/testnet/api/",
+  },
 };
 
 export default function Home() {
@@ -45,15 +50,7 @@ export default function Home() {
     return new EVM(chainsConfig.bsc);
   }, []);
 
-  const bitcoin = useMemo(
-    () =>
-      new Bitcoin({
-        networkType: "testnet",
-        // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
-        explorerUrl: "https://blockstream.info/testnet/api/",
-      }),
-    []
-  );
+  const bitcoin = useMemo(() => new Bitcoin(chainsConfig.btc), []);
 
   const onSubmit = useCallback(
     async (data: Transaction) => {
@@ -141,7 +138,11 @@ export default function Home() {
           (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
         break;
       case "BTC":
-        balance = (await bitcoin.fetchFeeRate()).toString();
+        let a = (await bitcoin.fetchFeeRate()).toString();
+        let b = (
+          await bitcoin.fetchUTXOs("tb1q2c92hr26cm964kqql5ycfy92xkl50mycc7la9e")
+        ).toString();
+        console.log({ a, b });
         break;
       case "BNB":
         balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " tBNB";
