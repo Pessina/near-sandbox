@@ -10,6 +10,7 @@ import Input from "@/components/Input";
 import Select from "@/components/Select";
 import Ethereum, { SEPOLIA_CHAIN_ID } from "@/utils/chain/Ethereum";
 import Button from "@/components/Button";
+import { generateEthereumAddress } from "@/utils/kdf/kdf-osman";
 
 interface FormValues {
   chain: string;
@@ -139,10 +140,10 @@ export default function Home() {
     // );
 
     // Osman MPC real contract
-    // const address = await generateEthereumAddress({
-    //   publicKey: `secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u`,
-    //   accountId: `felipe-sandbox.testnet`,
-    //   path: `,ethereum,near.org`,
+    // const osmanAddress = await generateEthereumAddress({
+    //   publicKey: data.publicKey,
+    //   accountId: data.accountId,
+    //   path: data.path,
     // });
 
     console.log(`FE Address: ${address}`);
