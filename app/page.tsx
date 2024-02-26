@@ -3,9 +3,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
-import { ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
-import { signMPC } from "@/utils/contract/signer";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
 import EVM from "@/utils/chain/EVM";
@@ -16,6 +14,20 @@ import { toast } from "react-toastify";
 const MPC_PUBLIC_KEY =
   "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
 
+const chainsConfig = {
+  ethereum: {
+    providerUrl:
+      "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
+    scanUrl: "https://sepolia.etherscan.io",
+    name: "ETH",
+  },
+  bsc: {
+    providerUrl: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+    scanUrl: "https://testnet.bscscan.com",
+    name: "BNB",
+  },
+};
+
 export default function Home() {
   const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
@@ -25,27 +37,11 @@ export default function Home() {
   const [chain, setChain] = useState<string>("ETH");
 
   const ethereum = useMemo(() => {
-    if (!process.env.NEXT_PUBLIC_INFURA_URL) {
-      throw new Error("Invalid ETH config");
-    }
-
-    return new EVM({
-      providerUrl: process.env.NEXT_PUBLIC_INFURA_URL,
-      scanUrl: "https://sepolia.etherscan.io",
-      name: "ETH",
-    });
+    return new EVM(chainsConfig.ethereum);
   }, []);
 
   const bsc = useMemo(() => {
-    if (!process.env.NEXT_PUBLIC_BSC_RPC_ENDPOINT) {
-      throw new Error("Invalid BSC config");
-    }
-
-    return new EVM({
-      providerUrl: process.env.NEXT_PUBLIC_BSC_RPC_ENDPOINT,
-      scanUrl: "https://testnet.bscscan.com",
-      name: "BNB",
-    });
+    return new EVM(chainsConfig.bsc);
   }, []);
 
   const onSubmit = useCallback(
@@ -117,7 +113,7 @@ export default function Home() {
 
         break;
       case "BTC":
-        return "BTC Address Derivation Not Implemented";
+        return "BTC Not Implemented";
       case "BNB":
         address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
         break;
@@ -154,7 +150,10 @@ export default function Home() {
             placeholder="Select chain"
             className="mb-2"
             value={chain}
-            onChange={(e) => setChain(e.target.value)}
+            onChange={(e) => {
+              setAccountBalance("");
+              setChain(e.target.value);
+            }}
             options={[
               { value: "ETH", label: "ETH" },
               { value: "BTC", label: "BTC" },

@@ -17,7 +17,7 @@ class EVM {
    * Initializes an EVM object with a specified configuration.
    *
    * @param {object} config - The configuration object for the EVM instance.
-   * @param {string} [config.providerUrl] - The URL for the EVM JSON RPC provider. Defaults to the NEXT_PUBLIC_INFURA_URL environment variable if not specified.
+   * @param {string} [config.providerUrl] - The URL for the EVM JSON RPC provider.
    */
   constructor(config: { providerUrl: string; scanUrl: string; name: string }) {
     this.provider = new ethers.providers.JsonRpcProvider(config.providerUrl);
@@ -231,14 +231,12 @@ class EVM {
     ): ethers.utils.SigningKey {
       const data = ethers.utils.toUtf8Bytes(`${predecessor},${path}`);
       const hash = ethers.utils.sha256(data);
-      const signingKey = new ethers.utils.SigningKey(hash);
-      return signingKey;
+      return new ethers.utils.SigningKey(hash);
     }
 
     function getEvmAddress(predecessor: string, path: string): string {
       const signingKey = constructSpoofKey(predecessor, path);
-      const publicKey = signingKey.publicKey;
-      return ethers.utils.computeAddress(publicKey);
+      return ethers.utils.computeAddress(signingKey.publicKey);
     }
 
     return getEvmAddress(signerId, path);
