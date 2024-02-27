@@ -92,14 +92,14 @@ export class Bitcoin {
     }
 
     // Implementing transaction signing
-    // utxos.forEach((utxo, index) => {
-    //   const privateKey = this.getPrivateKeyForAddress(utxo.address);
-    //   if (!privateKey) {
-    //     throw new Error(`Missing private key for address ${utxo.address}`);
-    //   }
-    //   psbt.signInput(index, privateKey);
-    // });
-    // psbt.finalizeAllInputs();
+    utxos.forEach((utxo, index) => {
+      const privateKey = this.getPrivateKeyForAddress(utxo.address);
+      if (!privateKey) {
+        throw new Error(`Missing private key for address ${utxo.address}`);
+      }
+      psbt.signInput(index, privateKey);
+    });
+    psbt.finalizeAllInputs();
 
     // Constructing the transaction hex
     const txHex = psbt.extractTransaction().toHex();
@@ -125,7 +125,7 @@ export class Bitcoin {
   //     changeAddress
   //   );
   // }
-  
+
   // async createTransaction(
   //   fromAddress: string,
   //   toAddress: string,
@@ -151,7 +151,6 @@ export class Bitcoin {
 
   //   // Serialize the transaction to get its raw format
   //   const serializedTx = transaction.uncheckedSerialize();
-    
 
   //   // Hash the serialized transaction using SHA-256
   //   const hash = crypto.createHash("sha256").update(serializedTx).digest("hex");
