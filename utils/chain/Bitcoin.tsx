@@ -174,8 +174,10 @@ export class Bitcoin {
     data.vin.forEach((vin) => {
       const txHash = Buffer.from(vin.txid, "hex").reverse();
       const vout = vin.vout;
-      const scriptSig = Buffer.alloc(0);
       const sequence = vin.sequence;
+      const scriptSig = vin.scriptsig
+        ? Buffer.from(vin.scriptsig, "hex")
+        : undefined;
       tx.addInput(txHash, vout, sequence, scriptSig);
     });
 
@@ -278,12 +280,12 @@ export class Bitcoin {
    * @param {string} txHex - The hexadecimal string of the signed transaction.
    * @param {Object} [options] - Optional parameters.
    * @param {boolean} [options.proxy=false] - Whether to use a proxy URL for the transaction broadcast.
-   * @returns {Promise<void>} A promise that resolves once the transaction is successfully broadcast.
+   * @returns {Promise<string>} A promise that resolves with the txid once the transaction is successfully broadcast
    */
   async sendTransaction(
     txHex: string,
     options?: { proxy?: boolean }
-  ): Promise<{ txid: string } | undefined> {
+  ): Promise<string | undefined> {
     try {
       const proxyUrl = options?.proxy ? "https://corsproxy.io/?" : "";
       const response = await axios.post(
@@ -339,13 +341,25 @@ export class Bitcoin {
         totalInput += utxo.value;
 
         const transaction = await this.fetchTransaction(utxo.txid);
-        const nonWitnessUtxo = transaction.toBuffer();
+        let inputOptions;
+        if (transaction.outs[utxo.vout].script.includes("0014")) {
+          inputOptions = {
+            hash: utxo.txid,
+            index: utxo.vout,
+            witnessUtxo: {
+              script: transaction.outs[utxo.vout].script,
+              value: utxo.value,
+            },
+          };
+        } else {
+          inputOptions = {
+            hash: utxo.txid,
+            index: utxo.vout,
+            nonWitnessUtxo: Buffer.from(transaction.toHex(), "hex"),
+          };
+        }
 
-        psbt.addInput({
-          hash: utxo.txid,
-          index: utxo.vout,
-          nonWitnessUtxo,
-        });
+        psbt.addInput(inputOptions);
       })
     );
 
@@ -389,21 +403,23 @@ export class Bitcoin {
     );
 
     psbt.finalizeAllInputs();
-    const tx = await this.sendTransaction(psbt.extractTransaction().toHex(), {
+    const txid = await this.sendTransaction(psbt.extractTransaction().toHex(), {
       proxy: true,
     });
 
-    toast.success(
-      <span>
-        View on {this.name}:{" "}
-        <Link
-          href={`${this.scanUrl}/tx/${tx?.txid}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Transaction Details
-        </Link>
-      </span>
-    );
+    if (txid) {
+      toast.success(
+        <span>
+          View on {this.name}:{" "}
+          <Link
+            href={`${this.scanUrl}/tx/${txid}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Transaction Details
+          </Link>
+        </span>
+      );
+    }
   }
 }
