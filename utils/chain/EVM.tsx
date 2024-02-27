@@ -283,17 +283,15 @@ class EVM {
     );
 
     if (signature) {
+      const r = `0x${signature.r}`;
+      const s = `0x${signature.s}`;
+      const v = signature.v;
       const transactionResponse = await this.sendSignedTransaction(
         transaction,
-        ethers.utils.joinSignature(signature)
+        ethers.utils.joinSignature({ r, s, v })
       );
 
-      const address = EVM.recoverAddressFromSignature(
-        transactionHash,
-        `0x${signature.r}`,
-        `0x${signature.s}`,
-        signature.v
-      );
+      const address = EVM.recoverAddressFromSignature(transactionHash, r, s, v);
 
       console.log(`BE Address: ${address}`);
 
