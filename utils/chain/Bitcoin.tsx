@@ -1,7 +1,13 @@
 import * as bitcoin from "bitcoinjs-lib";
 import axios from "axios";
-import * as bitcore from "bitcore-lib";
 import crypto from "crypto";
+import { signMPC } from "../contract/signer";
+import { ethers } from "ethers";
+import { Account } from "near-api-js";
+import ECPairFactory from "ecpair";
+import * as ecc from "tiny-secp256k1";
+
+const ECPair = ECPairFactory(ecc);
 
 export class Bitcoin {
   private network: bitcoin.networks.Network;
@@ -54,13 +60,66 @@ export class Bitcoin {
     }
   }
 
+  static deriveCanhazgasMPCAddress(
+    predecessor: string,
+    path: string
+  ): { address: string; publicKey: Buffer } {
+    function constructSpoofKey(predecessor: string, path: string): Buffer {
+      const data = Buffer.from(`${predecessor},${path}`);
+      const hash = bitcoin.crypto.sha256(data);
+      return hash;
+    }
+
+    function getBitcoinAddress(
+      predecessor: string,
+      path: string
+    ): { address: string; publicKey: Buffer } {
+      const spoofedPrivateKey = constructSpoofKey(predecessor, path);
+
+      const keyPair = ECPair.fromPrivateKey(spoofedPrivateKey, {
+        network: bitcoin.networks.bitcoin,
+      });
+
+      const { address } = bitcoin.payments.p2pkh({
+        pubkey: keyPair.publicKey,
+        network: bitcoin.networks.bitcoin,
+      });
+
+      if (!address) {
+        throw new Error("Failed to derive MPC address");
+      }
+
+      return { address, publicKey: keyPair.publicKey };
+    }
+
+    return getBitcoinAddress(predecessor, path);
+  }
+
+  constructDERFromRS(r: string, s: string) {
+    const rBuffer = Buffer.from(r, "hex");
+    const sBuffer = Buffer.from(s, "hex");
+
+    const signatureBuffer = Buffer.concat([rBuffer, sBuffer]);
+
+    const derSignature = bitcoin.script.signature.encode(signatureBuffer, 0x01);
+
+    const derSignatureHex = derSignature.slice(0, -1).toString("hex");
+
+    return derSignatureHex;
+  }
+
   async createTransaction(
-    fromAddress: string,
-    toAddress: string,
-    amountToSend: number,
-    changeAddress: string
+    data: {
+      fromAddress: string;
+      toAddress: string;
+      amountToSend: number;
+      changeAddress: string;
+    },
+    account: Account,
+    derivedPath: string,
+    contract: "production" | "canhazgas"
   ) {
-    const utxos = await this.fetchUTXOs(fromAddress);
+    const utxos = await this.fetchUTXOs(data.fromAddress);
     const feeRate = await this.fetchFeeRate();
 
     const psbt = new bitcoin.Psbt({ network: this.network });
@@ -76,88 +135,54 @@ export class Bitcoin {
     });
 
     psbt.addOutput({
-      address: toAddress,
-      value: amountToSend,
+      address: data.toAddress,
+      value: data.amountToSend,
     });
 
     const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
     const fee = estimatedSize * feeRate;
 
-    const change = totalInput - amountToSend - fee;
+    const change = totalInput - data.amountToSend - fee;
     if (change > 0) {
       psbt.addOutput({
-        address: changeAddress,
+        address: data.changeAddress,
         value: change,
       });
     }
 
-    // Implementing transaction signing
-    utxos.forEach((utxo, index) => {
-      const privateKey = this.getPrivateKeyForAddress(utxo.address);
-      if (!privateKey) {
-        throw new Error(`Missing private key for address ${utxo.address}`);
-      }
-      psbt.signInput(index, privateKey);
+    const { address, publicKey } = Bitcoin.deriveCanhazgasMPCAddress(
+      account.accountId,
+      derivedPath
+    );
+
+    console.log(address, publicKey);
+
+    const mpcKeyPair = {
+      publicKey,
+      sign: async (transactionHash: Buffer): Promise<Buffer> => {
+        const signature = await signMPC(
+          account,
+          Array.from(ethers.utils.arrayify(transactionHash)),
+          derivedPath
+        );
+
+        if (!signature) {
+          console.error("Failed to sign transaction");
+          return Buffer.alloc(0);
+        }
+
+        return Buffer.from(this.constructDERFromRS(signature?.r, signature?.s));
+      },
+    };
+
+    utxos.forEach((_, index) => {
+      psbt.signInputAsync(index, mpcKeyPair);
     });
     psbt.finalizeAllInputs();
 
-    // Constructing the transaction hex
     const txHex = psbt.extractTransaction().toHex();
 
     console.log(`Transaction Fee: ${fee} satoshis`);
     // console.log(`Transaction Hex: ${txHex}`);
   }
-
-  // Example usage
-  // static async exampleUsage() {
-  //   const bitcoinInstance = new Bitcoin({
-  //     networkType: "testnet",
-  //     explorerUrl: "https://api.blockcypher.com/v1/btc/test3/addrs/",
-  //   });
-  //   const fromAddress = "your_from_address";
-  //   const toAddress = "recipient_address";
-  //   const amountToSend = 100000;
-  //   const changeAddress = "your_change_address";
-  //   await bitcoinInstance.createTransaction(
-  //     fromAddress,
-  //     toAddress,
-  //     amountToSend,
-  //     changeAddress
-  //   );
-  // }
-
-  // async createTransaction(
-  //   fromAddress: string,
-  //   toAddress: string,
-  //   amountToSend: number,
-  //   changeAddress: string
-  // ) {
-  //   const utxos = await this.fetchUTXOs(fromAddress);
-  //   const feeRate = await this.fetchFeeRate();
-
-  //   let transaction = new bitcore.Transaction()
-  //     .from(
-  //       utxos.map((utxo) => ({
-  //         txId: utxo.txid,
-  //         outputIndex: utxo.vout,
-  //         address: fromAddress,
-  //         script: new bitcore.Script(new bitcore.Address(fromAddress)).toHex(),
-  //         satoshis: utxo.value,
-  //       }))
-  //     )
-  //     .to(toAddress, amountToSend)
-  //     .change(changeAddress)
-  //     .feePerKb(feeRate * 1000); // Fee rate is specified in satoshis per kilobyte in bitcore-lib
-
-  //   // Serialize the transaction to get its raw format
-  //   const serializedTx = transaction.uncheckedSerialize();
-
-  //   // Hash the serialized transaction using SHA-256
-  //   const hash = crypto.createHash("sha256").update(serializedTx).digest("hex");
-
-  //   // // Send the hash to the third-party service for signing
-  //   // const signedHash = await this.sendHashToThirdPartyServiceForSigning(hash);
-
-  //   // console.log(`Signed Hash: ${signedHash}`);
-  // }
 }
