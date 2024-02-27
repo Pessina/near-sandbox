@@ -13,9 +13,7 @@
     "@bitcoinerlab/secp256k1": "^1.1.1",
     "axios": "^1.6.7",
     "bitcoinjs-lib": "^6.1.5",
-    "bitcore-lib": "^10.0.23",
     "bn.js": "^5.2.1",
-    "borsh": "^2.0.0",
     "bs58": "^5.0.0",
     "bs58check": "^3.0.1",
     "buffer": "^6.0.3",
@@ -31,12 +29,10 @@
     "react-dom": "^18",
     "react-hook-form": "^7.50.1",
     "react-icons": "^5.0.1",
-    "react-toastify": "^10.0.4",
-    "tiny-secp256k1": "^2.2.3"
+    "react-toastify": "^10.0.4"
   },
   "devDependencies": {
     "@testing-library/react": "^14.2.1",
-    "@types/bitcore-lib": "^0.15.6",
     "@types/bn.js": "^5.1.5",
     "@types/bs58": "^4.0.4",
     "@types/elliptic": "^6.4.18",
