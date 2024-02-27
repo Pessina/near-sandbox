@@ -30,7 +30,7 @@ const chainsConfig = {
   btc: {
     networkType: "testnet" as const,
     // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
-    explorerUrl: "https://blockstream.info/testnet/api/",
+    rpcEndpoint: "https://blockstream.info/testnet/api/",
   },
 };
 
@@ -42,13 +42,9 @@ export default function Home() {
   const [accountBalance, setAccountBalance] = useState<string>("");
   const [chain, setChain] = useState<string>("ETH");
 
-  const ethereum = useMemo(() => {
-    return new EVM(chainsConfig.ethereum);
-  }, []);
+  const ethereum = useMemo(() => new EVM(chainsConfig.ethereum), []);
 
-  const bsc = useMemo(() => {
-    return new EVM(chainsConfig.bsc);
-  }, []);
+  const bsc = useMemo(() => new EVM(chainsConfig.bsc), []);
 
   const bitcoin = useMemo(() => new Bitcoin(chainsConfig.btc), []);
 
@@ -80,8 +76,14 @@ export default function Home() {
             );
             break;
           case "BTC":
-            console.log(
-              "Transaction preparation for BTC is not implemented yet."
+            await bitcoin.createTransaction(
+              {
+                toAddress: data.to,
+                amountToSend: parseFloat(data.value),
+              },
+              account,
+              derivedPath,
+              "canhazgas"
             );
             break;
           default:
@@ -93,7 +95,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account, bsc, chain, derivedPath, ethereum]
+    [account, bsc, chain, derivedPath, ethereum, bitcoin]
   );
 
   const derivedAddress = useMemo(() => {
@@ -121,7 +123,11 @@ export default function Home() {
 
         break;
       case "BTC":
-        return "BTC Not Implemented";
+        address = Bitcoin.deriveCanhazgasMPCAddress(
+          account.accountId,
+          derivedPath
+        ).address;
+        break;
       case "BNB":
         address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
         break;
@@ -138,10 +144,11 @@ export default function Home() {
           (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
         break;
       case "BTC":
+        // TODO: check if the conversion should be done in the function
         balance =
-          (await bitcoin.fetchBalance(
-            "tb1q2c92hr26cm964kqql5ycfy92xkl50mycc7la9e"
-          )) + " BTC";
+          parseInt((await bitcoin.fetchBalance(derivedAddress)).slice(0, 8)) /
+            100000000 +
+          " BTC";
         break;
       case "BNB":
         balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " BNB";
@@ -149,7 +156,7 @@ export default function Home() {
     }
 
     setAccountBalance(balance);
-  }, [bitcoin, bsc, chain, derivedAddress, ethereum]);
+  }, [bsc, chain, derivedAddress, ethereum, bitcoin]);
 
   return (
     <div className="h-screen w-full flex justify-center items-center">

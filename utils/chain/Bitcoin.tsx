@@ -5,23 +5,60 @@ import { signMPC } from "../contract/signer";
 import { ethers } from "ethers";
 import { Account } from "near-api-js";
 import ECPairFactory from "ecpair";
-import * as ecc from "tiny-secp256k1";
+import ecc from "@bitcoinerlab/secp256k1";
 
-const ECPair = ECPairFactory(ecc);
-
+type Transaction = {
+  txid: string;
+  version: number;
+  locktime: number;
+  size: number;
+  weight: number;
+  fee: number;
+  vin: Array<{
+    txid: string;
+    vout: number;
+    is_coinbase: boolean;
+    scriptsig: string;
+    scriptsig_asm: string;
+    inner_redeemscript_asm: string;
+    inner_witnessscript_asm: string;
+    sequence: number;
+    witness: string[];
+    prevout: any; // Keeping it as any to simplify, replace with actual type if known
+    is_pegin: boolean;
+    issuance: any; // Keeping it as any to simplify, replace with actual type if known
+  }>;
+  vout: Array<{
+    scriptpubkey: string;
+    scriptpubkey_asm: string;
+    scriptpubkey_type: string;
+    scriptpubkey_address: string;
+    value: number;
+    valuecommitment: string;
+    asset: string;
+    assetcommitment: string;
+    pegout: any; // Keeping it as any to simplify, replace with actual type if known
+  }>;
+  status: {
+    confirmed: boolean;
+    block_height: number | null;
+    block_hash: string | null;
+    block_time: number | null;
+  };
+};
 export class Bitcoin {
   private network: bitcoin.networks.Network;
-  private explorerUrl: string;
+  private rpcEndpoint: string;
 
   constructor(config: {
     networkType: "bitcoin" | "testnet";
-    explorerUrl: string;
+    rpcEndpoint: string;
   }) {
     this.network =
       config.networkType === "testnet"
         ? bitcoin.networks.testnet
         : bitcoin.networks.bitcoin;
-    this.explorerUrl = config.explorerUrl;
+    this.rpcEndpoint = config.rpcEndpoint;
   }
 
   async fetchBalance(address: string): Promise<string> {
@@ -34,7 +71,7 @@ export class Bitcoin {
   ): Promise<Array<{ txid: string; vout: number; value: number }>> {
     try {
       const response = await axios.get(
-        `${this.explorerUrl}address/${address}/utxo`
+        `${this.rpcEndpoint}address/${address}/utxo`
       );
       const utxos = response.data.map((utxo: any) => ({
         txid: utxo.txid,
@@ -49,7 +86,7 @@ export class Bitcoin {
   }
 
   async fetchFeeRate(): Promise<number> {
-    const response = await axios.get(`${this.explorerUrl}fee-estimates`);
+    const response = await axios.get(`${this.rpcEndpoint}fee-estimates`);
     const confirmationTarget = 6;
     if (response.data && response.data[confirmationTarget]) {
       return response.data[confirmationTarget];
@@ -58,6 +95,11 @@ export class Bitcoin {
         `Fee rate data for ${confirmationTarget} blocks confirmation target is missing in the response`
       );
     }
+  }
+
+  async fetchTransaction(transactionId: string): Promise<Transaction> {
+    const response = await axios.get(`${this.rpcEndpoint}tx/${transactionId}`);
+    return response.data;
   }
 
   static deriveCanhazgasMPCAddress(
@@ -74,15 +116,17 @@ export class Bitcoin {
       predecessor: string,
       path: string
     ): { address: string; publicKey: Buffer } {
+      const ECPair = ECPairFactory(ecc);
+
       const spoofedPrivateKey = constructSpoofKey(predecessor, path);
 
       const keyPair = ECPair.fromPrivateKey(spoofedPrivateKey, {
-        network: bitcoin.networks.bitcoin,
+        network: bitcoin.networks.testnet,
       });
 
       const { address } = bitcoin.payments.p2pkh({
         pubkey: keyPair.publicKey,
-        network: bitcoin.networks.bitcoin,
+        network: bitcoin.networks.testnet,
       });
 
       if (!address) {
@@ -95,44 +139,90 @@ export class Bitcoin {
     return getBitcoinAddress(predecessor, path);
   }
 
-  constructDERFromRS(r: string, s: string) {
-    const rBuffer = Buffer.from(r, "hex");
-    const sBuffer = Buffer.from(s, "hex");
+  constructRawSignatureFromRS(r: string, s: string): Buffer {
+    // Remove the '0x' prefix
+    r = r.slice(2);
+    s = s.slice(2);
 
-    const signatureBuffer = Buffer.concat([rBuffer, sBuffer]);
+    // Ensure both r and s are 64 characters (32 bytes) long
+    r = r.padStart(64, "0");
+    s = s.padStart(64, "0");
 
-    const derSignature = bitcoin.script.signature.encode(signatureBuffer, 0x01);
+    // Concatenate r and s, and convert to a Buffer
+    const rawSignature = Buffer.from(r + s, "hex");
 
-    const derSignatureHex = derSignature.slice(0, -1).toString("hex");
+    // Ensure the resulting Buffer is exactly 64 bytes long
+    if (rawSignature.length !== 64) {
+      throw new Error("Invalid signature length.");
+    }
 
-    return derSignatureHex;
+    return rawSignature;
   }
 
   async createTransaction(
     data: {
-      fromAddress: string;
       toAddress: string;
       amountToSend: number;
-      changeAddress: string;
     },
     account: Account,
     derivedPath: string,
     contract: "production" | "canhazgas"
   ) {
-    const utxos = await this.fetchUTXOs(data.fromAddress);
+    const { address, publicKey } = Bitcoin.deriveCanhazgasMPCAddress(
+      account.accountId,
+      derivedPath
+    );
+
+    console.log(address, publicKey);
+
+    const utxos = await this.fetchUTXOs(address);
     const feeRate = await this.fetchFeeRate();
 
     const psbt = new bitcoin.Psbt({ network: this.network });
 
     let totalInput = 0;
-    utxos.forEach((utxo) => {
-      totalInput += utxo.value;
-      psbt.addInput({
-        hash: utxo.txid,
-        index: utxo.vout,
-        nonWitnessUtxo: Buffer.alloc(0),
-      });
-    });
+    await Promise.all(
+      utxos.map(async (utxo) => {
+        totalInput += utxo.value;
+
+        const transactionData = await this.fetchTransaction(utxo.txid);
+        const tx = new bitcoin.Transaction();
+
+        tx.version = transactionData.version;
+        tx.locktime = transactionData.locktime;
+
+        transactionData.vin.forEach((vin) => {
+          const txHash = Buffer.from(vin.txid, "hex").reverse();
+          const vout = vin.vout;
+          const scriptSig = Buffer.alloc(0); // scriptsig is empty for segwit inputs
+          const sequence = vin.sequence;
+          tx.addInput(txHash, vout, sequence, scriptSig);
+        });
+
+        transactionData.vout.forEach((vout) => {
+          const value = vout.value; // Make sure this is in satoshis
+          const scriptPubKey = Buffer.from(vout.scriptpubkey, "hex");
+          tx.addOutput(scriptPubKey, value);
+        });
+
+        // For segwit transactions, we need to add the witness
+        transactionData.vin.forEach((vin, index) => {
+          if (vin.witness && vin.witness.length > 0) {
+            const witness = vin.witness.map((w) => Buffer.from(w, "hex"));
+            tx.setWitness(index, witness);
+          }
+        });
+
+        // Serialize the transaction to a Buffer
+        const nonWitnessUtxo = tx.toBuffer();
+
+        psbt.addInput({
+          hash: utxo.txid,
+          index: utxo.vout,
+          nonWitnessUtxo,
+        });
+      })
+    );
 
     psbt.addOutput({
       address: data.toAddress,
@@ -145,17 +235,12 @@ export class Bitcoin {
     const change = totalInput - data.amountToSend - fee;
     if (change > 0) {
       psbt.addOutput({
-        address: data.changeAddress,
+        address: address,
         value: change,
       });
     }
 
-    const { address, publicKey } = Bitcoin.deriveCanhazgasMPCAddress(
-      account.accountId,
-      derivedPath
-    );
-
-    console.log(address, publicKey);
+    console.log(psbt.data.inputs);
 
     const mpcKeyPair = {
       publicKey,
@@ -171,18 +256,40 @@ export class Bitcoin {
           return Buffer.alloc(0);
         }
 
-        return Buffer.from(this.constructDERFromRS(signature?.r, signature?.s));
+        return Buffer.from(
+          this.constructRawSignatureFromRS(signature?.r, signature?.s)
+        );
       },
     };
 
-    utxos.forEach((_, index) => {
-      psbt.signInputAsync(index, mpcKeyPair);
-    });
+    await Promise.all(
+      utxos.map(async (_, index) => {
+        await psbt.signInputAsync(index, mpcKeyPair);
+      })
+    );
+
     psbt.finalizeAllInputs();
 
     const txHex = psbt.extractTransaction().toHex();
 
+    try {
+      const proxyUrl = "https://corsproxy.io/?";
+      const broadcastResult = await axios.post(
+        `${proxyUrl}${this.rpcEndpoint}tx`,
+        txHex
+      );
+
+      if (broadcastResult.status === 200) {
+        console.log(
+          `Transaction successfully broadcasted. TXID: ${broadcastResult.data}`
+        );
+      } else {
+        console.error("Failed to broadcast transaction:", broadcastResult.data);
+      }
+    } catch (error) {
+      console.error("Error broadcasting transaction:", error);
+    }
+
     console.log(`Transaction Fee: ${fee} satoshis`);
-    // console.log(`Transaction Hex: ${txHex}`);
   }
 }
