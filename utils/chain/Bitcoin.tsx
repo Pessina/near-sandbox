@@ -275,6 +275,18 @@ export class Bitcoin {
     }
   }
 
+  /**
+   * Handles the process of creating and broadcasting a Bitcoin transaction.
+   * This function takes the recipient's address, the amount to send, the account details,
+   * and the derived path for the account to create a transaction. It then signs the transaction
+   * using the account's private key and broadcasts it to the Bitcoin network.
+   *
+   * @param {Object} data - The transaction data.
+   * @param {string} data.to - The recipient's Bitcoin address.
+   * @param {number} data.value - The amount of Bitcoin to send (in satoshis).
+   * @param {Account} account - The account object containing the user's account information.
+   * @param {string} derivedPath - The BIP32 derivation path for the account.
+   */
   async handleTransaction(
     data: {
       to: string;
