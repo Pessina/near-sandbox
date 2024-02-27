@@ -1,6 +1,5 @@
 import * as bitcoin from "bitcoinjs-lib";
 import axios from "axios";
-import crypto from "crypto";
 import { signMPC } from "../contract/signer";
 import { ethers } from "ethers";
 import { Account } from "near-api-js";
@@ -61,11 +60,29 @@ export class Bitcoin {
     this.rpcEndpoint = config.rpcEndpoint;
   }
 
+  /**
+   * Fetches the balance for a given Bitcoin address.
+   * This function retrieves all unspent transaction outputs (UTXOs) for the address,
+   * sums their values to calculate the total balance, and returns it as a string.
+   *
+   * @param {string} address - The Bitcoin address for which to fetch the balance.
+   * @returns {Promise<string>} A promise that resolves to the balance of the address as a string.
+   */
   async fetchBalance(address: string): Promise<string> {
     const utxos = await this.fetchUTXOs(address);
     return utxos.reduce((acc, utxo) => acc + utxo.value, 0).toString();
   }
 
+  /**
+   * Fetches the Unspent Transaction Outputs (UTXOs) for a given Bitcoin address.
+   * UTXOs are important for understanding the available balance of a Bitcoin address
+   * and are necessary for constructing new transactions.
+   *
+   * @param {string} address - The Bitcoin address for which to fetch the UTXOs.
+   * @returns {Promise<Array<{ txid: string; vout: number; value: number }>>} A promise that resolves to an array of UTXOs.
+   * Each UTXO is represented as an object containing the transaction ID (`txid`), the output index within that transaction (`vout`),
+   * and the value of the output in satoshis (`value`).
+   */
   async fetchUTXOs(
     address: string
   ): Promise<Array<{ txid: string; vout: number; value: number }>> {
@@ -85,6 +102,16 @@ export class Bitcoin {
     }
   }
 
+  /**
+   * Fetches the current fee rate from the Bitcoin network.
+   * This method queries the RPC endpoint for fee estimates and returns the fee rate
+   * expected for a transaction to be confirmed within a certain number of blocks.
+   * The confirmation target is set to 6 blocks by default, which is commonly used
+   * for a balance between confirmation time and cost.
+   *
+   * @returns {Promise<number>} A promise that resolves to the fee rate in satoshis per byte.
+   * @throws {Error} Throws an error if the fee rate data for the specified confirmation target is missing.
+   */
   async fetchFeeRate(): Promise<number> {
     const response = await axios.get(`${this.rpcEndpoint}fee-estimates`);
     const confirmationTarget = 6;
@@ -97,22 +124,73 @@ export class Bitcoin {
     }
   }
 
-  async fetchTransaction(transactionId: string): Promise<Transaction> {
-    const response = await axios.get(`${this.rpcEndpoint}tx/${transactionId}`);
-    return response.data;
+  /**
+   * Fetches a Bitcoin transaction by its ID and constructs a transaction object.
+   * This function retrieves the transaction details from the blockchain using the RPC endpoint,
+   * then parses the input and output data to construct a `bitcoin.Transaction` object.
+   *
+   * @param {string} transactionId - The ID of the transaction to fetch.
+   * @returns {Promise<bitcoin.Transaction>} A promise that resolves to a `bitcoin.Transaction` object representing the fetched transaction.
+   */
+  async fetchTransaction(transactionId: string): Promise<bitcoin.Transaction> {
+    
+    const { data } = await axios.get<Transaction>(
+      `${this.rpcEndpoint}tx/${transactionId}`
+    );
+    const tx = new bitcoin.Transaction();
+
+    
+    tx.version = data.version;
+    tx.locktime = data.locktime;
+
+    
+    data.vin.forEach((vin) => {
+      const txHash = Buffer.from(vin.txid, "hex").reverse(); 
+      const vout = vin.vout; 
+      const scriptSig = Buffer.alloc(0); 
+      const sequence = vin.sequence; 
+      tx.addInput(txHash, vout, sequence, scriptSig); 
+    });
+
+    data.vout.forEach((vout) => {
+      const value = vout.value;
+      const scriptPubKey = Buffer.from(vout.scriptpubkey, "hex");
+      tx.addOutput(scriptPubKey, value);
+    });
+  
+    
+    data.vin.forEach((vin, index) => {
+      if (vin.witness && vin.witness.length > 0) {
+        const witness = vin.witness.map((w) => Buffer.from(w, "hex")); 
+        tx.setWitness(index, witness); 
+      }
+    });
+
+    return tx; 
   }
 
-  static deriveCanhazgasMPCAddress(
+  /**
+   * Derives a spoofed Bitcoin address and public key for testing purposes using a Multi-Party Computation (MPC) approach.
+   * This method simulates the derivation of a Bitcoin address and public key from a given predecessor and path,
+   * using a spoofed key generation process. It is intended for use in test environments where actual Bitcoin transactions
+   * are not feasible.
+   *
+   * @param {string} predecessor - A string representing the initial input or seed for the spoofed key generation.
+   * @param {string} path - A derivation path that influences the final generated spoofed key.
+   * @returns {{ address: string; publicKey: Buffer }} An object containing the derived spoofed Bitcoin address and public key.
+   */
+  static deriveCanhazgasMPCAddressAndPublicKey(
     predecessor: string,
     path: string
   ): { address: string; publicKey: Buffer } {
+    
     function constructSpoofKey(predecessor: string, path: string): Buffer {
       const data = Buffer.from(`${predecessor},${path}`);
       const hash = bitcoin.crypto.sha256(data);
       return hash;
     }
 
-    function getBitcoinAddress(
+    function getBitcoinAddressAndPublicKey(
       predecessor: string,
       path: string
     ): { address: string; publicKey: Buffer } {
@@ -136,22 +214,29 @@ export class Bitcoin {
       return { address, publicKey: keyPair.publicKey };
     }
 
-    return getBitcoinAddress(predecessor, path);
+    return getBitcoinAddressAndPublicKey(predecessor, path);
   }
 
-  constructRawSignatureFromRS(r: string, s: string): Buffer {
-    // Remove the '0x' prefix
-    r = r.slice(2);
-    s = s.slice(2);
+  /**
+   * Joins the r and s components of a signature into a single Buffer.
+   * This function takes an object containing the r and s components of a signature,
+   * pads them to ensure they are each 64 characters long, concatenates them,
+   * and then converts the concatenated string into a Buffer. This Buffer represents
+   * the full signature in hexadecimal format. If the resulting Buffer is not exactly
+   * 64 bytes long, an error is thrown.
+   *
+   * @param {Object} signature - An object containing the r and s components of a signature.
+   * @param {string} signature.r - The r component of the signature.
+   * @param {string} signature.s - The s component of the signature.
+   * @returns {Buffer} A Buffer representing the concatenated r and s components of the signature.
+   * @throws {Error} Throws an error if the resulting Buffer is not exactly 64 bytes long.
+   */
+  static joinSignature(signature: { r: string; s: string }): Buffer {
+    const r = signature.r.padStart(64, "0");
+    const s = signature.s.padStart(64, "0");
 
-    // Ensure both r and s are 64 characters (32 bytes) long
-    r = r.padStart(64, "0");
-    s = s.padStart(64, "0");
-
-    // Concatenate r and s, and convert to a Buffer
     const rawSignature = Buffer.from(r + s, "hex");
 
-    // Ensure the resulting Buffer is exactly 64 bytes long
     if (rawSignature.length !== 64) {
       throw new Error("Invalid signature length.");
     }
@@ -159,121 +244,20 @@ export class Bitcoin {
     return rawSignature;
   }
 
-  async createTransaction(
-    data: {
-      toAddress: string;
-      amountToSend: number;
-    },
-    account: Account,
-    derivedPath: string,
-    contract: "production" | "canhazgas"
-  ) {
-    const { address, publicKey } = Bitcoin.deriveCanhazgasMPCAddress(
-      account.accountId,
-      derivedPath
-    );
-
-    console.log(address, publicKey);
-
-    const utxos = await this.fetchUTXOs(address);
-    const feeRate = await this.fetchFeeRate();
-
-    const psbt = new bitcoin.Psbt({ network: this.network });
-
-    let totalInput = 0;
-    await Promise.all(
-      utxos.map(async (utxo) => {
-        totalInput += utxo.value;
-
-        const transactionData = await this.fetchTransaction(utxo.txid);
-        const tx = new bitcoin.Transaction();
-
-        tx.version = transactionData.version;
-        tx.locktime = transactionData.locktime;
-
-        transactionData.vin.forEach((vin) => {
-          const txHash = Buffer.from(vin.txid, "hex").reverse();
-          const vout = vin.vout;
-          const scriptSig = Buffer.alloc(0); // scriptsig is empty for segwit inputs
-          const sequence = vin.sequence;
-          tx.addInput(txHash, vout, sequence, scriptSig);
-        });
-
-        transactionData.vout.forEach((vout) => {
-          const value = vout.value; // Make sure this is in satoshis
-          const scriptPubKey = Buffer.from(vout.scriptpubkey, "hex");
-          tx.addOutput(scriptPubKey, value);
-        });
-
-        // For segwit transactions, we need to add the witness
-        transactionData.vin.forEach((vin, index) => {
-          if (vin.witness && vin.witness.length > 0) {
-            const witness = vin.witness.map((w) => Buffer.from(w, "hex"));
-            tx.setWitness(index, witness);
-          }
-        });
-
-        // Serialize the transaction to a Buffer
-        const nonWitnessUtxo = tx.toBuffer();
-
-        psbt.addInput({
-          hash: utxo.txid,
-          index: utxo.vout,
-          nonWitnessUtxo,
-        });
-      })
-    );
-
-    psbt.addOutput({
-      address: data.toAddress,
-      value: data.amountToSend,
-    });
-
-    const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
-    const fee = estimatedSize * feeRate;
-
-    const change = totalInput - data.amountToSend - fee;
-    if (change > 0) {
-      psbt.addOutput({
-        address: address,
-        value: change,
-      });
-    }
-
-    console.log(psbt.data.inputs);
-
-    const mpcKeyPair = {
-      publicKey,
-      sign: async (transactionHash: Buffer): Promise<Buffer> => {
-        const signature = await signMPC(
-          account,
-          Array.from(ethers.utils.arrayify(transactionHash)),
-          derivedPath
-        );
-
-        if (!signature) {
-          console.error("Failed to sign transaction");
-          return Buffer.alloc(0);
-        }
-
-        return Buffer.from(
-          this.constructRawSignatureFromRS(signature?.r, signature?.s)
-        );
-      },
-    };
-
-    await Promise.all(
-      utxos.map(async (_, index) => {
-        await psbt.signInputAsync(index, mpcKeyPair);
-      })
-    );
-
-    psbt.finalizeAllInputs();
-
-    const txHex = psbt.extractTransaction().toHex();
-
+  /**
+   * Sends a signed transaction to the Bitcoin network.
+   * This function takes the hexadecimal representation of a signed transaction
+   * and broadcasts it to the network using a proxy URL to bypass CORS restrictions.
+   * It logs the transaction ID if the broadcast is successful, or an error message otherwise.
+   *
+   * @param {string} txHex - The hexadecimal string of the signed transaction.
+   * @param {Object} [options] - Optional parameters.
+   * @param {boolean} [options.proxy=false] - Whether to use a proxy URL for the transaction broadcast.
+   * @returns {Promise<void>} A promise that resolves once the transaction is successfully broadcast.
+   */
+  async sendTransaction(txHex: string, options?: { proxy?:boolean }): Promise<void> {
     try {
-      const proxyUrl = "https://corsproxy.io/?";
+      const proxyUrl = options?.proxy ? "https://corsproxy.io/?" : '';
       const broadcastResult = await axios.post(
         `${proxyUrl}${this.rpcEndpoint}tx`,
         txHex
@@ -289,7 +273,82 @@ export class Bitcoin {
     } catch (error) {
       console.error("Error broadcasting transaction:", error);
     }
+  }
 
-    console.log(`Transaction Fee: ${fee} satoshis`);
+  async handleTransaction(
+    data: {
+      to: string;
+      value: number;
+    },
+    account: Account,
+    derivedPath: string,
+  ) {
+    const { address, publicKey } = Bitcoin.deriveCanhazgasMPCAddressAndPublicKey(
+      account.accountId,
+      derivedPath
+    );
+
+    const utxos = await this.fetchUTXOs(address);
+    const feeRate = await this.fetchFeeRate();
+
+    const psbt = new bitcoin.Psbt({ network: this.network });
+
+    let totalInput = 0;
+    await Promise.all(
+      utxos.map(async (utxo) => {
+        totalInput += utxo.value;
+
+        const transaction = await this.fetchTransaction(utxo.txid);
+        const nonWitnessUtxo = transaction.toBuffer();
+
+        psbt.addInput({
+          hash: utxo.txid,
+          index: utxo.vout,
+          nonWitnessUtxo,
+        });
+      })
+    );
+
+    psbt.addOutput({
+      address: data.to,
+      value: data.value,
+    });
+
+    const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
+    const fee = estimatedSize * feeRate;
+
+    const change = totalInput - data.value - fee;
+    if (change > 0) {
+      psbt.addOutput({
+        address: address,
+        value: change,
+      });
+    }
+
+    const mpcKeyPair = {
+      publicKey,
+      sign: async (transactionHash: Buffer): Promise<Buffer> => {
+        const signature = await signMPC(
+          account,
+          Array.from(ethers.utils.arrayify(transactionHash)),
+          derivedPath
+        );
+
+        if (!signature) {
+          throw new Error("Failed to sign transaction");
+        }
+
+        return Buffer.from(Bitcoin.joinSignature(signature));
+      },
+    };
+
+    await Promise.all(
+      utxos.map(async (_, index) => {
+        await psbt.signInputAsync(index, mpcKeyPair);
+      })
+    );
+
+    psbt.finalizeAllInputs();
+    await this.sendTransaction(psbt.extractTransaction().toHex(), {proxy: true})
   }
 }

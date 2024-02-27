@@ -76,14 +76,13 @@ export default function Home() {
             );
             break;
           case "BTC":
-            await bitcoin.createTransaction(
+            await bitcoin.handleTransaction(
               {
-                toAddress: data.to,
-                amountToSend: parseFloat(data.value),
+                to: data.to,
+                value: parseFloat(data.value),
               },
               account,
-              derivedPath,
-              "canhazgas"
+              derivedPath
             );
             break;
           default:
@@ -123,7 +122,7 @@ export default function Home() {
 
         break;
       case "BTC":
-        address = Bitcoin.deriveCanhazgasMPCAddress(
+        address = Bitcoin.deriveCanhazgasMPCAddressAndPublicKey(
           account.accountId,
           derivedPath
         ).address;

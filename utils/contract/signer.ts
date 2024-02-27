@@ -45,8 +45,8 @@ export async function signMPC(
 
     return {
       v: parsedJSON[0].slice(0, 2) === "02" ? 0 : 1,
-      r: `0x${parsedJSON[0].slice(2)}`,
-      s: `0x${parsedJSON[1]}`,
+      r: parsedJSON[0].slice(2),
+      s: parsedJSON[1],
     };
   }
 

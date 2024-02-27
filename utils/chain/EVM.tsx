@@ -290,8 +290,8 @@ class EVM {
 
       const address = EVM.recoverAddressFromSignature(
         transactionHash,
-        signature.r,
-        signature.s,
+        `0x${signature.r}`,
+        `0x${signature.s}`,
         signature.v
       );
 

@@ -2,7 +2,6 @@ import { beforeAll, expect, test } from "vitest";
 
 import { Account } from "near-api-js";
 import initNear from "../config/near";
-import { getEvmAddress } from "../utils/kdf/kdf-signer-canhazgas-contract";
 import { ethers } from "ethers";
 import { signMPC } from "../utils/contract/signer";
 import Ethereum from "../utils/chain/EVM";
@@ -37,7 +36,7 @@ test.skip(
     const testCases = paths.flatMap((path) =>
       transactions.map((transaction) => async () => {
         const accountId = account.accountId;
-        const feAddress = getEvmAddress(accountId, path);
+        const feAddress = Ethereum.deriveCanhazgasMPCAddress(accountId, path);
         const hashedTransaction = ethers.utils.keccak256(
           ethers.utils.serializeTransaction(transaction)
         );
@@ -51,8 +50,8 @@ test.skip(
         if (signature) {
           const beAddress = Ethereum.recoverAddressFromSignature(
             hashedTransaction,
-            signature.r,
-            signature.s,
+            `0x${signature.r}`,
+            `0x${signature.s}`,
             signature.v
           );
 
