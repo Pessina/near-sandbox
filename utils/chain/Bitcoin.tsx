@@ -5,6 +5,8 @@ import { ethers } from "ethers";
 import { Account } from "near-api-js";
 import ECPairFactory from "ecpair";
 import ecc from "@bitcoinerlab/secp256k1";
+import Link from "@/components/Link";
+import { toast } from "react-toastify";
 
 type Transaction = {
   txid: string;
@@ -46,18 +48,44 @@ type Transaction = {
   };
 };
 export class Bitcoin {
+  private name: string;
   private network: bitcoin.networks.Network;
   private rpcEndpoint: string;
+  private scanUrl: string;
 
   constructor(config: {
     networkType: "bitcoin" | "testnet";
     rpcEndpoint: string;
+    scanUrl: string;
+    name: string;
   }) {
     this.network =
       config.networkType === "testnet"
         ? bitcoin.networks.testnet
         : bitcoin.networks.bitcoin;
     this.rpcEndpoint = config.rpcEndpoint;
+    this.scanUrl = config.scanUrl;
+    this.name = config.name;
+  }
+
+  /**
+   * Converts a value from satoshis to bitcoins.
+   *
+   * @param {number} satoshis - The amount in satoshis to convert.
+   * @returns {number} The equivalent amount in bitcoins.
+   */
+  static toBTC(satoshis: number): number {
+    return satoshis / 100000000;
+  }
+
+  /**
+   * Converts a value from bitcoins to satoshis.
+   *
+   * @param {number} btc - The amount in bitcoins to convert.
+   * @returns {number} The equivalent amount in satoshis.
+   */
+  static toSatoshi(btc: number): number {
+    return btc * 100000000;
   }
 
   /**
@@ -70,7 +98,9 @@ export class Bitcoin {
    */
   async fetchBalance(address: string): Promise<string> {
     const utxos = await this.fetchUTXOs(address);
-    return utxos.reduce((acc, utxo) => acc + utxo.value, 0).toString();
+    return Bitcoin.toBTC(
+      utxos.reduce((acc, utxo) => acc + utxo.value, 0)
+    ).toString();
   }
 
   /**
@@ -133,23 +163,20 @@ export class Bitcoin {
    * @returns {Promise<bitcoin.Transaction>} A promise that resolves to a `bitcoin.Transaction` object representing the fetched transaction.
    */
   async fetchTransaction(transactionId: string): Promise<bitcoin.Transaction> {
-    
     const { data } = await axios.get<Transaction>(
       `${this.rpcEndpoint}tx/${transactionId}`
     );
     const tx = new bitcoin.Transaction();
 
-    
     tx.version = data.version;
     tx.locktime = data.locktime;
 
-    
     data.vin.forEach((vin) => {
-      const txHash = Buffer.from(vin.txid, "hex").reverse(); 
-      const vout = vin.vout; 
-      const scriptSig = Buffer.alloc(0); 
-      const sequence = vin.sequence; 
-      tx.addInput(txHash, vout, sequence, scriptSig); 
+      const txHash = Buffer.from(vin.txid, "hex").reverse();
+      const vout = vin.vout;
+      const scriptSig = Buffer.alloc(0);
+      const sequence = vin.sequence;
+      tx.addInput(txHash, vout, sequence, scriptSig);
     });
 
     data.vout.forEach((vout) => {
@@ -157,16 +184,15 @@ export class Bitcoin {
       const scriptPubKey = Buffer.from(vout.scriptpubkey, "hex");
       tx.addOutput(scriptPubKey, value);
     });
-  
-    
+
     data.vin.forEach((vin, index) => {
       if (vin.witness && vin.witness.length > 0) {
-        const witness = vin.witness.map((w) => Buffer.from(w, "hex")); 
-        tx.setWitness(index, witness); 
+        const witness = vin.witness.map((w) => Buffer.from(w, "hex"));
+        tx.setWitness(index, witness);
       }
     });
 
-    return tx; 
+    return tx;
   }
 
   /**
@@ -183,7 +209,6 @@ export class Bitcoin {
     predecessor: string,
     path: string
   ): { address: string; publicKey: Buffer } {
-    
     function constructSpoofKey(predecessor: string, path: string): Buffer {
       const data = Buffer.from(`${predecessor},${path}`);
       const hash = bitcoin.crypto.sha256(data);
@@ -255,20 +280,21 @@ export class Bitcoin {
    * @param {boolean} [options.proxy=false] - Whether to use a proxy URL for the transaction broadcast.
    * @returns {Promise<void>} A promise that resolves once the transaction is successfully broadcast.
    */
-  async sendTransaction(txHex: string, options?: { proxy?:boolean }): Promise<void> {
+  async sendTransaction(
+    txHex: string,
+    options?: { proxy?: boolean }
+  ): Promise<{ txid: string } | undefined> {
     try {
-      const proxyUrl = options?.proxy ? "https://corsproxy.io/?" : '';
-      const broadcastResult = await axios.post(
+      const proxyUrl = options?.proxy ? "https://corsproxy.io/?" : "";
+      const response = await axios.post(
         `${proxyUrl}${this.rpcEndpoint}tx`,
         txHex
       );
 
-      if (broadcastResult.status === 200) {
-        console.log(
-          `Transaction successfully broadcasted. TXID: ${broadcastResult.data}`
-        );
+      if (response.status === 200) {
+        return response.data;
       } else {
-        console.error("Failed to broadcast transaction:", broadcastResult.data);
+        console.error("Failed to broadcast transaction:", response.data);
       }
     } catch (error) {
       console.error("Error broadcasting transaction:", error);
@@ -283,7 +309,7 @@ export class Bitcoin {
    *
    * @param {Object} data - The transaction data.
    * @param {string} data.to - The recipient's Bitcoin address.
-   * @param {number} data.value - The amount of Bitcoin to send (in satoshis).
+   * @param {number} data.value - The amount of Bitcoin to send (in BTC).
    * @param {Account} account - The account object containing the user's account information.
    * @param {string} derivedPath - The BIP32 derivation path for the account.
    */
@@ -293,12 +319,14 @@ export class Bitcoin {
       value: number;
     },
     account: Account,
-    derivedPath: string,
+    derivedPath: string
   ) {
-    const { address, publicKey } = Bitcoin.deriveCanhazgasMPCAddressAndPublicKey(
-      account.accountId,
-      derivedPath
-    );
+    const satoshis = Bitcoin.toSatoshi(data.value);
+    const { address, publicKey } =
+      Bitcoin.deriveCanhazgasMPCAddressAndPublicKey(
+        account.accountId,
+        derivedPath
+      );
 
     const utxos = await this.fetchUTXOs(address);
     const feeRate = await this.fetchFeeRate();
@@ -323,13 +351,13 @@ export class Bitcoin {
 
     psbt.addOutput({
       address: data.to,
-      value: data.value,
+      value: satoshis,
     });
 
     const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
     const fee = estimatedSize * feeRate;
 
-    const change = totalInput - data.value - fee;
+    const change = totalInput - satoshis - fee;
     if (change > 0) {
       psbt.addOutput({
         address: address,
@@ -361,6 +389,21 @@ export class Bitcoin {
     );
 
     psbt.finalizeAllInputs();
-    await this.sendTransaction(psbt.extractTransaction().toHex(), {proxy: true})
+    const tx = await this.sendTransaction(psbt.extractTransaction().toHex(), {
+      proxy: true,
+    });
+
+    toast.success(
+      <span>
+        View on {this.name}:{" "}
+        <Link
+          href={`${this.scanUrl}/tx/${tx?.txid}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Transaction Details
+        </Link>
+      </span>
+    );
   }
 }

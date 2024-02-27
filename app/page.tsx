@@ -28,9 +28,11 @@ const chainsConfig = {
     name: "BNB",
   },
   btc: {
+    name: "BTC",
     networkType: "testnet" as const,
     // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
     rpcEndpoint: "https://blockstream.info/testnet/api/",
+    scanUrl: "https://blockstream.info/testnet",
   },
 };
 
@@ -143,11 +145,8 @@ export default function Home() {
           (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
         break;
       case "BTC":
-        // TODO: check if the conversion should be done in the function
         balance =
-          parseInt((await bitcoin.fetchBalance(derivedAddress)).slice(0, 8)) /
-            100000000 +
-          " BTC";
+          (await bitcoin.fetchBalance(derivedAddress)).slice(0, 8) + " BTC";
         break;
       case "BNB":
         balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " BNB";
