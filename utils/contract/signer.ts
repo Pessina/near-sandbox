@@ -31,7 +31,7 @@ export async function signMPC(
   const result = await account.functionCall({
     contractId:
       contract === Contracts.PRODUCTION
-        ? "signer.production"
+        ? "multichain-testnet-2.testnet"
         : "signer.canhazgas.testnet",
     methodName: "sign",
     args: {
@@ -75,7 +75,7 @@ export async function getRootPublicKey(
   const result = await account.functionCall({
     contractId:
       contract === Contracts.PRODUCTION
-        ? "signer.production"
+        ? "multichain-testnet-2.testnet"
         : "signer.canhazgas.testnet",
     methodName: "public_key",
     args: {},

@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import initNear from "../config/near";
-import { Account } from "near-api-js";
+import { Account, Near } from "near-api-js";
 
 const useInitNear = () => {
-  const [account, setAccount] = useState<Account | undefined>(undefined);
+  const [state, setState] = useState<
+    { account: Account; connection: Near } | undefined
+  >(undefined);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const initialize = async () => {
       try {
-        const { account } = await initNear();
-        setAccount(account);
+        setState(await initNear());
       } catch (error) {
         console.error("Failed to initialize NEAR:", error);
       } finally {
@@ -21,7 +22,7 @@ const useInitNear = () => {
     initialize();
   }, []);
 
-  return { account, isLoading };
+  return { ...state, isLoading };
 };
 
 export default useInitNear;
