@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.1.1",
+    "@near-js/transactions": "^0.2.1",
+    "@near-wallet-selector/core": "^8.5.2",
+    "@near-wallet-selector/wallet-utils": "^8.5.2",
     "axios": "^1.6.7",
     "bitcoinjs-lib": "^6.1.5",
     "bn.js": "^5.2.1",
@@ -23,7 +26,6 @@
     "elliptic": "^6.5.4",
     "ethers": "^5.7.2",
     "keccak": "^3.0.4",
-    "near-api-js": "^3.0.2",
     "next": "14.1.0",
     "react": "^18",
     "react-dom": "^18",
