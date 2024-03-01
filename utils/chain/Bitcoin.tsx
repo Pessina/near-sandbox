@@ -7,6 +7,7 @@ import ECPairFactory from "ecpair";
 import ecc from "@bitcoinerlab/secp256k1";
 import Link from "@/components/Link";
 import { toast } from "react-toastify";
+import { Contracts } from "@/types/contracts";
 
 type Transaction = {
   txid: string;
@@ -321,7 +322,8 @@ export class Bitcoin {
       value: number;
     },
     account: Account,
-    derivedPath: string
+    derivedPath: string,
+    contract: Contracts
   ) {
     const satoshis = Bitcoin.toSatoshi(data.value);
     const { address, publicKey } =
@@ -385,7 +387,8 @@ export class Bitcoin {
         const signature = await signMPC(
           account,
           Array.from(ethers.utils.arrayify(transactionHash)),
-          derivedPath
+          derivedPath,
+          contract
         );
 
         if (!signature) {

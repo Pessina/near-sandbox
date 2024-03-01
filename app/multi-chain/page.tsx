@@ -11,6 +11,7 @@ import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 import { Bitcoin } from "@/utils/chain/Bitcoin";
+import { Contracts } from "@/types/contracts";
 
 const MPC_PUBLIC_KEY =
   "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
@@ -65,7 +66,7 @@ export default function Home() {
               account,
               derivedPath,
               MPC_PUBLIC_KEY,
-              "canhazgas"
+              Contracts.CANHAZGAS
             );
             break;
           case "ETH":
@@ -74,7 +75,7 @@ export default function Home() {
               account,
               derivedPath,
               MPC_PUBLIC_KEY,
-              "canhazgas"
+              Contracts.CANHAZGAS
             );
             break;
           case "BTC":
@@ -84,7 +85,8 @@ export default function Home() {
                 value: parseFloat(data.value),
               },
               account,
-              derivedPath
+              derivedPath,
+              Contracts.CANHAZGAS
             );
             break;
           default:

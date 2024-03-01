@@ -7,6 +7,7 @@ import { signMPC } from "../contract/signer";
 import { Account } from "near-api-js";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import { Contracts } from "@/types/contracts";
 
 class EVM {
   private provider: ethers.providers.JsonRpcProvider;
@@ -259,11 +260,11 @@ class EVM {
     account: Account,
     derivedPath: string,
     publicKey: string,
-    contract: "production" | "canhazgas"
+    contract: Contracts
   ): Promise<ethers.providers.TransactionResponse | undefined> {
     const transaction = await this.attachGasAndNonce({
       from:
-        contract === "production"
+        contract === Contracts.PRODUCTION
           ? EVM.deriveProductionAddress(
               account?.accountId,
               derivedPath,
@@ -279,7 +280,8 @@ class EVM {
     const signature = await signMPC(
       account,
       Array.from(ethers.utils.arrayify(transactionHash)),
-      derivedPath
+      derivedPath,
+      contract
     );
 
     if (signature) {
