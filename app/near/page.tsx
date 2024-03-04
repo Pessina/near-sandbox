@@ -24,6 +24,10 @@ const NearPage = () => {
   const onSubmit = async (data: FormsData) => {
     if (!account) return;
 
+    const keys = await account.findAccessKey("", []);
+
+    console.log(keys);
+
     try {
       const signedDelegate = await account.signedDelegate({
         receiverId: "multichain-testnet-2.testnet",
