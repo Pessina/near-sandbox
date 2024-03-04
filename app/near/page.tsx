@@ -21,6 +21,13 @@ const NearPage = () => {
 
   const { account } = useInitNear();
 
+  const showNonce = async () => {
+    if (!account) return;
+
+    const keys = await account.findAccessKey("", []);
+    console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
+  };
+
   const onSubmit = async (data: FormsData) => {
     if (!account) return;
 
@@ -94,6 +101,13 @@ const NearPage = () => {
             Delegate
           </Button>
         </form>
+        <Button
+          type="button"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          onClick={showNonce}
+        >
+          Nonce
+        </Button>
       </div>
     </div>
   );
