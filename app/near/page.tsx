@@ -19,16 +19,15 @@ type FormsData = {
 const NearPage = () => {
   const { register, handleSubmit } = useForm<FormsData>();
 
-  const { account, connection } = useInitNear();
+  const { account } = useInitNear();
 
   const onSubmit = async (data: FormsData) => {
     if (!account) return;
 
-    const keys = await account.findAccessKey("", []);
-
-    console.log(keys);
-
     try {
+      const keys = await account.findAccessKey("", []);
+      console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
+
       const signedDelegate = await account.signedDelegate({
         receiverId: "multichain-testnet-2.testnet",
         actions: [
@@ -52,7 +51,10 @@ const NearPage = () => {
         blockHeightTtl: 60,
       });
 
-      console.log(signedDelegate);
+      console.log(
+        "Signed delegate nonce: ",
+        signedDelegate.delegateAction.nonce.toNumber()
+      );
 
       const res = await fetch(
         "http://near-relayer-testnet.api.pagoda.co/relay",
