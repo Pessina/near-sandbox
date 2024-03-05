@@ -251,7 +251,7 @@ class EVM {
    * @param {Transaction} data - Contains the transaction details such as the recipient's address and the transaction value.
    * @param {Account} account - Holds the account credentials including the unique account ID.
    * @param {string} derivedPath - Specifies the derived path utilized for the transaction signing process.
-   * @param {string} publicKey - The public key associated with the account, used in address derivation.
+   * @param {string} signerContractPublicKey - The public key associated with the account, used in address derivation.
    * @param {string} contract - Indicates the contract environment, either "production" or "canhazgas", to determine the address derivation method.
    * @returns {Promise<void>} A promise that is fulfilled once the transaction has been successfully processed.
    */
@@ -259,7 +259,7 @@ class EVM {
     data: Transaction,
     account: Account,
     derivedPath: string,
-    publicKey: string,
+    signerContractPublicKey: string,
     contract: Contracts
   ): Promise<ethers.providers.TransactionResponse | undefined> {
     const transaction = await this.attachGasAndNonce({
@@ -268,7 +268,7 @@ class EVM {
           ? EVM.deriveProductionAddress(
               account?.accountId,
               derivedPath,
-              publicKey
+              signerContractPublicKey
             )
           : EVM.deriveCanhazgasMPCAddress(account?.accountId, derivedPath),
       to: data.to,
