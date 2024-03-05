@@ -1,47 +1,47 @@
+// @ts-nocheck
+
 import { base_decode } from "near-api-js/lib/utils/serialize";
 import { ec as EC } from "elliptic";
 import BN from "bn.js";
-import keccak256 from "keccak";
+import keccak from "keccak";
 import hash from "hash.js";
 import bs58check from "bs58check";
 
-function najPublicKeyStrToUncompressedHexPoint(
-  najPublicKeyStr: string
-): string {
+function najPublicKeyStrToUncompressedHexPoint(najPublicKeyStr) {
   return (
     "04" +
     Buffer.from(base_decode(najPublicKeyStr.split(":")[1])).toString("hex")
   );
 }
 
-async function sha256Hash(str: string): Promise<string> {
+async function sha256Hash(str) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
 
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashArray = [...new Uint8Array(hashBuffer)];
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function sha256StringToScalarLittleEndian(hashString: string): BN {
-  const littleEndianString = hashString.match(/../g)?.reverse().join("") || "";
+function sha256StringToScalarLittleEndian(hashString) {
+  const littleEndianString = hashString.match(/../g).reverse().join("");
 
-  const scalar = new BN(littleEndianString, 16, "le");
+  const scalar = new BN(littleEndianString, 16);
 
   return scalar;
 }
 
 async function deriveChildPublicKey(
-  parentUncompressedPublicKeyHex: string,
-  signerId: string,
-  path: string = ""
-): Promise<string> {
+  parentUncompressedPublicKeyHex,
+  signerId,
+  path = ""
+) {
   const ec = new EC("secp256k1");
   let scalar = await sha256Hash(
     `near-mpc-recovery v0.1.0 epsilon derivation:${signerId},${path}`
   );
-  scalar = sha256StringToScalarLittleEndian(scalar).toString(16);
+  scalar = sha256StringToScalarLittleEndian(scalar);
 
   const x = parentUncompressedPublicKeyHex.substring(2, 66);
   const y = parentUncompressedPublicKeyHex.substring(66);
@@ -50,7 +50,7 @@ async function deriveChildPublicKey(
   const oldPublicKeyPoint = ec.curve.point(x, y);
 
   // Multiply the scalar by the generator point G
-  const scalarTimesG = ec.g.mul(new BN(scalar, 16));
+  const scalarTimesG = ec.g.mul(scalar);
 
   // Add the result to the old public key point
   const newPublicKeyPoint = oldPublicKeyPoint.add(scalarTimesG);
@@ -62,10 +62,8 @@ async function deriveChildPublicKey(
   );
 }
 
-function uncompressedHexPointToEvmAddress(
-  uncompressedHexPoint: string
-): string {
-  const address = keccak256("keccak256")
+function uncompressedHexPointToEvmAddress(uncompressedHexPoint) {
+  const address = keccak("keccak256")
     .update(Buffer.from(uncompressedHexPoint.substring(2), "hex"))
     .digest("hex");
 
@@ -73,9 +71,7 @@ function uncompressedHexPointToEvmAddress(
   return "0x" + address.substring(address.length - 40);
 }
 
-async function uncompressedHexPointToBtcAddress(
-  publicKeyHex: string
-): Promise<string> {
+async function uncompressedHexPointToBtcAddress(publicKeyHex) {
   // Step 1: SHA-256 hashing of the public key
   const publicKeyBytes = Uint8Array.from(Buffer.from(publicKeyHex, "hex"));
 
@@ -103,20 +99,28 @@ async function uncompressedHexPointToBtcAddress(
   return address;
 }
 
-export async function generateEthereumAddress({
-  publicKey,
-  accountId,
-  path,
-}: {
-  publicKey: string;
-  accountId: string;
-  path?: string;
-}): Promise<string> {
+export const generateEthereumAddress = async (
+  account: Account,
+  signerId: string,
+  path: string
+) => {
+  // const publicKey = await getRootPublicKey(account, Contracts.PRODUCTION);
+  // console.log(publicKey);
+
+  // if (!publicKey) return;
+
+  const publicKey =
+    "secp256k1:4HFcTSodRLVCGNVcGc4Mf2fwBBBxv9jxkGdiW2S2CA1y6UpVVRWKj6RX7d7TDt65k2Bj3w9FU4BGtt43ZvuhCnNt";
+
+  console.log({ signerId, path });
+  const uncompressedHexPoint = najPublicKeyStrToUncompressedHexPoint(publicKey);
   const childPublicKey = await deriveChildPublicKey(
-    najPublicKeyStrToUncompressedHexPoint(publicKey),
-    accountId,
-    path
+    uncompressedHexPoint,
+    "hixacif394.testnet",
+    "test"
   );
-  const evmAddress = uncompressedHexPointToEvmAddress(childPublicKey);
-  return evmAddress;
-}
+  const address = uncompressedHexPointToEvmAddress(childPublicKey);
+
+  console.log({ address });
+  return address;
+};

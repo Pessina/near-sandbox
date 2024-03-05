@@ -12,6 +12,7 @@ import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 import { Bitcoin } from "@/utils/chain/Bitcoin";
 import { Contracts } from "@/types/contracts";
+import { generateEthereumAddress } from "@/utils/kdf/kdf-osman";
 
 const MPC_PUBLIC_KEY =
   "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
@@ -66,7 +67,7 @@ export default function Home() {
               account,
               derivedPath,
               MPC_PUBLIC_KEY,
-              Contracts.CANHAZGAS
+              Contracts.PRODUCTION
             );
             break;
           case "ETH":
@@ -75,7 +76,7 @@ export default function Home() {
               account,
               derivedPath,
               MPC_PUBLIC_KEY,
-              Contracts.CANHAZGAS
+              Contracts.PRODUCTION
             );
             break;
           case "BTC":
@@ -86,7 +87,7 @@ export default function Home() {
               },
               account,
               derivedPath,
-              Contracts.CANHAZGAS
+              Contracts.PRODUCTION
             );
             break;
           default:
@@ -118,11 +119,7 @@ export default function Home() {
         address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
 
         // Osman MPC real contract
-        //  osmanAddress =  generateEthereumAddress({
-        //   publicKey: data.publicKey,
-        //   accountId: data.accountId,
-        //   path: data.path,
-        // });
+        generateEthereumAddress(account, account.accountId, derivedPath);
 
         break;
       case "BTC":
