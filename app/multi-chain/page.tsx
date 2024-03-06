@@ -11,10 +11,6 @@ import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 import { Bitcoin } from "@/utils/chain/Bitcoin";
-import {
-  generateBTCAddress,
-  generateEthereumAddress,
-} from "@/utils/kdf/kdf-osman";
 import { getRootPublicKey } from "@/utils/contract/signer";
 
 const MPC_PUBLIC_KEY =
@@ -121,33 +117,21 @@ export default function Home() {
       let address = "";
       switch (chain) {
         case "ETH":
-          // Felipe MPC real contract
-          // address = EVM.deriveProductionAddress(
-          //   data.accountId,
-          //   data.path,
-          //   data.publicKey
-          // );
-
-          // Osman MPC real contract
-          address = await generateEthereumAddress(
+          address = EVM.deriveProductionAddress(
             account.accountId,
             derivedPath,
             MPC_PUBLIC_KEY
           );
-
           break;
         case "BTC":
-          address =
-            (
-              await generateBTCAddress(
-                account.accountId,
-                derivedPath,
-                MPC_PUBLIC_KEY
-              )
-            ).address ?? "";
+          address = Bitcoin.deriveProductionAddress(
+            account.accountId,
+            derivedPath,
+            MPC_PUBLIC_KEY
+          ).address;
           break;
         case "BNB":
-          address = await generateEthereumAddress(
+          address = EVM.deriveProductionAddress(
             account.accountId,
             derivedPath,
             MPC_PUBLIC_KEY

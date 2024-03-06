@@ -1,13 +1,10 @@
 import { UnsignedTransaction, ethers } from "ethers";
-import { ec as EC } from "elliptic";
-import bs58 from "bs58";
-import BN from "bn.js";
-import crypto from "crypto";
+
 import { signMPC } from "../contract/signer";
 import { Account } from "near-api-js";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { generateEthereumAddress } from "../kdf/kdf-osman";
+import { KeyDerivation } from "../kdf";
 
 class EVM {
   private provider: ethers.providers.JsonRpcProvider;
@@ -126,64 +123,33 @@ class EVM {
    *
    * @param {string} signerId - The unique identifier of the signer.
    * @param {string} path - The derivation path.
-   * @param {string} publicKey - The public key in base58 format.
+   * @param {string} signerContractPublicKey - The public key in base58 format.
    * @returns {string} The derived EVM address.
    *
    * @example
    * const signerId = "felipe.near";
    * const path = ",ethereum,near.org";
-   * const publicKey = "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
-   * const address = deriveAddress(signerId, path, publicKey);
+   * const signerContractPublicKey = "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
+   * const address = deriveAddress(signerId, path, signerContractPublicKey);
    * console.log(address); // 0x...
    */
   static deriveProductionAddress(
     signerId: string,
     path: string,
-    publicKey: string
+    signerContractPublicKey: string
   ): string {
-    const EPSILON_DERIVATION_PREFIX =
-      "near-mpc-recovery v0.1.0 epsilon derivation:";
+    const epsilon = KeyDerivation.deriveEpsilon(signerId, path);
+    const derivedKey = KeyDerivation.deriveKey(
+      signerContractPublicKey,
+      epsilon
+    );
 
-    const secp256k1 = new EC("secp256k1");
+    const publicKeyNoPrefix = derivedKey.startsWith("04")
+      ? derivedKey.substring(2)
+      : derivedKey;
+    const hash = ethers.utils.keccak256(Buffer.from(publicKeyNoPrefix, "hex"));
 
-    function deriveEpsilon(signerId: string, path: string): string {
-      const derivationPath = `${EPSILON_DERIVATION_PREFIX}${signerId},${path}`;
-      const hash = crypto.createHash("sha256").update(derivationPath).digest();
-      const ret = new BN(hash, "le").toString("hex");
-
-      return ret;
-    }
-
-    function deriveKey(publicKeyStr: string, epsilon: string): string {
-      const base58PublicKey = publicKeyStr.split(":")[1];
-
-      const decodedPublicKey = Buffer.from(
-        bs58.decode(base58PublicKey)
-      ).toString("hex");
-
-      const publicKey = secp256k1.keyFromPublic("04" + decodedPublicKey, "hex");
-      const derivedPoint = publicKey.getPublic().add(secp256k1.g.mul(epsilon));
-      const derivedPublicKey = derivedPoint.encode("hex", false);
-
-      return derivedPublicKey;
-    }
-
-    function deriveEthAddress(derivedPublicKeyStr: string): string {
-      const publicKeyNoPrefix = derivedPublicKeyStr.startsWith("04")
-        ? derivedPublicKeyStr.substring(2)
-        : derivedPublicKeyStr;
-      const hash = ethers.utils.keccak256(
-        Buffer.from(publicKeyNoPrefix, "hex")
-      );
-
-      return "0x" + hash.substring(hash.length - 40);
-    }
-
-    const epsilon = deriveEpsilon(signerId, path);
-    const derivedKey = deriveKey(publicKey, epsilon);
-    const address = deriveEthAddress(derivedKey);
-
-    return address;
+    return "0x" + hash.substring(hash.length - 40);
   }
 
   /**
@@ -230,7 +196,7 @@ class EVM {
     derivedPath: string,
     signerContractPublicKey: string
   ): Promise<ethers.providers.TransactionResponse | undefined> {
-    const from = await generateEthereumAddress(
+    const from = EVM.deriveProductionAddress(
       account?.accountId,
       derivedPath,
       signerContractPublicKey
