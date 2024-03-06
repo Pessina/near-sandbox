@@ -326,7 +326,7 @@ export class Bitcoin {
     signerContractPublicKey: string
   ) {
     const satoshis = Bitcoin.toSatoshi(data.value);
-    const { address, publicKey } = generateBTCAddress(
+    const { address, publicKey } = await generateBTCAddress(
       account.accountId,
       derivedPath,
       signerContractPublicKey
@@ -370,7 +370,7 @@ export class Bitcoin {
       value: satoshis,
     });
 
-    const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
+    const estimatedSize = utxos.length * 178 + 2 * 34 + 10;
     const fee = estimatedSize * feeRate;
 
     const change = totalInput - satoshis - fee;

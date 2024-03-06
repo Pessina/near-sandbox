@@ -137,11 +137,14 @@ export default function Home() {
 
           break;
         case "BTC":
-          address = generateBTCAddress(
-            account.accountId,
-            derivedPath,
-            MPC_PUBLIC_KEY
-          ).address;
+          address =
+            (
+              await generateBTCAddress(
+                account.accountId,
+                derivedPath,
+                MPC_PUBLIC_KEY
+              )
+            ).address ?? "";
           break;
         case "BNB":
           address = await generateEthereumAddress(

@@ -1,30 +1,31 @@
-// @ts-nocheck
-
 import { base_decode } from "near-api-js/lib/utils/serialize";
 import { ec as EC } from "elliptic";
 import BN from "bn.js";
 import keccak from "keccak";
 import hash from "hash.js";
 import bs58check from "bs58check";
+import * as bitcoin from "bitcoinjs-lib";
 
-function najPublicKeyStrToUncompressedHexPoint(najPublicKeyStr) {
+const ec = new EC("secp256k1");
+
+function najPublicKeyStrToUncompressedHexPoint(najPublicKeyStr: any) {
   return (
     "04" +
     Buffer.from(base_decode(najPublicKeyStr.split(":")[1])).toString("hex")
   );
 }
 
-async function sha256Hash(str) {
+async function sha256Hash(str: any) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
 
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
-  const hashArray = [...new Uint8Array(hashBuffer)];
+  const hashArray = [...(new Uint8Array(hashBuffer) as any)];
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function sha256StringToScalarLittleEndian(hashString) {
+function sha256StringToScalarLittleEndian(hashString: any) {
   const littleEndianString = hashString.match(/../g).reverse().join("");
 
   const scalar = new BN(littleEndianString, 16);
@@ -33,15 +34,15 @@ function sha256StringToScalarLittleEndian(hashString) {
 }
 
 async function deriveChildPublicKey(
-  parentUncompressedPublicKeyHex,
-  signerId,
+  parentUncompressedPublicKeyHex: any,
+  signerId: any,
   path = ""
 ) {
   const ec = new EC("secp256k1");
   let scalar = await sha256Hash(
     `near-mpc-recovery v0.1.0 epsilon derivation:${signerId},${path}`
   );
-  scalar = sha256StringToScalarLittleEndian(scalar);
+  scalar = sha256StringToScalarLittleEndian(scalar) as any;
 
   const x = parentUncompressedPublicKeyHex.substring(2, 66);
   const y = parentUncompressedPublicKeyHex.substring(66);
@@ -62,7 +63,7 @@ async function deriveChildPublicKey(
   );
 }
 
-function uncompressedHexPointToEvmAddress(uncompressedHexPoint) {
+function uncompressedHexPointToEvmAddress(uncompressedHexPoint: any) {
   const address = keccak("keccak256")
     .update(Buffer.from(uncompressedHexPoint.substring(2), "hex"))
     .digest("hex");
@@ -71,7 +72,7 @@ function uncompressedHexPointToEvmAddress(uncompressedHexPoint) {
   return "0x" + address.substring(address.length - 40);
 }
 
-async function uncompressedHexPointToBtcAddress(publicKeyHex) {
+async function uncompressedHexPointToBtcAddress(publicKeyHex: any) {
   // Step 1: SHA-256 hashing of the public key
   const publicKeyBytes = Uint8Array.from(Buffer.from(publicKeyHex, "hex"));
 
@@ -119,17 +120,28 @@ export const generateBTCAddress = async (
   signerId: string,
   path: string,
   publicKey: string
-): {
+): Promise<{
   address: string;
   publicKey: Buffer;
-} => {
+}> => {
   const uncompressedHexPoint = najPublicKeyStrToUncompressedHexPoint(publicKey);
   const childPublicKey = await deriveChildPublicKey(
     uncompressedHexPoint,
     signerId,
     path
   );
-  const address = await uncompressedHexPointToBtcAddress(childPublicKey);
+  // const address = await uncompressedHexPointToBtcAddress(childPublicKey);
 
-  return { address, publicKey: Buffer.from(childPublicKey) };
+  const publicKeyBuffer = Buffer.from(childPublicKey, "hex");
+
+  const { address } = bitcoin.payments.p2pkh({
+    pubkey: publicKeyBuffer,
+    network: bitcoin.networks.testnet,
+  });
+
+  if (!address) {
+    throw new Error("BTC address not found");
+  }
+
+  return { address, publicKey: publicKeyBuffer };
 };
