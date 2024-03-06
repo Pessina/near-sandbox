@@ -204,6 +204,7 @@ export class Bitcoin {
    *
    * @param {string} signerId - A string representing the initial input or seed for the spoofed key generation.
    * @param {string} path - A derivation path that influences the final generated spoofed key.
+   * @param {string} signerContractPublicKey - The public key in base58 format.
    * @returns {{ address: string; publicKey: Buffer }} An object containing the derived spoofed Bitcoin address and public key.
    */
   static deriveProductionAddress(

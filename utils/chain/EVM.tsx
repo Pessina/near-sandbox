@@ -130,7 +130,7 @@ class EVM {
    * const signerId = "felipe.near";
    * const path = ",ethereum,near.org";
    * const signerContractPublicKey = "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
-   * const address = deriveAddress(signerId, path, signerContractPublicKey);
+   * const address = deriveProductionAddress(signerId, path, signerContractPublicKey);
    * console.log(address); // 0x...
    */
   static deriveProductionAddress(
