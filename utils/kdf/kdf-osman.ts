@@ -100,27 +100,36 @@ async function uncompressedHexPointToBtcAddress(publicKeyHex) {
 }
 
 export const generateEthereumAddress = async (
-  account: Account,
   signerId: string,
-  path: string
+  path: string,
+  publicKey: string
 ) => {
-  // const publicKey = await getRootPublicKey(account, Contracts.PRODUCTION);
-  // console.log(publicKey);
-
-  // if (!publicKey) return;
-
-  const publicKey =
-    "secp256k1:4HFcTSodRLVCGNVcGc4Mf2fwBBBxv9jxkGdiW2S2CA1y6UpVVRWKj6RX7d7TDt65k2Bj3w9FU4BGtt43ZvuhCnNt";
-
-  console.log({ signerId, path });
   const uncompressedHexPoint = najPublicKeyStrToUncompressedHexPoint(publicKey);
   const childPublicKey = await deriveChildPublicKey(
     uncompressedHexPoint,
-    "hixacif394.testnet",
-    "test"
+    signerId,
+    path
   );
   const address = uncompressedHexPointToEvmAddress(childPublicKey);
 
-  console.log({ address });
   return address;
+};
+
+export const generateBTCAddress = async (
+  signerId: string,
+  path: string,
+  publicKey: string
+): {
+  address: string;
+  publicKey: Buffer;
+} => {
+  const uncompressedHexPoint = najPublicKeyStrToUncompressedHexPoint(publicKey);
+  const childPublicKey = await deriveChildPublicKey(
+    uncompressedHexPoint,
+    signerId,
+    path
+  );
+  const address = await uncompressedHexPointToBtcAddress(childPublicKey);
+
+  return { address, publicKey: Buffer.from(childPublicKey) };
 };

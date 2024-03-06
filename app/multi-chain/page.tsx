@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import Loader from "@/components/Loader";
 import useInitNear from "@/hooks/useInitNear";
@@ -11,11 +11,14 @@ import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 import { Bitcoin } from "@/utils/chain/Bitcoin";
-import { Contracts } from "@/types/contracts";
-import { generateEthereumAddress } from "@/utils/kdf/kdf-osman";
+import {
+  generateBTCAddress,
+  generateEthereumAddress,
+} from "@/utils/kdf/kdf-osman";
+import { getRootPublicKey } from "@/utils/contract/signer";
 
 const MPC_PUBLIC_KEY =
-  "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
+  "secp256k1:4HFcTSodRLVCGNVcGc4Mf2fwBBBxv9jxkGdiW2S2CA1y6UpVVRWKj6RX7d7TDt65k2Bj3w9FU4BGtt43ZvuhCnNt";
 
 const chainsConfig = {
   ethereum: {
@@ -42,8 +45,9 @@ export default function Home() {
   const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, isLoading: isNearLoading } = useInitNear();
-  const [derivedPath, setDerivedPath] = useState<string>("");
-  const [accountBalance, setAccountBalance] = useState<string>("");
+  const [derivedPath, setDerivedPath] = useState("");
+  const [derivedAddress, setDerivedAddress] = useState("");
+  const [accountBalance, setAccountBalance] = useState("");
   const [chain, setChain] = useState<string>("ETH");
 
   const ethereum = useMemo(() => new EVM(chainsConfig.ethereum), []);
@@ -66,8 +70,7 @@ export default function Home() {
               data,
               account,
               derivedPath,
-              MPC_PUBLIC_KEY,
-              Contracts.PRODUCTION
+              MPC_PUBLIC_KEY
             );
             break;
           case "ETH":
@@ -75,8 +78,7 @@ export default function Home() {
               data,
               account,
               derivedPath,
-              MPC_PUBLIC_KEY,
-              Contracts.PRODUCTION
+              MPC_PUBLIC_KEY
             );
             break;
           case "BTC":
@@ -87,7 +89,7 @@ export default function Home() {
               },
               account,
               derivedPath,
-              Contracts.PRODUCTION
+              MPC_PUBLIC_KEY
             );
             break;
           default:
@@ -102,38 +104,58 @@ export default function Home() {
     [account, bsc, chain, derivedPath, ethereum, bitcoin]
   );
 
-  const derivedAddress = useMemo(() => {
-    if (!account) return "Invalid account";
+  useEffect(() => {
+    const getAddress = async () => {
+      if (!account) {
+        setDerivedAddress("");
+        return;
+      }
 
-    let address = "";
-    switch (chain) {
-      case "ETH":
-        // Felipe MPC real contract
-        // address = EVM.deriveProductionAddress(
-        //   data.accountId,
-        //   data.path,
-        //   data.publicKey
-        // );
+      // const publicKey = await getRootPublicKey(account, Contracts.PRODUCTION);
 
-        // Felipe MPC fake contract
-        address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
+      // if (!publicKey) {
+      //   setDerivedAddress("");
+      //   return;
+      // }
 
-        // Osman MPC real contract
-        generateEthereumAddress(account, account.accountId, derivedPath);
+      let address = "";
+      switch (chain) {
+        case "ETH":
+          // Felipe MPC real contract
+          // address = EVM.deriveProductionAddress(
+          //   data.accountId,
+          //   data.path,
+          //   data.publicKey
+          // );
 
-        break;
-      case "BTC":
-        address = Bitcoin.deriveCanhazgasMPCAddressAndPublicKey(
-          account.accountId,
-          derivedPath
-        ).address;
-        break;
-      case "BNB":
-        address = EVM.deriveCanhazgasMPCAddress(account.accountId, derivedPath);
-        break;
-    }
+          // Osman MPC real contract
+          address = await generateEthereumAddress(
+            account.accountId,
+            derivedPath,
+            MPC_PUBLIC_KEY
+          );
 
-    return address;
+          break;
+        case "BTC":
+          address = generateBTCAddress(
+            account.accountId,
+            derivedPath,
+            MPC_PUBLIC_KEY
+          ).address;
+          break;
+        case "BNB":
+          address = await generateEthereumAddress(
+            account.accountId,
+            derivedPath,
+            MPC_PUBLIC_KEY
+          );
+          break;
+      }
+
+      setDerivedAddress(address);
+    };
+
+    getAddress();
   }, [account, chain, derivedPath]);
 
   const getAccountBalance = useCallback(async () => {

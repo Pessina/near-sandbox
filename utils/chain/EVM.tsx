@@ -7,7 +7,7 @@ import { signMPC } from "../contract/signer";
 import { Account } from "near-api-js";
 import Link from "next/link";
 import { toast } from "react-toastify";
-import { Contracts } from "@/types/contracts";
+import { generateEthereumAddress } from "../kdf/kdf-osman";
 
 class EVM {
   private provider: ethers.providers.JsonRpcProvider;
@@ -24,36 +24,6 @@ class EVM {
     this.provider = new ethers.providers.JsonRpcProvider(config.providerUrl);
     this.scanUrl = config.scanUrl;
     this.name = config.name;
-  }
-
-  /**
-   * Attempts to recover the signer's address from a signature using r, s, and the original message.
-   *
-   * @param {string} messageHash - The original message that was signed.
-   * @param {string} r - The r component of the signature.
-   * @param {string} s - The s component of the signature.
-   * @param {string} v - The v component of the signature.
-   * @returns {string | undefined} The recovered address, or undefined if address could not be recovered.
-   */
-  static recoverAddressFromSignature(
-    messageHash: string,
-    r: string,
-    s: string,
-    v: number
-  ): string | undefined {
-    try {
-      const recoveredAddress = ethers.utils.recoverAddress(messageHash, {
-        r,
-        s,
-        v,
-      });
-
-      return recoveredAddress;
-    } catch (error) {
-      console.error(`Address recovery failed:`, error);
-    }
-
-    return undefined;
   }
 
   /**
@@ -225,23 +195,23 @@ class EVM {
    * @param {string} path - The derivation path used for generating the address.
    * @returns {string} A promise that resolves to the derived EVM address.
    */
-  static deriveCanhazgasMPCAddress(signerId: string, path: string): string {
-    function constructSpoofKey(
-      predecessor: string,
-      path: string
-    ): ethers.utils.SigningKey {
-      const data = ethers.utils.toUtf8Bytes(`${predecessor},${path}`);
-      const hash = ethers.utils.sha256(data);
-      return new ethers.utils.SigningKey(hash);
-    }
+  // static deriveCanhazgasMPCAddress(signerId: string, path: string): string {
+  //   function constructSpoofKey(
+  //     predecessor: string,
+  //     path: string
+  //   ): ethers.utils.SigningKey {
+  //     const data = ethers.utils.toUtf8Bytes(`${predecessor},${path}`);
+  //     const hash = ethers.utils.sha256(data);
+  //     return new ethers.utils.SigningKey(hash);
+  //   }
 
-    function getEvmAddress(predecessor: string, path: string): string {
-      const signingKey = constructSpoofKey(predecessor, path);
-      return ethers.utils.computeAddress(signingKey.publicKey);
-    }
+  //   function getEvmAddress(predecessor: string, path: string): string {
+  //     const signingKey = constructSpoofKey(predecessor, path);
+  //     return ethers.utils.computeAddress(signingKey.publicKey);
+  //   }
 
-    return getEvmAddress(signerId, path);
-  }
+  //   return getEvmAddress(signerId, path);
+  // }
 
   /**
    * Orchestrates the transaction execution process by attaching necessary gas and nonce, signing, and then sending the transaction.
@@ -252,25 +222,22 @@ class EVM {
    * @param {Account} account - Holds the account credentials including the unique account ID.
    * @param {string} derivedPath - Specifies the derived path utilized for the transaction signing process.
    * @param {string} signerContractPublicKey - The public key associated with the account, used in address derivation.
-   * @param {string} contract - Indicates the contract environment, either "production" or "canhazgas", to determine the address derivation method.
    * @returns {Promise<void>} A promise that is fulfilled once the transaction has been successfully processed.
    */
   async handleTransaction(
     data: Transaction,
     account: Account,
     derivedPath: string,
-    signerContractPublicKey: string,
-    contract: Contracts
+    signerContractPublicKey: string
   ): Promise<ethers.providers.TransactionResponse | undefined> {
+    const from = await generateEthereumAddress(
+      account?.accountId,
+      derivedPath,
+      signerContractPublicKey
+    );
+
     const transaction = await this.attachGasAndNonce({
-      from:
-        contract === Contracts.PRODUCTION
-          ? EVM.deriveProductionAddress(
-              account?.accountId,
-              derivedPath,
-              signerContractPublicKey
-            )
-          : EVM.deriveCanhazgasMPCAddress(account?.accountId, derivedPath),
+      from,
       to: data.to,
       value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
     });
@@ -280,22 +247,34 @@ class EVM {
     const signature = await signMPC(
       account,
       Array.from(ethers.utils.arrayify(transactionHash)),
-      derivedPath,
-      contract
+      derivedPath
     );
 
     if (signature) {
       const r = `0x${signature.r}`;
       const s = `0x${signature.s}`;
-      const v = signature.v;
+      const v = [0, 1].find((currV) => {
+        const address = ethers.utils.recoverAddress(transactionHash, {
+          r,
+          s,
+          v: currV,
+        });
+
+        if (from.toLowerCase() === address.toLowerCase()) {
+          console.log(`BE Address: ${address}`);
+
+          return true;
+        }
+      });
+
+      if (v === undefined) {
+        throw new Error("Failed to recover address from signature.");
+      }
+
       const transactionResponse = await this.sendSignedTransaction(
         transaction,
         ethers.utils.joinSignature({ r, s, v })
       );
-
-      const address = EVM.recoverAddressFromSignature(transactionHash, r, s, v);
-
-      console.log(`BE Address: ${address}`);
 
       toast.success(
         <span>

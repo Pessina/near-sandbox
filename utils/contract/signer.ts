@@ -1,4 +1,3 @@
-import { Contracts } from "@/types/contracts";
 import BN from "bn.js";
 import { Account } from "near-api-js";
 
@@ -18,8 +17,7 @@ import { Account } from "near-api-js";
 export async function signMPC(
   account: Account,
   payload: number[],
-  path: string,
-  contract: Contracts
+  path: string
 ): Promise<
   | {
       v: number;
@@ -29,13 +27,10 @@ export async function signMPC(
   | undefined
 > {
   const result = await account.functionCall({
-    contractId:
-      contract === Contracts.PRODUCTION
-        ? "multichain-testnet-2.testnet"
-        : "signer.canhazgas.testnet",
+    contractId: "multichain-testnet-2.testnet",
     methodName: "sign",
     args: {
-      payload: payload,
+      payload: payload.slice().reverse(),
       path,
     },
     gas: new BN("300000000000000"),
@@ -69,14 +64,11 @@ export async function signMPC(
  * @returns {Promise<string | undefined>} The public key as a string if the call is successful, otherwise undefined.
  */
 export async function getRootPublicKey(
-  account: Account,
-  contract: "canhazgas" | "production"
+  account: Account
 ): Promise<string | undefined> {
   const result = await account.functionCall({
-    contractId:
-      contract === Contracts.PRODUCTION
-        ? "multichain-testnet-2.testnet"
-        : "signer.canhazgas.testnet",
+    contractId: "multichain-testnet-2.testnet",
+
     methodName: "public_key",
     args: {},
     gas: new BN("300000000000000"),

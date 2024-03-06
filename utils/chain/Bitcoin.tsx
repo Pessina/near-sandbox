@@ -7,7 +7,7 @@ import ECPairFactory from "ecpair";
 import ecc from "@bitcoinerlab/secp256k1";
 import Link from "@/components/Link";
 import { toast } from "react-toastify";
-import { Contracts } from "@/types/contracts";
+import { generateBTCAddress } from "../kdf/kdf-osman";
 
 type Transaction = {
   txid: string;
@@ -208,42 +208,42 @@ export class Bitcoin {
    * @param {string} path - A derivation path that influences the final generated spoofed key.
    * @returns {{ address: string; publicKey: Buffer }} An object containing the derived spoofed Bitcoin address and public key.
    */
-  static deriveCanhazgasMPCAddressAndPublicKey(
-    predecessor: string,
-    path: string
-  ): { address: string; publicKey: Buffer } {
-    function constructSpoofKey(predecessor: string, path: string): Buffer {
-      const data = Buffer.from(`${predecessor},${path}`);
-      const hash = bitcoin.crypto.sha256(data);
-      return hash;
-    }
+  // static deriveCanhazgasMPCAddressAndPublicKey(
+  //   predecessor: string,
+  //   path: string
+  // ): { address: string; publicKey: Buffer } {
+  //   function constructSpoofKey(predecessor: string, path: string): Buffer {
+  //     const data = Buffer.from(`${predecessor},${path}`);
+  //     const hash = bitcoin.crypto.sha256(data);
+  //     return hash;
+  //   }
 
-    function getBitcoinAddressAndPublicKey(
-      predecessor: string,
-      path: string
-    ): { address: string; publicKey: Buffer } {
-      const ECPair = ECPairFactory(ecc);
+  //   function getBitcoinAddressAndPublicKey(
+  //     predecessor: string,
+  //     path: string
+  //   ): { address: string; publicKey: Buffer } {
+  //     const ECPair = ECPairFactory(ecc);
 
-      const spoofedPrivateKey = constructSpoofKey(predecessor, path);
+  //     const spoofedPrivateKey = constructSpoofKey(predecessor, path);
 
-      const keyPair = ECPair.fromPrivateKey(spoofedPrivateKey, {
-        network: bitcoin.networks.testnet,
-      });
+  //     const keyPair = ECPair.fromPrivateKey(spoofedPrivateKey, {
+  //       network: bitcoin.networks.testnet,
+  //     });
 
-      const { address } = bitcoin.payments.p2pkh({
-        pubkey: keyPair.publicKey,
-        network: bitcoin.networks.testnet,
-      });
+  //     const { address } = bitcoin.payments.p2pkh({
+  //       pubkey: keyPair.publicKey,
+  //       network: bitcoin.networks.testnet,
+  //     });
 
-      if (!address) {
-        throw new Error("Failed to derive MPC address");
-      }
+  //     if (!address) {
+  //       throw new Error("Failed to derive MPC address");
+  //     }
 
-      return { address, publicKey: keyPair.publicKey };
-    }
+  //     return { address, publicKey: keyPair.publicKey };
+  //   }
 
-    return getBitcoinAddressAndPublicKey(predecessor, path);
-  }
+  //   return getBitcoinAddressAndPublicKey(predecessor, path);
+  // }
 
   /**
    * Joins the r and s components of a signature into a single Buffer.
@@ -323,14 +323,14 @@ export class Bitcoin {
     },
     account: Account,
     derivedPath: string,
-    contract: Contracts
+    signerContractPublicKey: string
   ) {
     const satoshis = Bitcoin.toSatoshi(data.value);
-    const { address, publicKey } =
-      Bitcoin.deriveCanhazgasMPCAddressAndPublicKey(
-        account.accountId,
-        derivedPath
-      );
+    const { address, publicKey } = generateBTCAddress(
+      account.accountId,
+      derivedPath,
+      signerContractPublicKey
+    );
 
     const utxos = await this.fetchUTXOs(address);
     const feeRate = await this.fetchFeeRate();
@@ -387,8 +387,7 @@ export class Bitcoin {
         const signature = await signMPC(
           account,
           Array.from(ethers.utils.arrayify(transactionHash)),
-          derivedPath,
-          contract
+          derivedPath
         );
 
         if (!signature) {
