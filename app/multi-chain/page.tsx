@@ -37,6 +37,12 @@ const chainsConfig = {
   },
 };
 
+enum Chain {
+  ETH = "ETH",
+  BNB = "BNB",
+  BTC = "BTC",
+}
+
 export default function Home() {
   const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
@@ -44,7 +50,7 @@ export default function Home() {
   const [derivedPath, setDerivedPath] = useState("");
   const [derivedAddress, setDerivedAddress] = useState("");
   const [accountBalance, setAccountBalance] = useState("");
-  const [chain, setChain] = useState<string>("ETH");
+  const [chain, setChain] = useState<Chain>(Chain.ETH);
 
   const ethereum = useMemo(() => new EVM(chainsConfig.ethereum), []);
 
@@ -61,7 +67,7 @@ export default function Home() {
       setIsSendingTransaction(true);
       try {
         switch (chain) {
-          case "BNB":
+          case Chain.BNB:
             await bsc.handleTransaction(
               data,
               account,
@@ -69,7 +75,7 @@ export default function Home() {
               MPC_PUBLIC_KEY
             );
             break;
-          case "ETH":
+          case Chain.ETH:
             await ethereum.handleTransaction(
               data,
               account,
@@ -77,7 +83,7 @@ export default function Home() {
               MPC_PUBLIC_KEY
             );
             break;
-          case "BTC":
+          case Chain.BTC:
             await bitcoin.handleTransaction(
               {
                 to: data.to,
@@ -177,12 +183,12 @@ export default function Home() {
             value={chain}
             onChange={(e) => {
               setAccountBalance("");
-              setChain(e.target.value);
+              setChain(e.target.value as Chain);
             }}
             options={[
-              { value: "ETH", label: "ETH" },
-              { value: "BTC", label: "BTC" },
-              { value: "BNB", label: "BNB" },
+              { value: Chain.ETH, label: "ETH" },
+              { value: Chain.BTC, label: "BTC" },
+              { value: Chain.BNB, label: "BNB" },
             ]}
           />
           <div className="grid grid-cols-2 gap-4">
