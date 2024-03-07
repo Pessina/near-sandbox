@@ -376,7 +376,7 @@ export class Bitcoin {
       sign: async (transactionHash: Buffer): Promise<Buffer> => {
         const signature = await signMPC(
           account,
-          Array.from(ethers.utils.arrayify(transactionHash)),
+          Array.from(ethers.getBytes(transactionHash)),
           derivedPath
         );
 

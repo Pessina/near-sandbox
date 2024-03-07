@@ -1,4 +1,4 @@
-import { UnsignedTransaction, ethers } from "ethers";
+import { ethers, parseEther } from "ethers";
 
 import { signMPC } from "../contract/signer";
 import { Account } from "near-api-js";
@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { KeyDerivation } from "../kdf";
 
 class EVM {
-  private provider: ethers.providers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider;
   private scanUrl: string;
   private name: string;
 
@@ -18,7 +18,7 @@ class EVM {
    * @param {string} [config.providerUrl] - The URL for the EVM JSON RPC provider.
    */
   constructor(config: { providerUrl: string; scanUrl: string; name: string }) {
-    this.provider = new ethers.providers.JsonRpcProvider(config.providerUrl);
+    this.provider = new ethers.JsonRpcProvider(config.providerUrl);
     this.scanUrl = config.scanUrl;
     this.name = config.name;
   }
@@ -30,11 +30,11 @@ class EVM {
    * @returns {string} The hashed transaction ready for signature.
    */
   static prepareTransactionForSignature(
-    transaction: UnsignedTransaction
+    transaction: ethers.TransactionLike
   ): string {
     const serializedTransaction =
-      ethers.utils.serializeTransaction(transaction);
-    const transactionHash = ethers.utils.keccak256(serializedTransaction);
+      ethers.Transaction.from(transaction).unsignedSerialized;
+    const transactionHash = ethers.keccak256(serializedTransaction);
 
     return transactionHash;
   }
@@ -46,15 +46,15 @@ class EVM {
    * @returns {Promise<string>} The transaction hash of the executed transaction.
    */
   async sendSignedTransaction(
-    transaction: UnsignedTransaction,
-    signature: string
-  ): Promise<ethers.providers.TransactionResponse> {
+    transaction: ethers.TransactionLike,
+    signature: ethers.SignatureLike
+  ): Promise<ethers.TransactionResponse> {
     try {
-      const serializedTransaction = ethers.utils.serializeTransaction(
-        transaction,
-        ethers.utils.joinSignature(signature)
-      );
-      return this.provider.sendTransaction(serializedTransaction);
+      const serializedTransaction = ethers.Transaction.from({
+        ...transaction,
+        signature,
+      }).serialized;
+      return this.provider.broadcastTransaction(serializedTransaction);
     } catch (error) {
       console.error(`Transaction execution failed:`, error);
       throw new Error("Failed to send signed transaction.");
@@ -72,11 +72,11 @@ class EVM {
    * @returns {Promise<ethers.providers.TransactionRequest>} A new transaction object augmented with gas price, gas limit, and chain ID.
    */
   async attachGasAndNonce(
-    transaction: Omit<ethers.providers.TransactionRequest, "from"> & {
+    transaction: Omit<ethers.TransactionLike, "from"> & {
       from: string;
     }
-  ): Promise<UnsignedTransaction> {
-    const gasPrice = await this.provider.getGasPrice();
+  ): Promise<ethers.TransactionLike> {
+    const feeData = await this.provider.getFeeData();
     const gasLimit = await this.provider.estimateGas(transaction);
     const nonce = await this.provider.getTransactionCount(
       transaction.from,
@@ -87,9 +87,9 @@ class EVM {
 
     return {
       ...rest,
-      gasLimit: ethers.utils.hexlify(gasLimit),
-      gasPrice: ethers.utils.hexlify(gasPrice),
-      chainId: this.provider.network.chainId,
+      gasPrice: feeData.gasPrice,
+      gasLimit,
+      chainId: this.provider._network.chainId,
       nonce,
       type: 0,
     };
@@ -107,7 +107,7 @@ class EVM {
   async getBalance(address: string): Promise<string> {
     try {
       const balance = await this.provider.getBalance(address);
-      return ethers.utils.formatEther(balance);
+      return ethers.formatEther(balance);
     } catch (error) {
       console.error(`Failed to fetch balance for address ${address}:`, error);
       throw new Error("Failed to fetch balance.");
@@ -147,37 +147,10 @@ class EVM {
     const publicKeyNoPrefix = derivedKey.startsWith("04")
       ? derivedKey.substring(2)
       : derivedKey;
-    const hash = ethers.utils.keccak256(Buffer.from(publicKeyNoPrefix, "hex"));
+    const hash = ethers.keccak256(Buffer.from(publicKeyNoPrefix, "hex"));
 
     return "0x" + hash.substring(hash.length - 40);
   }
-
-  /**
-   * Derives a fake MPC (Multi-Party Computation) address for testing purposes.
-   * This method simulates the derivation of an EVM address from a given signer ID and path,
-   * using a spoofed key generation process.
-   *
-   * @param {string} signerId - The unique identifier of the signer.
-   * @param {string} path - The derivation path used for generating the address.
-   * @returns {string} A promise that resolves to the derived EVM address.
-   */
-  // static deriveCanhazgasMPCAddress(signerId: string, path: string): string {
-  //   function constructSpoofKey(
-  //     predecessor: string,
-  //     path: string
-  //   ): ethers.utils.SigningKey {
-  //     const data = ethers.utils.toUtf8Bytes(`${predecessor},${path}`);
-  //     const hash = ethers.utils.sha256(data);
-  //     return new ethers.utils.SigningKey(hash);
-  //   }
-
-  //   function getEvmAddress(predecessor: string, path: string): string {
-  //     const signingKey = constructSpoofKey(predecessor, path);
-  //     return ethers.utils.computeAddress(signingKey.publicKey);
-  //   }
-
-  //   return getEvmAddress(signerId, path);
-  // }
 
   /**
    * Orchestrates the transaction execution process by attaching necessary gas and nonce, signing, and then sending the transaction.
@@ -195,7 +168,7 @@ class EVM {
     account: Account,
     derivedPath: string,
     signerContractPublicKey: string
-  ): Promise<ethers.providers.TransactionResponse | undefined> {
+  ): Promise<ethers.TransactionLike | undefined> {
     const from = EVM.deriveProductionAddress(
       account?.accountId,
       derivedPath,
@@ -205,14 +178,14 @@ class EVM {
     const transaction = await this.attachGasAndNonce({
       from,
       to: data.to,
-      value: ethers.utils.hexlify(ethers.utils.parseEther(data.value)),
+      value: parseEther(data.value),
     });
 
     const transactionHash = EVM.prepareTransactionForSignature(transaction);
 
     const signature = await signMPC(
       account,
-      Array.from(ethers.utils.arrayify(transactionHash)),
+      Array.from(ethers.getBytes(transactionHash)),
       derivedPath
     );
 
@@ -220,17 +193,13 @@ class EVM {
       const r = `0x${signature.r}`;
       const s = `0x${signature.s}`;
       const v = [0, 1].find((currV) => {
-        const address = ethers.utils.recoverAddress(transactionHash, {
+        const address = ethers.recoverAddress(transactionHash, {
           r,
           s,
           v: currV,
         });
 
-        if (from.toLowerCase() === address.toLowerCase()) {
-          console.log(`BE Address: ${address}`);
-
-          return true;
-        }
+        return from.toLowerCase() === address.toLowerCase();
       });
 
       if (v === undefined) {
@@ -239,7 +208,7 @@ class EVM {
 
       const transactionResponse = await this.sendSignedTransaction(
         transaction,
-        ethers.utils.joinSignature({ r, s, v })
+        ethers.Signature.from({ r, s, v })
       );
 
       toast.success(
