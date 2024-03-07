@@ -123,24 +123,24 @@ class EVM {
    *
    * @param {string} signerId - The unique identifier of the signer.
    * @param {string} path - The derivation path.
-   * @param {string} signerContractPublicKey - The public key in base58 format.
+   * @param {string} derivationRootPublicKey - The root public key for derivation
    * @returns {string} The derived EVM address.
    *
    * @example
    * const signerId = "felipe.near";
    * const path = ",ethereum,near.org";
-   * const signerContractPublicKey = "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
-   * const address = deriveProductionAddress(signerId, path, signerContractPublicKey);
+   * const derivationRootPublicKey = "secp256k1:37aFybhUHCxRdDkuCcB3yHzxqK7N8EQ745MujyAQohXSsYymVeHzhLxKvZ2qYeRHf3pGFiAsxqFJZjpF9gP2JV5u";
+   * const address = deriveProductionAddress(signerId, path, derivationRootPublicKey);
    * console.log(address); // 0x...
    */
   static deriveProductionAddress(
     signerId: string,
     path: string,
-    signerContractPublicKey: string
+    derivationRootPublicKey: string
   ): string {
     const epsilon = KeyDerivation.deriveEpsilon(signerId, path);
     const derivedKey = KeyDerivation.deriveKey(
-      signerContractPublicKey,
+      derivationRootPublicKey,
       epsilon
     );
 
@@ -159,20 +159,20 @@ class EVM {
    *
    * @param {Transaction} data - Contains the transaction details such as the recipient's address and the transaction value.
    * @param {Account} account - Holds the account credentials including the unique account ID.
-   * @param {string} derivedPath - Specifies the derived path utilized for the transaction signing process.
-   * @param {string} signerContractPublicKey - The public key associated with the account, used in address derivation.
+   * @param {string} keyPath - Specifies the key derivation path.
+   * @param {string} derivationRootPublicKey - The root public key for derivation
    * @returns {Promise<void>} A promise that is fulfilled once the transaction has been successfully processed.
    */
   async handleTransaction(
     data: Transaction,
     account: Account,
-    derivedPath: string,
-    signerContractPublicKey: string
+    keyPath: string,
+    derivationRootPublicKey: string
   ): Promise<ethers.TransactionLike | undefined> {
     const from = EVM.deriveProductionAddress(
       account?.accountId,
-      derivedPath,
-      signerContractPublicKey
+      keyPath,
+      derivationRootPublicKey
     );
 
     const transaction = await this.attachGasAndNonce({
@@ -186,7 +186,7 @@ class EVM {
     const signature = await signMPC(
       account,
       Array.from(ethers.getBytes(transactionHash)),
-      derivedPath
+      keyPath
     );
 
     if (signature) {
