@@ -20,7 +20,6 @@ export async function signMPC(
   path: string
 ): Promise<
   | {
-      v: number;
       r: string;
       s: string;
     }
@@ -43,7 +42,6 @@ export async function signMPC(
     const parsedJSON = JSON.parse(decodedValue) as [string, string];
 
     return {
-      v: parsedJSON[0].slice(0, 2) === "02" ? 0 : 1,
       r: parsedJSON[0].slice(2),
       s: parsedJSON[1],
     };
