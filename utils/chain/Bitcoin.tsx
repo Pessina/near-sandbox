@@ -204,17 +204,17 @@ export class Bitcoin {
    *
    * @param {string} signerId - A string representing the initial input or seed for the spoofed key generation.
    * @param {string} path - A derivation path that influences the final generated spoofed key.
-   * @param {string} signerContractPublicKey - The public key in base58 format.
+   * @param {string} derivationRootPublicKey - The root public key for derivation
    * @returns {{ address: string; publicKey: Buffer }} An object containing the derived spoofed Bitcoin address and public key.
    */
   static deriveProductionAddress(
     signerId: string,
     path: string,
-    signerContractPublicKey: string
+    derivationRootPublicKey: string
   ): { address: string; publicKey: Buffer } {
     const epsilon = KeyDerivation.deriveEpsilon(signerId, path);
     const derivedKey = KeyDerivation.deriveKey(
-      signerContractPublicKey,
+      derivationRootPublicKey,
       epsilon
     );
 
@@ -303,8 +303,8 @@ export class Bitcoin {
    * @param {Object} data - The transaction data.
    * @param {string} data.to - The recipient's Bitcoin address.
    * @param {number} data.value - The amount of Bitcoin to send (in BTC).
-   * @param {Account} account - The account object containing the user's account information.
-   * @param {string} derivedPath - The BIP32 derivation path for the account.
+   * @param {Account} account - The NEAR account object
+   * @param {string} keyPath - Specifies the key derivation path.
    */
   async handleTransaction(
     data: {
@@ -312,14 +312,14 @@ export class Bitcoin {
       value: number;
     },
     account: Account,
-    derivedPath: string,
-    signerContractPublicKey: string
+    keyPath: string,
+    derivationRootPublicKey: string
   ) {
     const satoshis = Bitcoin.toSatoshi(data.value);
     const { address, publicKey } = Bitcoin.deriveProductionAddress(
       account.accountId,
-      derivedPath,
-      signerContractPublicKey
+      keyPath,
+      derivationRootPublicKey
     );
 
     const utxos = await this.fetchUTXOs(address);
@@ -378,7 +378,7 @@ export class Bitcoin {
         const signature = await signMPC(
           account,
           Array.from(ethers.getBytes(transactionHash)),
-          derivedPath
+          keyPath
         );
 
         if (!signature) {
