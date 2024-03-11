@@ -325,6 +325,7 @@ export class Bitcoin {
     const utxos = await this.fetchUTXOs(address);
     const feeRate = await this.fetchFeeRate();
 
+    // TODO: select input outputs using coinselect from bitcoinlib-js
     const psbt = new bitcoin.Psbt({ network: this.network });
 
     let totalInput = 0;
