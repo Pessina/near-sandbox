@@ -66,7 +66,6 @@ export async function getRootPublicKey(
 ): Promise<string | undefined> {
   const result = await account.functionCall({
     contractId: "multichain-testnet-2.testnet",
-
     methodName: "public_key",
     args: {},
     gas: new BN("300000000000000"),
