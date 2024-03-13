@@ -361,8 +361,8 @@ export class Bitcoin {
       value: satoshis,
     });
 
-    const estimatedSize = utxos.length * 178 + 2 * 34 + 10;
-    const fee = estimatedSize * feeRate;
+    const estimatedSize = utxos.length * 148 + 2 * 34 + 10;
+    const fee = estimatedSize * (feeRate + 3);
 
     const change = totalInput - satoshis - fee;
     if (change > 0) {
