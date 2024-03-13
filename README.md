@@ -13,7 +13,7 @@ This repository contains a demo application that demonstrates the process of sig
 
 - Node.js
 - NPM package manager
-- A NEAR testnet account - Create here: https://testnet.mynearwallet.com/
+- A NEAR testnet account - Instructions to create an account: https://docs.near.org/tools/near-cli
 
 ## Setup
 
@@ -62,8 +62,8 @@ Open your browser and navigate to http://localhost:3000/multi-chain to access th
 
 The main components of the application are located in the following files:
 
-- pages/index.tsx: The main page of the application that handles user interactions and state management.
-- utils/chain/EVM.ts: Contains the EVM class that provides functions for interacting with Ethereum and Binance Smart Chain.
-- utils/chain/Bitcoin.ts: Contains the Bitcoin class that provides functions for interacting with the Bitcoin testnet.
-- utils/contract/signer.ts: Contains functions for signing transactions using the MPC (Multi-Party Computation) approach.
-- utils/kdf.ts: Contains functions for key derivation.
+- `pages/index.tsx:` The main page of the application that handles user interactions and state management.
+- `utils/chain/EVM.ts:` Contains the EVM class that provides functions for interacting with Ethereum and Binance Smart Chain.
+- `utils/chain/Bitcoin.ts:` Contains the Bitcoin class that provides functions for interacting with the Bitcoin testnet.
+- `utils/contract/signer.ts:` Contains functions for signing transactions using the smart contract.
+- `utils/kdf.ts:` Contains functions for key derivation.
