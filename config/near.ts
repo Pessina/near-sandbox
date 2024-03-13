@@ -3,9 +3,7 @@ import { parseSeedPhrase } from 'near-seed-phrase'
 
 const nearPrivKeyOverride = process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY_OVERRIDE;
 const nearAccountId = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID || "set env vars";
-console.log('aloha nearPrivKey', nearPrivKeyOverride)
 const seedPhrase = process.env.NEXT_PUBLIC_NEAR_SEED_PHRASE;
-console.log('aloha seedPhrase', seedPhrase)
 
 let keyPair
 if (!nearPrivKeyOverride) {
@@ -14,7 +12,6 @@ if (!nearPrivKeyOverride) {
     process.exit(1)
   }
   const { publicKey, secretKey } = parseSeedPhrase(seedPhrase);
-  console.log('aloha publicKey', publicKey)
   keyPair = KeyPair.fromString(secretKey);
 } else {
   console.info('Using the environment variable to override the private key, instead of using the seed phrase.')
