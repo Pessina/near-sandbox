@@ -130,7 +130,8 @@ export default function Home() {
           );
           break;
         case "BTC":
-          address = Bitcoin.deriveProductionAddress(
+          const Btc = new Bitcoin(chainsConfig.btc)
+          address = Btc.deriveProductionAddress(
             account.accountId,
             derivedPath,
             MPC_PUBLIC_KEY
