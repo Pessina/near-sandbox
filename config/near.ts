@@ -1,15 +1,29 @@
 import { KeyPair, connect, keyStores } from "near-api-js";
+import { parseSeedPhrase } from 'near-seed-phrase'
 
-if (
-  !process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY ||
-  !process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID
-) {
-  throw new Error("No private key or account id found in environment");
+const nearPrivKeyOverride = process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY_OVERRIDE;
+const nearAccountId = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID || "set env vars";
+console.log('aloha nearPrivKey', nearPrivKeyOverride)
+const seedPhrase = process.env.NEXT_PUBLIC_NEAR_SEED_PHRASE;
+console.log('aloha seedPhrase', seedPhrase)
+
+let keyPair
+if (!nearPrivKeyOverride) {
+  if (!seedPhrase) {
+    console.error('Dev, please set the environment variables')
+    process.exit(1)
+  }
+  const { publicKey, secretKey } = parseSeedPhrase(seedPhrase);
+  console.log('aloha publicKey', publicKey)
+  keyPair = KeyPair.fromString(secretKey);
+} else {
+  console.info('Using the environment variable to override the private key, instead of using the seed phrase.')
+  keyPair = KeyPair.fromString(nearPrivKeyOverride);
 }
 
-const keyPair = KeyPair.fromString(process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY);
+
 const keyStore = new keyStores.InMemoryKeyStore();
-keyStore.setKey("testnet", process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID, keyPair);
+keyStore.setKey("testnet", nearAccountId, keyPair);
 
 const config = {
   networkId: "testnet",

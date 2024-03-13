@@ -207,7 +207,7 @@ export class Bitcoin {
    * @param {string} derivationRootPublicKey - The root public key for derivation
    * @returns {{ address: string; publicKey: Buffer }} An object containing the derived spoofed Bitcoin address and public key.
    */
-  static deriveProductionAddress(
+  public deriveProductionAddress(
     signerId: string,
     path: string,
     derivationRootPublicKey: string
@@ -222,9 +222,9 @@ export class Bitcoin {
 
     const { address } = bitcoin.payments.p2pkh({
       pubkey: publicKeyBuffer,
-      network: bitcoin.networks.testnet,
+      network: this.network,
     });
-
+    
     if (!address) {
       throw new Error("Unable to derive BTC address");
     }
@@ -316,7 +316,7 @@ export class Bitcoin {
     derivationRootPublicKey: string
   ) {
     const satoshis = Bitcoin.toSatoshi(data.value);
-    const { address, publicKey } = Bitcoin.deriveProductionAddress(
+    const { address, publicKey } = this.deriveProductionAddress(
       account.accountId,
       keyPath,
       derivationRootPublicKey

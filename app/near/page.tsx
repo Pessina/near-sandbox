@@ -24,7 +24,7 @@ const NearPage = () => {
   const showNonce = async () => {
     if (!account) return;
 
-    const keys = await account.findAccessKey("", []);
+    const keys = await account.findAccessKey(account.accountId, []);
     console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
   };
 
@@ -32,7 +32,7 @@ const NearPage = () => {
     if (!account) return;
 
     try {
-      const keys = await account.findAccessKey("", []);
+      const keys = await account.findAccessKey(account.accountId, []);
       console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
 
       const signedDelegate = await account.signedDelegate({
