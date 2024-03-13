@@ -18,9 +18,41 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000/multi-chain](http://localhost:3000/multi-chain) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To create a private key needed for this repo (see `.env` file) please consult the NEAR CLI docs, especially:
+
+https://docs.near.org/tools/near-cli#near-create-account
+
+and
+
+https://docs.near.org/tools/near-cli#near-generate-key
+
+and
+
+https://docs.near.org/tools/near-cli#near-add-key
+
+## Faucets
+
+Here are some potential faucets for testnets:
+
+### ETH
+
+https://faucets.chain.link/sepolia
+https://www.infura.io/faucet/sepolia
+https://www.alchemy.com/faucets/ethereum-sepolia
+
+### BNB
+
+https://www.bnbchain.org/en/testnet-faucet
+
+### BTC
+
+https://coinfaucet.eu/en/btc-testnet/ (Chrome)
+
+## NextJS
+
+You can start editing the page by modifying `app/multi-chain/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
 
