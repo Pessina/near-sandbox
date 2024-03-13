@@ -19,15 +19,10 @@ This repository contains a demo application that demonstrates the process of sig
 
 Clone the repository:
 
-```bash
-git clone https://github.com/your-username/multi-chain-signing-demo.git
-cd multi-chain-signing-demo
-```
-
 Install the dependencies:
 
 ```bash
-yarn install
+npm i
 ```
 
 Set up the environment variables: Create a .env file in the root directory of the project and add the following variables:
