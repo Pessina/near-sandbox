@@ -1,37 +1,69 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Multi-Chain Transaction Signing Demo
 
-## Getting Started
+This repository contains a demo application that demonstrates the process of signing transactions on multiple blockchain networks using a single NEAR account. The application supports signing transactions on Ethereum (ETH), Binance Smart Chain (BNB), and Bitcoin (BTC) testnets.
 
-First, run the development server:
+## Features
+
+- Sign transactions on ETH, BNB, and BTC testnets using a NEAR account
+- Derive addresses for each supported chain based on a derivation path
+- Check account balances on each supported chain
+- Send transactions on each supported chain
+
+## Prerequisites
+
+- Node.js
+- NPM package manager
+- A NEAR testnet account - Create here: https://testnet.mynearwallet.com/
+
+## Setup
+
+Clone the repository:
+
+```bash
+git clone https://github.com/your-username/multi-chain-signing-demo.git
+cd multi-chain-signing-demo
+```
+
+Install the dependencies:
+
+```bash
+yarn install
+```
+
+Set up the environment variables: Create a .env file in the root directory of the project and add the following variables:
+
+```bash
+NEXT_PUBLIC_NEAR_ACCOUNT_ID=your-near-testnet-account-id
+NEXT_PUBLIC_NEAR_PRIVATE_KEY=your-near-testnet-private-key
+```
+
+Replace your-near-testnet-account-id with your NEAR testnet account ID and your-near-testnet-private-key with your NEAR testnet private key.
+
+## Running the Application
+
+To start the development server, run the following command:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open your browser and navigate to http://localhost:3000/multi-chain to access the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+- Select the desired chain (ETH, BNB, or BTC) from the dropdown menu.
+- Enter the derivation path for the selected chain.
+- Click the "Check Balance" button to fetch the account balance on the selected chain.
+- Enter the recipient's address in the "Address" field.
+- Enter the amount to send in the "Value" field.
+- Click the "Send Transaction" button to initiate the transaction.
 
-## Learn More
+## Code Structure
 
-To learn more about Next.js, take a look at the following resources:
+The main components of the application are located in the following files:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
-# near-sandbox
+- pages/index.tsx: The main page of the application that handles user interactions and state management.
+- utils/chain/EVM.ts: Contains the EVM class that provides functions for interacting with Ethereum and Binance Smart Chain.
+- utils/chain/Bitcoin.ts: Contains the Bitcoin class that provides functions for interacting with the Bitcoin testnet.
+- utils/contract/signer.ts: Contains functions for signing transactions using the MPC (Multi-Party Computation) approach.
+- utils/kdf.ts: Contains functions for key derivation.
