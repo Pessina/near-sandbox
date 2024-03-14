@@ -157,14 +157,14 @@ class EVM {
    * This method leverages the provided chain instance, transaction details, account credentials, and a specific derived path
    * to facilitate the execution of a transaction on the blockchain network.
    *
-   * @param {Transaction} data - Contains the transaction details such as the recipient's address and the transaction value.
+   * @param {Transaction} tx - Contains the transaction details such as the recipient's address and the transaction value.
    * @param {Account} account - Holds the account credentials including the unique account ID.
    * @param {string} keyPath - Specifies the key derivation path.
    * @param {string} derivationRootPublicKey - The root public key for derivation
    * @returns {Promise<void>} A promise that is fulfilled once the transaction has been successfully processed.
    */
   async handleTransaction(
-    data: Transaction,
+    tx: Transaction,
     account: Account,
     keyPath: string,
     derivationRootPublicKey: string
@@ -177,8 +177,9 @@ class EVM {
 
     const transaction = await this.attachGasAndNonce({
       from,
-      to: data.to,
-      value: parseEther(data.value),
+      to: tx.to,
+      value: parseEther(tx.value),
+      data: tx.data || "0x"
     });
 
     const transactionHash = EVM.prepareTransactionForSignature(transaction);
