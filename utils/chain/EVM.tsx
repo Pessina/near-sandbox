@@ -12,10 +12,12 @@ class EVM {
   private name: string;
 
   /**
-   * Initializes an EVM object with a specified configuration.
+   * Constructs an EVM instance with the provided configuration.
    *
-   * @param {object} config - The configuration object for the EVM instance.
-   * @param {string} [config.providerUrl] - The URL for the EVM JSON RPC provider.
+   * @param {Object} config - The configuration object for the EVM instance.
+   * @param {string} config.providerUrl - The URL of the Ethereum JSON RPC provider.
+   * @param {string} config.scanUrl - The base URL of the blockchain explorer.
+   * @param {string} config.name - The name of the EVM network.
    */
   constructor(config: { providerUrl: string; scanUrl: string; name: string }) {
     this.provider = new ethers.JsonRpcProvider(config.providerUrl);
@@ -40,10 +42,18 @@ class EVM {
   }
 
   /**
-   * Sends a signed transaction for execution.
+   * Sends a signed transaction to the blockchain.
    *
-   * @param {string} signedTransaction - The signed transaction payload as a hex string.
-   * @returns {Promise<string>} The transaction hash of the executed transaction.
+   * This method takes a transaction object and its corresponding signature,
+   * combines them into a single serialized transaction, and broadcasts it to the network
+   * using the current provider. If the transaction is successfully broadcasted,
+   * it returns the transaction response. If there is an error during the process,
+   * it logs the error and throws a custom error message.
+   *
+   * @param {ethers.TransactionLike} transaction - The transaction object to be sent.
+   * @param {ethers.SignatureLike} signature - The signature of the transaction.
+   * @returns {Promise<ethers.TransactionResponse>} The response of the broadcasted transaction.
+   * @throws {Error} If the transaction fails to be executed or sent.
    */
   async sendSignedTransaction(
     transaction: ethers.TransactionLike,
@@ -179,7 +189,7 @@ class EVM {
       from,
       to: tx.to,
       value: parseEther(tx.value),
-      data: tx.data || "0x"
+      data: tx.data || "0x",
     });
 
     const transactionHash = EVM.prepareTransactionForSignature(transaction);

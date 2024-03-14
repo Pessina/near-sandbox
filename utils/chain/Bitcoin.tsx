@@ -46,12 +46,23 @@ type Transaction = {
     block_time: number | null;
   };
 };
+
+type UTXO = { txid: string; vout: number; value: number; script: string };
 export class Bitcoin {
   private name: string;
   private network: bitcoin.networks.Network;
   private rpcEndpoint: string;
   private scanUrl: string;
 
+  /**
+   * Constructs a new Bitcoin instance with the provided configuration.
+   *
+   * @param {Object} config - The configuration object for the Bitcoin instance.
+   * @param {"bitcoin" | "testnet"} config.networkType - The type of Bitcoin network (mainnet or testnet).
+   * @param {string} config.rpcEndpoint - The endpoint URL for the Bitcoin RPC interface.
+   * @param {string} config.scanUrl - The URL for the blockchain explorer to view transactions.
+   * @param {string} config.name - The name of the Bitcoin network (e.g., Bitcoin, Testnet).
+   */
   constructor(config: {
     networkType: "bitcoin" | "testnet";
     rpcEndpoint: string;
@@ -104,17 +115,13 @@ export class Bitcoin {
 
   /**
    * Fetches the Unspent Transaction Outputs (UTXOs) for a given Bitcoin address.
-   * UTXOs are important for understanding the available balance of a Bitcoin address
-   * and are necessary for constructing new transactions.
    *
    * @param {string} address - The Bitcoin address for which to fetch the UTXOs.
    * @returns {Promise<Array<{ txid: string; vout: number; value: number }>>} A promise that resolves to an array of UTXOs.
    * Each UTXO is represented as an object containing the transaction ID (`txid`), the output index within that transaction (`vout`),
    * and the value of the output in satoshis (`value`).
    */
-  async fetchUTXOs(
-    address: string
-  ): Promise<Array<{ txid: string; vout: number; value: number }>> {
+  async fetchUTXOs(address: string): Promise<UTXO[]> {
     try {
       const response = await axios.get(
         `${this.rpcEndpoint}address/${address}/utxo`
@@ -123,6 +130,7 @@ export class Bitcoin {
         txid: utxo.txid,
         vout: utxo.vout,
         value: utxo.value,
+        script: utxo.script,
       }));
       return utxos;
     } catch (error) {
@@ -197,15 +205,16 @@ export class Bitcoin {
   }
 
   /**
-   * Derives a spoofed Bitcoin address and public key for testing purposes using a Multi-Party Computation (MPC) approach.
-   * This method simulates the derivation of a Bitcoin address and public key from a given predecessor and path,
-   * using a spoofed key generation process. It is intended for use in test environments where actual Bitcoin transactions
-   * are not feasible.
+   * Derives a production Bitcoin address and its corresponding public key from a given signer ID, derivation path, and root public key.
+   * This method utilizes the KeyDerivation utility to compute an epsilon value based on the signer ID and path, which is then used
+   * to derive a new public key from the provided root public key. The derived public key is used to generate a Bitcoin address
+   * in the testnet network using the P2PKH (Pay to Public Key Hash) method. If the address cannot be derived, an error is thrown.
    *
-   * @param {string} signerId - A string representing the initial input or seed for the spoofed key generation.
-   * @param {string} path - A derivation path that influences the final generated spoofed key.
-   * @param {string} derivationRootPublicKey - The root public key for derivation
-   * @returns {{ address: string; publicKey: Buffer }} An object containing the derived spoofed Bitcoin address and public key.
+   * @param {string} signerId - The unique identifier of the signer.
+   * @param {string} path - The derivation path.
+   * @param {string} derivationRootPublicKey - The root public key for derivation.
+   * @returns {{ address: string; publicKey: Buffer }} An object containing the derived Bitcoin address and its corresponding public key.
+   * @throws {Error} Throws an error if unable to derive the Bitcoin address.
    */
   static deriveProductionAddress(
     signerId: string,
