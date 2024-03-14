@@ -232,6 +232,7 @@ export default function Home() {
               placeholder="To Address"
             />
             <Input label="Value" {...register("value")} placeholder="Value" />
+            <Input label="Data" {...register("data")} placeholder="0x" />
             <Button type="submit" isLoading={isSendingTransaction}>
               Send Transaction
             </Button>
