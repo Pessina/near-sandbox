@@ -36,7 +36,7 @@ const NearPage = () => {
       console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
 
       const signedDelegate = await account.signedDelegate({
-        receiverId: "multichain-testnet-2.testnet",
+        receiverId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
         actions: [
           new Action({
             functionCall: new FunctionCall({

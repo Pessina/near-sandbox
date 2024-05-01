@@ -26,7 +26,7 @@ export async function signMPC(
   | undefined
 > {
   const result = await account.functionCall({
-    contractId: "multichain-testnet-2.testnet",
+    contractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
     methodName: "sign",
     args: {
       payload: payload.slice().reverse(),
@@ -62,10 +62,11 @@ export async function signMPC(
  * @returns {Promise<string | undefined>} The public key as a string if the call is successful, otherwise undefined.
  */
 export async function getRootPublicKey(
-  account: Account
+  account: Account,
+  contractId: string
 ): Promise<string | undefined> {
   const result = await account.functionCall({
-    contractId: "multichain-testnet-2.testnet",
+    contractId,
     methodName: "public_key",
     args: {},
     gas: new BN("300000000000000"),

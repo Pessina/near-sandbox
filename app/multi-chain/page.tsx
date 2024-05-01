@@ -12,9 +12,13 @@ import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 import { Bitcoin } from "@/utils/chain/Bitcoin";
 import { getRootPublicKey } from "@/utils/contract/signer";
-
-const MPC_PUBLIC_KEY =
-  "secp256k1:4HFcTSodRLVCGNVcGc4Mf2fwBBBxv9jxkGdiW2S2CA1y6UpVVRWKj6RX7d7TDt65k2Bj3w9FU4BGtt43ZvuhCnNt";
+import {
+  fetchDerivedBTCAddressAndPublicKey,
+  fetchDerivedEVMAddress,
+  signAndSendBTCTransaction,
+  signAndSendEVMTransaction,
+} from "multichain-tools";
+import * as bitcoinlib from "bitcoinjs-lib";
 
 const chainsConfig = {
   ethereum: {
@@ -46,11 +50,33 @@ enum Chain {
 export default function Home() {
   const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
-  const { account, isLoading: isNearLoading } = useInitNear();
+  const { account, isLoading: isNearLoading, connection } = useInitNear();
   const [derivedPath, setDerivedPath] = useState("");
   const [derivedAddress, setDerivedAddress] = useState("");
   const [accountBalance, setAccountBalance] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
+  const [mpcPublicKey, setMpcPublicKey] = useState("");
+
+  useEffect(() => {
+    const getMpcPublicKey = async () => {
+      if (!account) {
+        return;
+      }
+
+      const mpcPublicKey = await getRootPublicKey(
+        account,
+        process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+      );
+
+      if (!mpcPublicKey) {
+        throw new Error("MPC Public Key not found");
+      }
+
+      setMpcPublicKey(mpcPublicKey);
+    };
+
+    getMpcPublicKey();
+  }, [account]);
 
   const ethereum = useMemo(() => new EVM(chainsConfig.ethereum), []);
 
@@ -60,39 +86,60 @@ export default function Home() {
 
   const onSubmit = useCallback(
     async (data: Transaction) => {
-      if (!account?.accountId || !derivedPath) {
-        throw new Error("Account not found");
+      if (!account?.accountId || !derivedPath || !mpcPublicKey || !connection) {
+        throw new Error(
+          "Required account information is missing. Please ensure that the account ID, derived path, MPC public key, and connection are available."
+        );
       }
 
       setIsSendingTransaction(true);
+
       try {
         switch (chain) {
           case Chain.BNB:
-            await bsc.handleTransaction(
-              data,
-              account,
-              derivedPath,
-              MPC_PUBLIC_KEY
-            );
-            break;
           case Chain.ETH:
-            await ethereum.handleTransaction(
-              data,
-              account,
-              derivedPath,
-              MPC_PUBLIC_KEY
-            );
+            await signAndSendEVMTransaction({
+              transaction: {
+                to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+                value: "10000000000000000",
+                derivedPath,
+              },
+              chainConfig: {
+                providerUrl:
+                  "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
+                contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              },
+              nearAuthentication: {
+                networkId: "testnet",
+                keypair: await connection.config.keyStore.getKey(
+                  "testnet",
+                  process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID
+                ),
+                accountId: account.accountId,
+              },
+            });
             break;
           case Chain.BTC:
-            await bitcoin.handleTransaction(
-              {
-                to: data.to,
-                value: parseFloat(data.value),
+            await signAndSendBTCTransaction({
+              chainConfig: {
+                providerUrl: "https://blockstream.info/testnet/api/",
+                contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+                networkType: "testnet",
               },
-              account,
-              derivedPath,
-              MPC_PUBLIC_KEY
-            );
+              transaction: {
+                to: data.to,
+                value: "300000",
+                derivedPath,
+              },
+              nearAuthentication: {
+                networkId: "testnet",
+                keypair: await connection.config.keyStore.getKey(
+                  "testnet",
+                  process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID
+                ),
+                accountId: account.accountId,
+              },
+            });
             break;
           default:
             console.error("Unsupported chain selected");
@@ -103,44 +150,43 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account, bsc, chain, derivedPath, ethereum, bitcoin]
+    [account, chain, connection?.config.keyPair, derivedPath]
   );
 
   useEffect(() => {
     const getAddress = async () => {
-      if (!account) {
+      if (!account || !mpcPublicKey) {
         setDerivedAddress("");
         return;
       }
 
-      // const publicKey = await getRootPublicKey(account, Contracts.PRODUCTION);
-
-      // if (!publicKey) {
-      //   setDerivedAddress("");
-      //   return;
-      // }
-
       let address = "";
       switch (chain) {
         case "ETH":
-          address = EVM.deriveProductionAddress(
+          address = await fetchDerivedEVMAddress(
             account.accountId,
             derivedPath,
-            MPC_PUBLIC_KEY
+            "testnet",
+            process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
           );
           break;
         case "BTC":
-          address = Bitcoin.deriveProductionAddress(
-            account.accountId,
-            derivedPath,
-            MPC_PUBLIC_KEY
+          address = (
+            await fetchDerivedBTCAddressAndPublicKey(
+              account.accountId,
+              derivedPath,
+              bitcoinlib.networks.testnet,
+              "testnet",
+              process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+            )
           ).address;
           break;
         case "BNB":
-          address = EVM.deriveProductionAddress(
+          address = await fetchDerivedEVMAddress(
             account.accountId,
             derivedPath,
-            MPC_PUBLIC_KEY
+            "testnet",
+            process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
           );
           break;
       }
@@ -172,7 +218,7 @@ export default function Home() {
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
-      {!account || isNearLoading ? (
+      {!account || isNearLoading || !mpcPublicKey ? (
         <Loader />
       ) : (
         <div className="flex flex-col gap-4">
