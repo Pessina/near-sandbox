@@ -13,12 +13,15 @@ import { toast } from "react-toastify";
 import { Bitcoin } from "@/utils/chain/Bitcoin";
 import { getRootPublicKey } from "@/utils/contract/signer";
 import {
+  fetchBTCFeeProperties,
   fetchDerivedBTCAddressAndPublicKey,
   fetchDerivedEVMAddress,
+  fetchEVMFeeProperties,
   signAndSendBTCTransaction,
   signAndSendEVMTransaction,
 } from "multichain-tools";
 import * as bitcoinlib from "bitcoinjs-lib";
+import { ethers } from "ethers";
 
 const chainsConfig = {
   ethereum: {
@@ -105,8 +108,7 @@ export default function Home() {
                 derivedPath,
               },
               chainConfig: {
-                providerUrl:
-                  "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
+                providerUrl: chainsConfig.bsc.providerUrl,
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
               },
               nearAuthentication: {
@@ -122,7 +124,7 @@ export default function Home() {
           case Chain.BTC:
             await signAndSendBTCTransaction({
               chainConfig: {
-                providerUrl: "https://blockstream.info/testnet/api/",
+                providerUrl: chainsConfig.btc.rpcEndpoint,
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
                 networkType: "testnet",
               },
@@ -150,7 +152,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account, chain, connection?.config.keyPair, derivedPath]
+    [account?.accountId, chain, connection, derivedPath, mpcPublicKey]
   );
 
   useEffect(() => {
@@ -162,6 +164,7 @@ export default function Home() {
 
       let address = "";
       switch (chain) {
+        case "BNB":
         case "ETH":
           address = await fetchDerivedEVMAddress(
             account.accountId,
@@ -181,21 +184,13 @@ export default function Home() {
             )
           ).address;
           break;
-        case "BNB":
-          address = await fetchDerivedEVMAddress(
-            account.accountId,
-            derivedPath,
-            "testnet",
-            process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
-          );
-          break;
       }
 
       setDerivedAddress(address);
     };
 
     getAddress();
-  }, [account, chain, derivedPath]);
+  }, [account, chain, derivedPath, mpcPublicKey]);
 
   const getAccountBalance = useCallback(async () => {
     let balance = "";
@@ -215,6 +210,31 @@ export default function Home() {
 
     setAccountBalance(balance);
   }, [bsc, chain, derivedAddress, ethereum, bitcoin]);
+
+  const getFeeRate = useCallback(async () => {
+    let feeRate: any;
+    switch (chain) {
+      case "BNB":
+      case "ETH":
+        feeRate = await fetchEVMFeeProperties(
+          chainsConfig.ethereum.providerUrl,
+          {
+            to: "0x0987654321098765432109876543210987654321",
+            value: ethers.parseEther("1"),
+          }
+        );
+        break;
+      case "BTC":
+        feeRate = await fetchBTCFeeProperties(
+          chainsConfig.btc.rpcEndpoint,
+          "tb1qz9f5pqk3t0lhrsuppyzrctdtrtlcewjhy0jngu",
+          [{ address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", value: 10000 }]
+        );
+        break;
+    }
+
+    console.log({ feeRate });
+  }, [chain]);
 
   return (
     <div className="h-screen w-full flex justify-center items-center">
@@ -266,6 +286,9 @@ export default function Home() {
               value={accountBalance}
               disabled
             />
+            <Button onClick={getFeeRate} className="h-[38px] self-end">
+              Check fee rate
+            </Button>
           </div>
           <h2 className="text-white text-2xl font-bold">Transaction</h2>
           <form
