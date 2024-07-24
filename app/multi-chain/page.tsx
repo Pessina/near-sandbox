@@ -72,8 +72,6 @@ export default function Home() {
         process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
       );
 
-      console.log({ mpcPublicKey });
-
       if (!mpcPublicKey) {
         throw new Error("MPC Public Key not found");
       }
@@ -119,7 +117,6 @@ export default function Home() {
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
               },
               nearAuthentication,
-              fastAuthRelayerUrl: "https://near-relayer-testnet.api.pagoda.co"
             });
             break;
           case Chain.BTC:
