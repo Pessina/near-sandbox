@@ -6,12 +6,10 @@ import Loader from "@/components/Loader";
 import useInitNear from "@/hooks/useInitNear";
 import Input from "@/components/Input";
 import Select from "@/components/Select";
-import EVM from "@/utils/chain/EVM";
+
 import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
-import { Bitcoin } from "@/utils/chain/Bitcoin";
-import { getRootPublicKey } from "@/utils/contract/signer";
 import {
   fetchBTCFeeProperties,
   fetchDerivedBTCAddressAndPublicKey,
@@ -22,6 +20,8 @@ import {
 } from "multichain-tools";
 import * as bitcoinlib from "bitcoinjs-lib";
 import { ethers } from "ethers";
+import { getBalance } from "@/utils/balance";
+import { getRootPublicKey } from "@/utils/contracts";
 
 const chainsConfig = {
   ethereum: {
@@ -71,6 +71,8 @@ export default function Home() {
         process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
       );
 
+      console.log({ mpcPublicKey });
+
       if (!mpcPublicKey) {
         throw new Error("MPC Public Key not found");
       }
@@ -81,11 +83,6 @@ export default function Home() {
     getMpcPublicKey();
   }, [account]);
 
-  const ethereum = useMemo(() => new EVM(chainsConfig.ethereum), []);
-
-  const bsc = useMemo(() => new EVM(chainsConfig.bsc), []);
-
-  const bitcoin = useMemo(() => new Bitcoin(chainsConfig.btc), []);
 
   const onSubmit = useCallback(
     async (data: Transaction) => {
@@ -194,22 +191,29 @@ export default function Home() {
 
   const getAccountBalance = useCallback(async () => {
     let balance = "";
-    switch (chain) {
-      case "ETH":
-        balance =
-          (await ethereum.getBalance(derivedAddress)).slice(0, 8) + " ETH";
-        break;
-      case "BTC":
-        balance =
-          (await bitcoin.fetchBalance(derivedAddress)).slice(0, 8) + " BTC";
-        break;
-      case "BNB":
-        balance = (await bsc.getBalance(derivedAddress)).slice(0, 8) + " BNB";
-        break;
+    try {
+      switch (chain) {
+        case "ETH":
+          balance = await getBalance("ETH", chainsConfig.ethereum.providerUrl, derivedAddress);
+          balance = `${parseFloat(balance).toFixed(8)} ETH`;
+          break;
+        case "BTC":
+          balance = await getBalance("BTC", chainsConfig.btc.rpcEndpoint, derivedAddress);
+          balance = `${balance} BTC`;
+          break;
+        case "BNB":
+          balance = await getBalance("BNB", chainsConfig.bsc.providerUrl, derivedAddress);
+          balance = `${parseFloat(balance).toFixed(8)} BNB`;
+          break;
+        default:
+          throw new Error('Unsupported chain');
+      }
+      setAccountBalance(balance);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      setAccountBalance('Error');
     }
-
-    setAccountBalance(balance);
-  }, [bsc, chain, derivedAddress, ethereum, bitcoin]);
+  }, [chain, derivedAddress]);
 
   const getFeeRate = useCallback(async () => {
     let feeRate: any;
