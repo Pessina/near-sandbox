@@ -22,6 +22,7 @@ import * as bitcoinlib from "bitcoinjs-lib";
 import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
 import { getRootPublicKey } from "@/utils/contracts";
+import { NearAuthentication } from "multichain-tools/src/chains/types";
 
 const chainsConfig = {
   ethereum: {
@@ -95,27 +96,30 @@ export default function Home() {
       setIsSendingTransaction(true);
 
       try {
+        const nearAuthentication: NearAuthentication = {
+          networkId: "testnet",
+          keypair: await connection.config.keyStore.getKey(
+            "testnet",
+            process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
+          ),
+          accountId: account.accountId,
+        };
+
         switch (chain) {
           case Chain.BNB:
           case Chain.ETH:
             await signAndSendEVMTransaction({
               transaction: {
-                to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-                value: "10000000000000000",
+                to: data.to,
+                value: ethers.parseEther(data.value).toString(),
                 derivedPath,
               },
               chainConfig: {
-                providerUrl: chainsConfig.bsc.providerUrl,
+                providerUrl: chain === Chain.ETH ? chainsConfig.ethereum.providerUrl : chainsConfig.bsc.providerUrl,
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
               },
-              nearAuthentication: {
-                networkId: "testnet",
-                keypair: await connection.config.keyStore.getKey(
-                  "testnet",
-                  process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID
-                ),
-                accountId: account.accountId,
-              },
+              nearAuthentication,
+              fastAuthRelayerUrl: "https://near-relayer-testnet.api.pagoda.co"
             });
             break;
           case Chain.BTC:
@@ -127,24 +131,18 @@ export default function Home() {
               },
               transaction: {
                 to: data.to,
-                value: "300000",
+                value: Math.floor(parseFloat(data.value) * 1e8).toString(), 
                 derivedPath,
               },
-              nearAuthentication: {
-                networkId: "testnet",
-                keypair: await connection.config.keyStore.getKey(
-                  "testnet",
-                  process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID
-                ),
-                accountId: account.accountId,
-              },
+              nearAuthentication,
             });
             break;
           default:
-            console.error("Unsupported chain selected");
+            throw new Error("Unsupported chain selected");
         }
       } catch (e) {
-        console.error(e);
+        console.error("Transaction failed:", e);
+        // You might want to show an error message to the user here
       } finally {
         setIsSendingTransaction(false);
       }
