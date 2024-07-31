@@ -23,6 +23,7 @@ import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
 import { getRootPublicKey } from "@/utils/contracts";
 import { NearAuthentication } from "multichain-tools/src/chains/types";
+import * as bitcoin from 'bitcoinjs-lib'
 
 const chainsConfig = {
   ethereum: {
@@ -120,6 +121,23 @@ export default function Home() {
             });
             break;
           case Chain.BTC:
+            const btcProperties = await fetchBTCFeeProperties(
+              chainsConfig.btc.rpcEndpoint,
+              derivedAddress,
+              [
+                { address: data.to, value: Math.floor(parseFloat(data.value) * 1e8) },
+                // {
+                //   script: bitcoin.script.compile([
+                //     bitcoin.opcodes.OP_RETURN,
+                //     Buffer.from('You started a revolution.\nThank you.\nWith love,\nNEAR', 'utf8')
+                //   ]),
+                //   value: 0
+                // }
+            ]
+            );
+
+            console.log({btcProperties})
+
             await signAndSendBTCTransaction({
               chainConfig: {
                 providerUrl: chainsConfig.btc.rpcEndpoint,
@@ -127,9 +145,9 @@ export default function Home() {
                 networkType: "testnet",
               },
               transaction: {
-                to: data.to,
-                value: Math.floor(parseFloat(data.value) * 1e8).toString(), 
                 derivedPath,
+                inputs: btcProperties.inputs,
+                outputs: btcProperties.outputs,
               },
               nearAuthentication,
             });
@@ -144,7 +162,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account?.accountId, chain, connection, derivedPath, mpcPublicKey]
+    [account?.accountId, chain, connection, derivedAddress, derivedPath, mpcPublicKey]
   );
 
   useEffect(() => {
