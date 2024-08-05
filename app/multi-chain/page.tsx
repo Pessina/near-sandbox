@@ -28,8 +28,8 @@ import * as bitcoin from 'bitcoinjs-lib'
 const chainsConfig = {
   ethereum: {
     providerUrl:
-      "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
-    scanUrl: "https://sepolia.etherscan.io",
+      "https://mainnet.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
+    scanUrl: "https://etherscan.io",
     name: "ETH",
   },
   bsc: {
@@ -39,10 +39,10 @@ const chainsConfig = {
   },
   btc: {
     name: "BTC",
-    networkType: "testnet" as const,
+    networkType: "mainnet" as const,
     // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
-    rpcEndpoint: "https://blockstream.info/testnet/api/",
-    scanUrl: "https://blockstream.info/testnet",
+    rpcEndpoint: "https://blockstream.info/api/",
+    scanUrl: "https://blockstream.info",
   },
 };
 
@@ -96,9 +96,9 @@ export default function Home() {
 
       try {
         const nearAuthentication: NearAuthentication = {
-          networkId: "testnet",
+          networkId: "mainnet",
           keypair: await connection.config.keyStore.getKey(
-            "testnet",
+            "mainnet",
             process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
           ),
           accountId: account.accountId,
@@ -126,13 +126,13 @@ export default function Home() {
               derivedAddress,
               [
                 { address: data.to, value: Math.floor(parseFloat(data.value) * 1e8) },
-                // {
-                //   script: bitcoin.script.compile([
-                //     bitcoin.opcodes.OP_RETURN,
-                //     Buffer.from('You started a revolution.\nThank you.\nWith love,\nNEAR', 'utf8')
-                //   ]),
-                //   value: 0
-                // }
+                {
+                  script: bitcoin.script.compile([
+                    bitcoin.opcodes.OP_RETURN,
+                    Buffer.from('You started a revolution.\nThank you.\nWith love,\nNEAR', 'utf8')
+                  ]),
+                  value: 0
+                }
             ]
             );
 
@@ -142,7 +142,7 @@ export default function Home() {
               chainConfig: {
                 providerUrl: chainsConfig.btc.rpcEndpoint,
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-                networkType: "testnet",
+                networkType: "bitcoin",
               },
               transaction: {
                 derivedPath,
@@ -179,7 +179,7 @@ export default function Home() {
           address = await fetchDerivedEVMAddress(
             account.accountId,
             derivedPath,
-            "testnet",
+            "mainnet",
             process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
           );
           break;
@@ -188,8 +188,8 @@ export default function Home() {
             await fetchDerivedBTCAddressAndPublicKey(
               account.accountId,
               derivedPath,
-              bitcoinlib.networks.testnet,
-              "testnet",
+              bitcoinlib.networks.bitcoin,
+              "mainnet",
               process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
             )
           ).address;
