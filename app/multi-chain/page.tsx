@@ -16,19 +16,17 @@ import {
   fetchDerivedEVMAddress,
   fetchEVMFeeProperties,
   signAndSendBTCTransaction,
-  signAndSendEVMTransaction,
+  signAndSendEVMTransaction
 } from "multichain-tools";
-import * as bitcoinlib from "bitcoinjs-lib";
 import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
 import { getRootPublicKey } from "@/utils/contracts";
-import { NearAuthentication } from "multichain-tools/src/chains/types";
-import * as bitcoin from 'bitcoinjs-lib'
+
 
 const chainsConfig = {
   ethereum: {
     providerUrl:
-      "https://mainnet.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
+      "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
     scanUrl: "https://etherscan.io",
     name: "ETH",
   },
@@ -39,9 +37,9 @@ const chainsConfig = {
   },
   btc: {
     name: "BTC",
-    networkType: "mainnet" as const,
+    networkType: "testnet" as const,
     // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
-    rpcEndpoint: "https://blockstream.info/api/",
+    rpcEndpoint: "https://blockstream.info/testnet/api/",
     scanUrl: "https://blockstream.info",
   },
 };
@@ -95,10 +93,10 @@ export default function Home() {
       setIsSendingTransaction(true);
 
       try {
-        const nearAuthentication: NearAuthentication = {
-          networkId: "mainnet",
+        const nearAuthentication = {
+          networkId: "testnet" as const,
           keypair: await connection.config.keyStore.getKey(
-            "mainnet",
+            "testnet",
             process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
           ),
           accountId: account.accountId,
@@ -111,13 +109,19 @@ export default function Home() {
               transaction: {
                 to: data.to,
                 value: ethers.parseEther(data.value).toString(),
-                derivedPath,
               },
               chainConfig: {
                 providerUrl: chain === Chain.ETH ? chainsConfig.ethereum.providerUrl : chainsConfig.bsc.providerUrl,
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
               },
               nearAuthentication,
+              derivationPath: {
+                chain: 60,
+                domain: "",
+                meta: {
+                  path: derivedPath,
+                }
+              }
             });
             break;
           case Chain.BTC:
@@ -126,28 +130,35 @@ export default function Home() {
               derivedAddress,
               [
                 { address: data.to, value: Math.floor(parseFloat(data.value) * 1e8) },
-                {
-                  script: bitcoin.script.compile([
-                    bitcoin.opcodes.OP_RETURN,
-                    Buffer.from('You started a revolution.\nThank you.\nWith love,\nNEAR', 'utf8')
-                  ]),
-                  value: 0
-                }
+                // {
+                //   script: bitcoin.script.compile([
+                //     bitcoin.opcodes.OP_RETURN,
+                //     Buffer.from('You started a revolution.\nThank you.\nWith love,\nNEAR', 'utf8')
+                //   ]),
+                //   value: 0
+                // }
             ]
             );
 
-            console.log({btcProperties})
 
             await signAndSendBTCTransaction({
               chainConfig: {
                 providerUrl: chainsConfig.btc.rpcEndpoint,
                 contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-                networkType: "bitcoin",
+                network: "testnet",
               },
               transaction: {
-                derivedPath,
+                to: data.to,
+                value: data.value,
                 inputs: btcProperties.inputs,
                 outputs: btcProperties.outputs,
+              },
+              derivationPath: {
+                chain: 0,
+                domain: "",
+                meta: {
+                  path: derivedPath,
+                }
               },
               nearAuthentication,
             });
@@ -176,22 +187,35 @@ export default function Home() {
       switch (chain) {
         case "BNB":
         case "ETH":
-          address = await fetchDerivedEVMAddress(
-            account.accountId,
-            derivedPath,
-            "mainnet",
-            process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
-          );
+          console.log({account, derivedPath, contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!})
+          address = await fetchDerivedEVMAddress({
+            signerId: account.accountId,
+            path: {
+              chain: 60,
+              domain: "",
+              meta: {
+                path: derivedPath,
+              }
+            },
+            nearNetworkId: "testnet",
+            multichainContractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+          });
           break;
         case "BTC":
           address = (
-            await fetchDerivedBTCAddressAndPublicKey(
-              account.accountId,
-              derivedPath,
-              bitcoinlib.networks.bitcoin,
-              "mainnet",
-              process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
-            )
+            await fetchDerivedBTCAddressAndPublicKey({
+              signerId: account.accountId,
+              path: {
+                chain: 0,
+                domain: "",
+                meta: {
+                  path: derivedPath,
+                }
+              },
+              btcNetworkId:  'testnet',
+              nearNetworkId: "testnet",
+              multichainContractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+            })
           ).address;
           break;
       }

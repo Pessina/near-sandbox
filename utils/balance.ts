@@ -9,7 +9,7 @@ export async function getEVMBalance(providerUrl: string, address: string): Promi
 
 export async function getBTCBalance(rpcEndpoint: string, address: string): Promise<string> {
   try {
-    const response = await axios.get(`https://blockstream.info/api/address/${address}/utxo`);
+    const response = await axios.get(`https://blockstream.info/testnet/api/address/${address}/utxo`);
     const utxos = response.data;
     const totalSatoshis = utxos.reduce((acc: number, utxo: any) => acc + utxo.value, 0);
     return (totalSatoshis / 100000000).toFixed(8); // Convert satoshis to BTC and format to 8 decimal places

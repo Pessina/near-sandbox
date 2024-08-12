@@ -15,7 +15,6 @@
     "@near-wallet-selector/core": "^8.5.2",
     "@near-wallet-selector/wallet-utils": "^8.5.2",
     "axios": "^1.6.7",
-    "bitcoinjs-lib": "^6.1.5",
     "bn.js": "^5.2.1",
     "bs58": "^5.0.0",
     "bs58check": "^3.0.1",

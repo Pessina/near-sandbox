@@ -9,14 +9,14 @@ if (
 
 const keyPair = KeyPair.fromString(process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY);
 const keyStore = new keyStores.InMemoryKeyStore();
-keyStore.setKey("mainnet", process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID, keyPair);
+keyStore.setKey("testnet", process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID, keyPair);
 
 const config = {
-  networkId: "mainnet",
+  networkId: "testnet",
   keyStore,
-  nodeUrl: "https://rpc.mainnet.near.org",
-  walletUrl: "https://wallet.mainnet.near.org",
-  helperUrl: "https://helper.mainnet.near.org",
+  nodeUrl: "https://rpc.testnet.near.org",
+  walletUrl: "https://wallet.testnet.near.org",
+  helperUrl: "https://helper.testnet.near.org",
 };
 
 async function initNear() {
