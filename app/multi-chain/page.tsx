@@ -16,11 +16,12 @@ import {
   fetchDerivedEVMAddress,
   fetchEVMFeeProperties,
   signAndSendBTCTransaction,
-  signAndSendEVMTransaction
+  signAndSendEVMTransaction,
+  ChainSignaturesContract
 } from "multichain-tools";
 import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
-import { getRootPublicKey } from "@/utils/contracts";
+
 
 
 const chainsConfig = {
@@ -41,6 +42,13 @@ const chainsConfig = {
     // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
     rpcEndpoint: "https://blockstream.info/testnet/api/",
     scanUrl: "https://blockstream.info",
+  },
+  cosmos: {
+    name: "ATOM",
+    rpcEndpoint: "https://rpc.sentry-01.theta-testnet.polypore.xyz",
+    restEndpoint: "https://rest.sentry-01.theta-testnet.polypore.xyz",
+    chainId: "theta-testnet-001",
+    scanUrl: "https://explorer.theta-testnet.polypore.xyz",
   },
 };
 
@@ -66,14 +74,14 @@ export default function Home() {
         return;
       }
 
-      const mpcPublicKey = await getRootPublicKey(
+      const mpcPublicKey = await ChainSignaturesContract.getRootPublicKey(
         account,
         process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
       );
 
       if (!mpcPublicKey) {
         throw new Error("MPC Public Key not found");
-      }
+      }  
 
       setMpcPublicKey(mpcPublicKey);
     };
@@ -98,7 +106,7 @@ export default function Home() {
           keypair: await connection.config.keyStore.getKey(
             "testnet",
             process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
-          ),
+          ), 
           accountId: account.accountId,
         };
 
@@ -122,25 +130,9 @@ export default function Home() {
                   path: derivedPath,
                 }
               }
-            });
+            }); 
             break;
           case Chain.BTC:
-            const btcProperties = await fetchBTCFeeProperties(
-              chainsConfig.btc.rpcEndpoint,
-              derivedAddress,
-              [
-                { address: data.to, value: Math.floor(parseFloat(data.value) * 1e8) },
-                // {
-                //   script: bitcoin.script.compile([
-                //     bitcoin.opcodes.OP_RETURN,
-                //     Buffer.from('You started a revolution.\nThank you.\nWith love,\nNEAR', 'utf8')
-                //   ]),
-                //   value: 0
-                // }
-            ]
-            );
-
-
             await signAndSendBTCTransaction({
               chainConfig: {
                 providerUrl: chainsConfig.btc.rpcEndpoint,
@@ -150,8 +142,6 @@ export default function Home() {
               transaction: {
                 to: data.to,
                 value: data.value,
-                inputs: btcProperties.inputs,
-                outputs: btcProperties.outputs,
               },
               derivationPath: {
                 chain: 0,
@@ -173,7 +163,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account?.accountId, chain, connection, derivedAddress, derivedPath, mpcPublicKey]
+    [account.accountId, chain, connection, derivedPath, mpcPublicKey]
   );
 
   useEffect(() => {
