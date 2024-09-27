@@ -22,8 +22,6 @@ import {
 import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
 
-
-
 const chainsConfig = {
   ethereum: {
     providerUrl:
@@ -42,13 +40,6 @@ const chainsConfig = {
     // API ref: https://github.com/Blockstream/esplora/blob/master/API.md
     rpcEndpoint: "https://blockstream.info/testnet/api/",
     scanUrl: "https://blockstream.info",
-  },
-  cosmos: {
-    name: "ATOM",
-    rpcEndpoint: "https://rpc.sentry-01.theta-testnet.polypore.xyz",
-    restEndpoint: "https://rest.sentry-01.theta-testnet.polypore.xyz",
-    chainId: "theta-testnet-001",
-    scanUrl: "https://explorer.theta-testnet.polypore.xyz",
   },
 };
 
@@ -75,8 +66,8 @@ export default function Home() {
       }
 
       const mpcPublicKey = await ChainSignaturesContract.getRootPublicKey(
-        account,
-        process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+        process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+        'testnet',
       );
 
       if (!mpcPublicKey) {
@@ -163,7 +154,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account.accountId, chain, connection, derivedPath, mpcPublicKey]
+    [account?.accountId, chain, connection, derivedPath, mpcPublicKey]
   );
 
   useEffect(() => {
