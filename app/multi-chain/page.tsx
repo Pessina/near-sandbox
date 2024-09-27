@@ -17,7 +17,9 @@ import {
   fetchEVMFeeProperties,
   signAndSendBTCTransaction,
   signAndSendEVMTransaction,
-  ChainSignaturesContract
+  ChainSignaturesContract,
+  Cosmos,
+  fetchDerivedCosmosAddressAndPublicKey, 
 } from "multichain-tools";
 import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
@@ -41,12 +43,23 @@ const chainsConfig = {
     rpcEndpoint: "https://blockstream.info/testnet/api/",
     scanUrl: "https://blockstream.info",
   },
+  cosmos: {
+    name: "COSMOS",
+    rpcEndpoint: "https://rpc.osmotest5.osmosis.zone/",
+    restEndpoint: "https://lcd.osmotest5.osmosis.zone/",
+    chainId: "osmo-test-5",
+    scanUrl: "https://explorer.osmotest5.osmosis.zone",
+    bech32Prefix: "osmo",
+    denom: "uosmo",
+    slip44: 118,
+  },
 };
 
 enum Chain {
   ETH = "ETH",
   BNB = "BNB",
   BTC = "BTC",
+  COSMOS = "COSMOS",
 }
 
 export default function Home() {
@@ -144,6 +157,35 @@ export default function Home() {
               nearAuthentication,
             });
             break;
+          case Chain.COSMOS:
+            const cosmos = new Cosmos({
+              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              chainId: chainsConfig.cosmos.chainId as any,
+            });
+            await cosmos.handleTransaction(
+              {
+                messages: [
+                  {
+                    typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+                    value: {
+                      fromAddress: derivedAddress,
+                      toAddress: data.to,
+                      amount: [{ denom: "uosmo", amount: data.value }],
+                    },
+                  },
+                ],
+                memo: data.data || "",
+              },
+              nearAuthentication,
+              {
+                chain: 118,
+                domain: "",
+                meta: {
+                  path: derivedPath,
+                },
+              }
+            );
+            break;
           default:
             throw new Error("Unsupported chain selected");
         }
@@ -154,7 +196,7 @@ export default function Home() {
         setIsSendingTransaction(false);
       }
     },
-    [account?.accountId, chain, connection, derivedPath, mpcPublicKey]
+    [account?.accountId, chain, connection, derivedPath, mpcPublicKey, derivedAddress]
   );
 
   useEffect(() => {
@@ -199,6 +241,22 @@ export default function Home() {
             })
           ).address;
           break;
+        case "COSMOS":
+          const { address: cosmosAddress } = await fetchDerivedCosmosAddressAndPublicKey({
+            signerId: account.accountId,
+            path: {
+              chain: 118,
+              domain: "",
+              meta: {
+                path: derivedPath,
+              }
+            },
+            nearNetworkId: "testnet",
+            multichainContractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+            prefix: "osmo",
+          });
+          address = cosmosAddress;
+          break;
       }
 
       setDerivedAddress(address);
@@ -222,6 +280,10 @@ export default function Home() {
         case "BNB":
           balance = await getBalance("BNB", chainsConfig.bsc.providerUrl, derivedAddress);
           balance = `${parseFloat(balance).toFixed(8)} BNB`;
+          break;
+        case "COSMOS":
+          balance = await getBalance("COSMOS", chainsConfig.cosmos.restEndpoint, derivedAddress, { denom: "uosmo" });
+          balance = `${balance} COSMOS`;
           break;
         default:
           throw new Error('Unsupported chain');
@@ -253,6 +315,10 @@ export default function Home() {
           [{ address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", value: 10000 }]
         );
         break;
+      case "COSMOS":
+        // Implement COSMOS fee rate fetching here
+        feeRate = "Not implemented for COSMOS";
+        break;
     }
 
     console.log({ feeRate });
@@ -277,6 +343,7 @@ export default function Home() {
               { value: Chain.ETH, label: "ETH" },
               { value: Chain.BTC, label: "BTC" },
               { value: Chain.BNB, label: "BNB" },
+              { value: Chain.COSMOS, label: "COSMOS" },
             ]}
           />
           <div className="grid grid-cols-2 gap-4">
