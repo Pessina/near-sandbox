@@ -11,15 +11,13 @@ import Button from "@/components/Button";
 import { LuCopy } from "react-icons/lu";
 import { toast } from "react-toastify";
 import {
-  fetchBTCFeeProperties,
   fetchDerivedBTCAddressAndPublicKey,
   fetchDerivedEVMAddress,
-  fetchEVMFeeProperties,
+  fetchDerivedCosmosAddressAndPublicKey, 
   signAndSendBTCTransaction,
   signAndSendEVMTransaction,
+  signAndSendCosmosTransaction,
   ChainSignaturesContract,
-  Cosmos,
-  fetchDerivedCosmosAddressAndPublicKey, 
 } from "multichain-tools";
 import { ethers } from "ethers";
 import { getBalance } from "@/utils/balance";
@@ -158,12 +156,12 @@ export default function Home() {
             });
             break;
           case Chain.COSMOS:
-            const cosmos = new Cosmos({
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-              chainId: chainsConfig.cosmos.chainId as any,
-            });
-            await cosmos.handleTransaction(
-              {
+            await signAndSendCosmosTransaction({
+              chainConfig: {
+                contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+                chainId: chainsConfig.cosmos.chainId,
+              },
+              transaction: {
                 messages: [
                   {
                     typeUrl: "/cosmos.bank.v1beta1.MsgSend",
@@ -176,15 +174,15 @@ export default function Home() {
                 ],
                 memo: data.data || "",
               },
-              nearAuthentication,
-              {
+              derivationPath: {
                 chain: 118,
                 domain: "",
                 meta: {
                   path: derivedPath,
-                },
-              }
-            );
+                }
+              },
+              nearAuthentication,
+            });
             break;
           default:
             throw new Error("Unsupported chain selected");
@@ -295,35 +293,6 @@ export default function Home() {
     }
   }, [chain, derivedAddress]);
 
-  const getFeeRate = useCallback(async () => {
-    let feeRate: any;
-    switch (chain) {
-      case "BNB":
-      case "ETH":
-        feeRate = await fetchEVMFeeProperties(
-          chainsConfig.ethereum.providerUrl,
-          {
-            to: "0x0987654321098765432109876543210987654321",
-            value: ethers.parseEther("1"),
-          }
-        );
-        break;
-      case "BTC":
-        feeRate = await fetchBTCFeeProperties(
-          chainsConfig.btc.rpcEndpoint,
-          "tb1qz9f5pqk3t0lhrsuppyzrctdtrtlcewjhy0jngu",
-          [{ address: "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", value: 10000 }]
-        );
-        break;
-      case "COSMOS":
-        // Implement COSMOS fee rate fetching here
-        feeRate = "Not implemented for COSMOS";
-        break;
-    }
-
-    console.log({ feeRate });
-  }, [chain]);
-
   return (
     <div className="h-screen w-full flex justify-center items-center">
       {!account || isNearLoading || !mpcPublicKey ? (
@@ -375,9 +344,6 @@ export default function Home() {
               value={accountBalance}
               disabled
             />
-            <Button onClick={getFeeRate} className="h-[38px] self-end">
-              Check fee rate
-            </Button>
           </div>
           <h2 className="text-white text-2xl font-bold">Transaction</h2>
           <form
