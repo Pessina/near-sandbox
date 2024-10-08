@@ -7,6 +7,8 @@ import { Chain, chainsConfig } from '../constants/chains';
 import { signAndSendBTCTransaction, signAndSendEVMTransaction, signAndSendCosmosTransaction } from "multichain-tools";
 import { ethers } from "ethers";
 import useInitNear from '@/hooks/useInitNear';
+import { toast } from "react-toastify";
+import { getExplorerUrl } from '../utils/explorer';
 
 interface TransactionFormProps {
   chain: Chain;
@@ -26,7 +28,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
       keypair: await connection.config.keyStore.getKey(
         "testnet",
         process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
-      ), 
+      ),
       accountId: account.accountId,
     }
 
@@ -52,7 +54,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                 path: derivedPath,
               }
             }
-          }); 
+          });
           break;
         case Chain.BTC:
           res = await signAndSendBTCTransaction({
@@ -106,7 +108,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
         default:
           throw new Error("Unsupported chain selected");
       }
-      console.log(res);
+
+      if (res.success) {
+        const explorerUrl = getExplorerUrl(chain, res.transactionHash);
+        toast.success(
+          <div>
+            Transaction successful!{' '}
+            <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="underline">
+              View on explorer
+            </a>
+          </div>
+        );
+      } else {
+        toast.error(`Transaction failed: ${res.errorMessage}`);
+      }
     } catch (e) {
       console.error("Transaction failed:", e);
       // You might want to show an error message to the user here
