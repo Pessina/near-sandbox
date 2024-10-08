@@ -9,23 +9,23 @@ export enum Chain {
 export const chainsConfig = {
   ethereum: {
     providerUrl: "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
-    scanUrl: "https://sepolia.etherscan.io",
+    explorerUrl: "https://sepolia.etherscan.io",
     name: "ETH",
   },
   bsc: {
     providerUrl: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
-    scanUrl: "https://testnet.bscscan.com",
+    explorerUrl: "https://testnet.bscscan.com",
     name: "BNB",
   },
   btc: {
     name: "BTC",
     networkType: "testnet" as const,
     rpcEndpoint: "https://blockstream.info/testnet/api/",
-    scanUrl: "https://blockstream.info/testnet",
+    explorerUrl: "https://blockstream.info/testnet",
   },
   cosmos: {
     restEndpoint: "https://lcd.osmotest5.osmosis.zone/",
-    scanUrl: "https://www.mintscan.io/osmosis-testnet",
+    explorerUrl: "https://www.mintscan.io/osmosis-testnet",
     chainId: "osmo-test-5",
   },
 };

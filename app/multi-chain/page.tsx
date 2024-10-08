@@ -19,7 +19,7 @@ export default function Home() {
   const { account, isLoading: isNearLoading } = useInitNear();
   const [derivedPath, setDerivedPath] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
-  
+
   const mpcPublicKey = useMpcPublicKey(account);
   const derivedAddress = useDerivedAddress(account, chain, derivedPath, mpcPublicKey);
   const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddress);
@@ -34,7 +34,11 @@ export default function Home() {
   }, [derivedAddress]);
 
   if (!account || isNearLoading || !mpcPublicKey) {
-    return <Loader />;
+    return (
+      <div className="h-screen w-full flex justify-center items-center">
+        <Loader />
+      </div>
+    );
   }
 
   return (
@@ -70,23 +74,22 @@ export default function Home() {
               onClick: handleCopyAddress,
             }}
           />
-            <Button onClick={getAccountBalance} className="flex-1">
-              Check Balance
-            </Button>
-            <Input
-              label="Balance"
-              name="balance"
-              value={accountBalance}
-              disabled
-              className="flex-1"
-            />
+          <Button onClick={getAccountBalance} className="flex-1">
+            Check Balance
+          </Button>
+          <Input
+            label="Balance"
+            name="balance"
+            value={accountBalance}
+            disabled
+            className="flex-1"
+          />
         </div>
         <h2 className="text-white text-2xl font-bold mt-6">Transaction</h2>
-        <TransactionForm 
+        <TransactionForm
           chain={chain}
           derivedPath={derivedPath}
         />
-      </div>
-    </div>
+      </div></div>
   );
 }
