@@ -17,11 +17,11 @@ import { useMpcPublicKey } from "./hooks/useMpcPublicKey";
 
 export default function Home() {
   const { account, isLoading: isNearLoading } = useInitNear();
-  const [derivedPath, setDerivedPath] = useState("");
+  const [path, setPath] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
 
-  const mpcPublicKey = useMpcPublicKey(account);
-  const derivedAddress = useDerivedAddress(account, chain, derivedPath, mpcPublicKey);
+  const mpcPublicKey = useMpcPublicKey();
+  const derivedAddress = useDerivedAddress(account, chain, path, mpcPublicKey);
   const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddress);
 
   const handleChainChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -60,9 +60,9 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="Path"
-            name="derivedPath"
-            value={derivedPath}
-            onChange={(e) => setDerivedPath(e.target.value)}
+            name="path"
+            value={path}
+            onChange={(e) => setPath(e.target.value)}
           />
           <Input
             label="Derived Address"
@@ -88,7 +88,7 @@ export default function Home() {
         <h2 className="text-white text-2xl font-bold mt-6">Transaction</h2>
         <TransactionForm
           chain={chain}
-          derivedPath={derivedPath}
+          path={path}
         />
       </div></div>
   );

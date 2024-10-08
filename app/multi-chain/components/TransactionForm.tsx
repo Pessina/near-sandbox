@@ -9,25 +9,31 @@ import { ethers } from "ethers";
 import useInitNear from '@/hooks/useInitNear';
 import { toast } from "react-toastify";
 import { getExplorerUrl } from '../utils/explorer';
+import { useEnvVariables } from '@/hooks/useEnvVariables';
 
 interface TransactionFormProps {
   chain: Chain;
-  derivedPath: string;
+  path: string;
 }
 
-export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derivedPath }) => {
+export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, path }) => {
   const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, connection } = useInitNear();
+  const { chainSignatureContract, nearNetworkId, nearAccountId } = useEnvVariables()
+
+  if (!account || !connection) {
+    return null;
+  }
 
   const onSubmit = async (data: Transaction) => {
     setIsSendingTransaction(true);
 
     const nearAuthentication = {
-      networkId: "testnet" as const,
+      networkId: nearNetworkId,
       keypair: await connection.config.keyStore.getKey(
-        "testnet",
-        process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
+        nearNetworkId,
+        nearAccountId
       ),
       accountId: account.accountId,
     }
@@ -44,14 +50,14 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
             },
             chainConfig: {
               providerUrl: chain === Chain.ETH ? chainsConfig.ethereum.providerUrl : chainsConfig.bsc.providerUrl,
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              contract: chainSignatureContract,
             },
             nearAuthentication,
             derivationPath: {
               chain: 60,
               domain: "",
               meta: {
-                path: derivedPath,
+                path: path,
               }
             }
           });
@@ -60,7 +66,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
           res = await signAndSendBTCTransaction({
             chainConfig: {
               providerUrl: chainsConfig.btc.rpcEndpoint,
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              contract: chainSignatureContract,
               network: "testnet",
             },
             transaction: {
@@ -71,7 +77,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               chain: 0,
               domain: "",
               meta: {
-                path: derivedPath,
+                path: path,
               }
             },
             nearAuthentication,
@@ -80,7 +86,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
         case Chain.COSMOS:
           res = await signAndSendCosmosTransaction({
             chainConfig: {
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              contract: chainSignatureContract,
               chainId: chainsConfig.cosmos.chainId,
             },
             transaction: {
@@ -99,7 +105,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               chain: 118,
               domain: "",
               meta: {
-                path: derivedPath,
+                path: path,
               }
             },
             nearAuthentication,

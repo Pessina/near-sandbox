@@ -1,6 +1,6 @@
 // src/hooks/useAccountBalance.ts
 import { useState, useCallback } from 'react';
-import { getBalance } from "@/utils/balance";
+import { getBalance } from "@/app/multi-chain/utils/balance";
 import { Chain, chainsConfig } from '../constants/chains';
 
 export const useAccountBalance = (chain: Chain, derivedAddress: string) => {

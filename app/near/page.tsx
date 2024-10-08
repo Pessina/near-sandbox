@@ -5,12 +5,12 @@ import { useForm } from "react-hook-form";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import useInitNear from "@/hooks/useInitNear";
-import BN from "bn.js";
 import {
   encodeSignedDelegate,
   Action,
   FunctionCall,
 } from "@near-js/transactions";
+import { BN } from "bn.js";
 
 type FormsData = {
   message: string;
@@ -25,7 +25,7 @@ const NearPage = () => {
     if (!account) return;
 
     const keys = await account.findAccessKey("", []);
-    console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
+    console.log("Access key nonce: ", keys.accessKey.nonce);
   };
 
   const onSubmit = async (data: FormsData) => {
@@ -33,7 +33,7 @@ const NearPage = () => {
 
     try {
       const keys = await account.findAccessKey("", []);
-      console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
+      console.log("Access key nonce: ", keys.accessKey.nonce);
 
       const signedDelegate = await account.signedDelegate({
         receiverId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
@@ -41,7 +41,7 @@ const NearPage = () => {
           new Action({
             functionCall: new FunctionCall({
               methodName: "sign",
-              args: Array.from(
+              args: new Uint8Array(Array.from(
                 JSON.stringify({
                   payload: [
                     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -49,18 +49,18 @@ const NearPage = () => {
                   ],
                   path: "test",
                 })
-              ).map((char) => char.charCodeAt(0)),
-              gas: new BN("300000000000000"),
-              deposit: new BN("0"),
-            }),
-          }),
+              ).map((char) => char.charCodeAt(0))),
+              gas: BigInt("300000000000000"),
+              deposit: BigInt("0"),
+            })
+          })
         ],
         blockHeightTtl: 60,
       });
 
       console.log(
         "Signed delegate nonce: ",
-        signedDelegate.delegateAction.nonce.toNumber()
+        signedDelegate.delegateAction.nonce
       );
 
       const res = await fetch(

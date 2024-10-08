@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { ChainSignaturesContract } from "multichain-tools";
+import { useEnvVariables } from '@/hooks/useEnvVariables';
 
-export const useMpcPublicKey = (account: any) => {
+
+export const useMpcPublicKey = () => {
   const [mpcPublicKey, setMpcPublicKey] = useState("");
+  const { chainSignatureContract, nearNetworkId } = useEnvVariables(); 
 
   useEffect(() => {
     const getMpcPublicKey = async () => {
-      if (!account) return;
-
       const mpcPublicKey = await ChainSignaturesContract.getPublicKey({
-        contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-        networkId: 'testnet',
+        contract: chainSignatureContract,
+          networkId: nearNetworkId,
       });
 
       if (!mpcPublicKey) {
@@ -21,7 +22,7 @@ export const useMpcPublicKey = (account: any) => {
     };
 
     getMpcPublicKey();
-  }, [account]);
+  }, [chainSignatureContract, nearNetworkId]);
 
   return mpcPublicKey;
 };
