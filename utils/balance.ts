@@ -19,13 +19,44 @@ export async function getBTCBalance(rpcEndpoint: string, address: string): Promi
   }
 }
 
-export async function getBalance(chain: string, providerUrl: string, address: string): Promise<string> {
+export async function fetchCosmosBalance(
+  address: string,
+  restUrl: string,
+  denom?: string
+): Promise<string> {
+  try {
+    if (!denom) {
+      throw new Error('Denom is required for Cosmos balance fetching')
+    }
+
+    const balanceUrl = `${restUrl}/cosmos/bank/v1beta1/balances/${address}`
+    const response = await axios.get(balanceUrl)
+
+    const balances = response.data.balances
+    const balance = balances.find((b: any) => b.denom === denom)
+
+    if (balance) {
+      return balance.amount
+    } else {
+      return '0'
+    }
+  } catch (error) {
+    console.error('Failed to fetch Cosmos balance:', error)
+    throw new Error('Failed to fetch Cosmos balance')
+  }
+}
+
+export async function getBalance(chain: string, providerUrl: string, address: string, config?: {
+  denom?: string
+}): Promise<string> {
   switch (chain) {
     case 'ETH':
     case 'BNB':
       return await getEVMBalance(providerUrl, address);
     case 'BTC':
       return await getBTCBalance(providerUrl, address);
+    case 'COSMOS':
+      return await fetchCosmosBalance(address, providerUrl, config?.denom);
     default:
       throw new Error('Unsupported chain');
   }
