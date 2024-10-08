@@ -5,13 +5,13 @@ import { useEnvVariables } from '@/hooks/useEnvVariables';
 
 export const useMpcPublicKey = () => {
   const [mpcPublicKey, setMpcPublicKey] = useState("");
-  const { chainSignatureContract, nearNetworkId } = useEnvVariables(); 
+  const { chainSignatureContract, networkId } = useEnvVariables(); 
 
   useEffect(() => {
     const getMpcPublicKey = async () => {
       const mpcPublicKey = await ChainSignaturesContract.getPublicKey({
         contract: chainSignatureContract,
-          networkId: nearNetworkId,
+          networkId: networkId,
       });
 
       if (!mpcPublicKey) {
@@ -22,7 +22,7 @@ export const useMpcPublicKey = () => {
     };
 
     getMpcPublicKey();
-  }, [chainSignatureContract, nearNetworkId]);
+  }, [chainSignatureContract, networkId]);
 
   return mpcPublicKey;
 };

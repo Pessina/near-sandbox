@@ -8,7 +8,7 @@ import { signAndSendBTCTransaction, signAndSendEVMTransaction, signAndSendCosmos
 import { ethers } from "ethers";
 import useInitNear from '@/hooks/useInitNear';
 import { toast } from "react-toastify";
-import { getExplorerUrl } from '../utils/explorer';
+import { useExplorerUrl } from '../utils/explorer';
 import { useEnvVariables } from '@/hooks/useEnvVariables';
 
 interface TransactionFormProps {
@@ -20,7 +20,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, path })
   const { register, handleSubmit } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, connection } = useInitNear();
-  const { chainSignatureContract, nearNetworkId, nearAccountId } = useEnvVariables()
+  const { chainSignatureContract, networkId, nearAccountId } = useEnvVariables()
+  const { getExplorerUrl } = useExplorerUrl();
 
   if (!account || !connection) {
     return null;
@@ -30,9 +31,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, path })
     setIsSendingTransaction(true);
 
     const nearAuthentication = {
-      networkId: nearNetworkId,
+      networkId: networkId,
       keypair: await connection.config.keyStore.getKey(
-        nearNetworkId,
+        networkId,
         nearAccountId
       ),
       accountId: account.accountId,
@@ -49,7 +50,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, path })
               value: ethers.parseEther(data.value).toString(),
             },
             chainConfig: {
-              providerUrl: chain === Chain.ETH ? chainsConfig.ethereum.providerUrl : chainsConfig.bsc.providerUrl,
+              providerUrl: chain === Chain.ETH ? chainsConfig.ethereum[networkId].providerUrl : chainsConfig.bsc[networkId].providerUrl,
               contract: chainSignatureContract,
             },
             nearAuthentication,
@@ -65,7 +66,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, path })
         case Chain.BTC:
           res = await signAndSendBTCTransaction({
             chainConfig: {
-              providerUrl: chainsConfig.btc.rpcEndpoint,
+              providerUrl: chainsConfig.btc[networkId].rpcEndpoint,
               contract: chainSignatureContract,
               network: "testnet",
             },
@@ -87,7 +88,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, path })
           res = await signAndSendCosmosTransaction({
             chainConfig: {
               contract: chainSignatureContract,
-              chainId: chainsConfig.cosmos.chainId,
+              chainId: chainsConfig.cosmos[networkId].chainId,
             },
             transaction: {
               messages: [

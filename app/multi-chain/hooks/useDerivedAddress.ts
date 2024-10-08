@@ -6,7 +6,7 @@ import { useEnvVariables } from '../../../hooks/useEnvVariables';
 
 export const useDerivedAddress = (account: any, chain: Chain, path: string, mpcPublicKey: string) => {
   const [derivedAddress, setDerivedAddress] = useState("");
-  const { chainSignatureContract, nearNetworkId } = useEnvVariables(); 
+  const { chainSignatureContract, networkId } = useEnvVariables(); 
 
   useEffect(() => {
     const getAddress = async () => {
@@ -28,7 +28,7 @@ export const useDerivedAddress = (account: any, chain: Chain, path: string, mpcP
                 path: path,
               }
             },
-            nearNetworkId,
+            nearNetworkId: networkId,
             multichainContractId: chainSignatureContract
           });
           break;
@@ -44,7 +44,7 @@ export const useDerivedAddress = (account: any, chain: Chain, path: string, mpcP
                 }
               },
               btcNetworkId:  'testnet',
-              nearNetworkId,
+              nearNetworkId: networkId,
               multichainContractId: chainSignatureContract
             })
           ).address;
@@ -59,7 +59,7 @@ export const useDerivedAddress = (account: any, chain: Chain, path: string, mpcP
                 path: path,
               }
             },
-            nearNetworkId,
+            nearNetworkId: networkId,
             multichainContractId: chainSignatureContract,
             prefix: "osmo",
           });
@@ -71,7 +71,7 @@ export const useDerivedAddress = (account: any, chain: Chain, path: string, mpcP
     };
 
     getAddress();
-  }, [account, chain, chainSignatureContract, mpcPublicKey, nearNetworkId, path]);
+  }, [account, chain, chainSignatureContract, mpcPublicKey, networkId, path]);
 
   return derivedAddress;
 };

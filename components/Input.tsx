@@ -20,11 +20,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {...rest}
             ref={ref}
             disabled={disabled}
-            className={`block appearance-none w-full bg-gray-800 text-white border border-gray-600 ${
-              !disabled ? "hover:border-gray-500" : ""
-            } px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline ${
-              disabled ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`block appearance-none w-full bg-gray-800 text-white border border-gray-600 ${!disabled ? "hover:border-gray-500" : ""
+              } px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline ${disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
           />
           {icon && (
             <div className="ml-2 cursor-pointer" onClick={icon.onClick}>
