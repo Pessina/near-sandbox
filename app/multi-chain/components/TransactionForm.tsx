@@ -36,10 +36,16 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
         case Chain.BNB:
         case Chain.ETH:
           res = await signAndSendEVMTransaction({
-            transaction: {
-              to: data.to,
-              value: ethers.parseEther(data.value).toString(),
-            },
+            transaction: data.data
+            ? {
+                to: data.to,
+                value: ethers.parseEther(data.value).toString(),
+                data: data.data,
+              }
+            : {
+                to: data.to,
+                value: ethers.parseEther(data.value).toString(),
+              },
             chainConfig: {
               providerUrl: chain === Chain.ETH ? chainsConfig.ethereum.providerUrl : chainsConfig.bsc.providerUrl,
               contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
