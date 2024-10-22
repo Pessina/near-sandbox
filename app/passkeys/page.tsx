@@ -4,13 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Button from "@/components/Button";
 import { WebAuthn } from './_classes/WebAuthn';
 import { mockServer } from './_utils/mock-server';
-import { toHex } from 'viem';
+import { Hex, toHex } from 'viem';
 
 const PasskeysPage = () => {
   const [registrationStatus, setRegistrationStatus] = useState('');
   const [authenticationStatus, setAuthenticationStatus] = useState('');
   const [isPasskeyAvailable, setIsPasskeyAvailable] = useState(false);
   const [username, setUsername] = useState('test@example.com');
+  const [publicKey, setPublicKey] = useState<{
+    x: Hex;
+    y: Hex;
+  } | null>(null);
 
   useEffect(() => {
     const checkPasskeyAvailability = async () => {
@@ -27,11 +31,15 @@ const PasskeysPage = () => {
 
       console.log({ credential });
 
+
       if (!credential) {
         throw new Error('Failed to create credential');
       }
 
+      setPublicKey(credential.pubKey);
+
       const result = await mockServer.completeRegistration(username, credential);
+
 
       if (result.success) {
         setRegistrationStatus('Passkey registered successfully!');
@@ -52,13 +60,18 @@ const PasskeysPage = () => {
 
       console.log({ assertion });
 
-      if (!assertion) {
+      if (!assertion || !publicKey) {
         throw new Error('Failed to get assertion');
       }
 
-      const result = await mockServer.completeAuthentication(username, assertion);
+      const result = await WebAuthn.validateSignature({
+        publicKey: publicKey,
+        signature: assertion.signature,
+        authenticatorData: assertion.authenticatorData,
+        clientData: assertion.clientData,
+      });
 
-      if (result.success) {
+      if (result) {
         setAuthenticationStatus('Authentication successful!');
       } else {
         throw new Error('Server verification failed');
