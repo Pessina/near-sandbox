@@ -31,7 +31,6 @@ const PasskeysPage = () => {
 
       console.log({ credential });
 
-
       if (!credential) {
         throw new Error('Failed to create credential');
       }
@@ -39,7 +38,6 @@ const PasskeysPage = () => {
       setPublicKey(credential.pubKey);
 
       const result = await mockServer.completeRegistration(username, credential);
-
 
       if (result.success) {
         setRegistrationStatus('Passkey registered successfully!');
@@ -94,6 +92,13 @@ const PasskeysPage = () => {
         )}
 
         <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter username"
+            className="w-full p-2 border border-gray-300 rounded text-black"
+          />
           <Button onClick={registerPasskey} className="w-full" disabled={!isPasskeyAvailable}>
             Register Passkey
           </Button>
