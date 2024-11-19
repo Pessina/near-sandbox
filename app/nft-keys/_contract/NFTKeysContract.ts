@@ -74,10 +74,6 @@ export class NFTKeysContractClient {
     return await this.contract.nft_metadata(args);
   }
 
-  async nftToken(args: { token_id: string }): Promise<any> {
-    return await this.contract.nft_token(args);
-  }
-
   async nftTokens(args: {
     from_index?: string;
     limit?: number;

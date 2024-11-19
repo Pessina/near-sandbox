@@ -9,7 +9,7 @@ import Input from "@/components/Input"
 import Select from "@/components/Select"
 import Link from "@/components/Link"
 import Loader from "@/components/Loader"
-import { parseNearAmount } from "near-api-js/lib/utils/format"
+import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
 
 type FormData = {
   tokenId: string
@@ -26,6 +26,8 @@ export default function NFTKeysPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [nfts, setNfts] = useState<any[]>([])
   const [ownedNfts, setOwnedNfts] = useState<any[]>([])
+  const [storageBalance, setStorageBalance] = useState<{ total: string; available: string } | null>(null)
+  const [metadata, setMetadata] = useState<any>(null)
 
   const action = watch('action')
 
@@ -40,27 +42,31 @@ export default function NFTKeysPage() {
   }, [account])
 
   useEffect(() => {
-    if (!contractClient) return
+    if (!contractClient || !account) return
 
-    const loadNFTs = async () => {
+    const loadData = async () => {
       try {
-        const allNfts = await contractClient.nftTokens({})
-        setNfts(allNfts)
-
-        if (account) {
-          const userNfts = await contractClient.nftTokensForOwner({
+        const [allNfts, userNfts, balance, nftMetadata] = await Promise.all([
+          contractClient.nftTokens({}),
+          contractClient.nftTokensForOwner({
             account_id: account.accountId,
             from_index: "0",
             limit: 100,
-          })
-          setOwnedNfts(userNfts)
-        }
+          }),
+          contractClient.getStorageBalanceOf(account.accountId),
+          contractClient.nftMetadata({})
+        ])
+
+        setNfts(allNfts)
+        setOwnedNfts(userNfts)
+        setStorageBalance(balance)
+        setMetadata(nftMetadata)
       } catch (error) {
-        setMessage({ type: 'error', content: `Error loading NFTs: ${error}` })
+        setMessage({ type: 'error', content: `Error loading data: ${error}` })
       }
     }
 
-    loadNFTs()
+    loadData()
   }, [contractClient, account])
 
   const handleMint = async () => {
@@ -99,6 +105,8 @@ export default function NFTKeysPage() {
     setIsProcessing(true)
     try {
       await contractClient.storageDeposit(account.accountId, false, "100000000000000", amount)
+      const balance = await contractClient.getStorageBalanceOf(account.accountId)
+      setStorageBalance(balance)
       setMessage({ type: 'success', content: "Storage deposit successful" })
       reset()
     } catch (error) {
@@ -113,6 +121,10 @@ export default function NFTKeysPage() {
     setIsProcessing(true)
     try {
       await contractClient.storageWithdraw()
+      if (account) {
+        const balance = await contractClient.getStorageBalanceOf(account.accountId)
+        setStorageBalance(balance)
+      }
       setMessage({ type: 'success', content: "Storage withdrawal successful" })
     } catch (error) {
       setMessage({ type: 'error', content: `Error withdrawing storage: ${error}` })
@@ -126,6 +138,7 @@ export default function NFTKeysPage() {
     setIsProcessing(true)
     try {
       await contractClient.storageUnregister({ force: true })
+      setStorageBalance(null)
       setMessage({ type: 'success', content: "Storage unregistration successful" })
     } catch (error) {
       setMessage({ type: 'error', content: `Error unregistering storage: ${error}` })
@@ -167,6 +180,27 @@ export default function NFTKeysPage() {
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <h1 className="text-3xl font-bold mb-6 text-white">NFT Keys Management</h1>
+
+      {metadata && (
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+          <h2 className="text-xl font-bold mb-4 text-white">Contract Metadata</h2>
+          <div className="text-white">
+            <p>Name: {metadata.name}</p>
+            <p>Symbol: {metadata.symbol}</p>
+            {metadata.icon && <img src={metadata.icon} alt="NFT Icon" className="w-16 h-16 mt-2" />}
+          </div>
+        </div>
+      )}
+
+      {storageBalance && (
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+          <h2 className="text-xl font-bold mb-4 text-white">Storage Balance</h2>
+          <div className="text-white">
+            <p>Total: {formatNearAmount(storageBalance.total)} NEAR</p>
+            <p>Available: {formatNearAmount(storageBalance.available)} NEAR</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
         <h2 className="text-xl font-bold mb-4 text-white">Mint New NFT Key</h2>
