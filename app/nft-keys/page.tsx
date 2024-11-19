@@ -27,7 +27,6 @@ export default function NFTKeysPage() {
   const [nfts, setNfts] = useState<any[]>([])
   const [ownedNfts, setOwnedNfts] = useState<any[]>([])
   const [storageBalance, setStorageBalance] = useState<{ total: string; available: string } | null>(null)
-  const [metadata, setMetadata] = useState<any>(null)
 
   const action = watch('action')
 
@@ -46,7 +45,7 @@ export default function NFTKeysPage() {
 
     const loadData = async () => {
       try {
-        const [allNfts, userNfts, balance, nftMetadata] = await Promise.all([
+        const [allNfts, userNfts, balance] = await Promise.all([
           contractClient.nftTokens({}),
           contractClient.nftTokensForOwner({
             account_id: account.accountId,
@@ -54,13 +53,11 @@ export default function NFTKeysPage() {
             limit: 100,
           }),
           contractClient.getStorageBalanceOf(account.accountId),
-          contractClient.nftMetadata({})
         ])
 
         setNfts(allNfts)
         setOwnedNfts(userNfts)
         setStorageBalance(balance)
-        setMetadata(nftMetadata)
       } catch (error) {
         setMessage({ type: 'error', content: `Error loading data: ${error}` })
       }
@@ -84,6 +81,7 @@ export default function NFTKeysPage() {
           from_index: "0",
           limit: 100,
         })
+
         setOwnedNfts(userNfts)
       }
     } catch (error) {
@@ -180,17 +178,6 @@ export default function NFTKeysPage() {
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <h1 className="text-3xl font-bold mb-6 text-white">NFT Keys Management</h1>
-
-      {metadata && (
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
-          <h2 className="text-xl font-bold mb-4 text-white">Contract Metadata</h2>
-          <div className="text-white">
-            <p>Name: {metadata.name}</p>
-            <p>Symbol: {metadata.symbol}</p>
-            {metadata.icon && <img src={metadata.icon} alt="NFT Icon" className="w-16 h-16 mt-2" />}
-          </div>
-        </div>
-      )}
 
       {storageBalance && (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
