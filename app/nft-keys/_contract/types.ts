@@ -39,6 +39,51 @@ export type NFTKeysContract = Contract & {
     memo?: string;
   }) => Promise<void>;
 
+  nft_transfer_call: (
+    args: ContractChangeMethodArgs<{
+      receiver_id: string;
+      token_id: string;
+      msg: string;
+      approval_id?: number;
+      memo?: string;
+    }>
+  ) => Promise<void>;
+
+  ckt_public_key_for: (args: {
+    token_id: string;
+    path?: string;
+  }) => Promise<string>;
+
+  ckt_sign_hash: (
+    args: ContractChangeMethodArgs<{
+      token_id: string;
+      path?: string;
+      payload: number[];
+      approval_id?: number;
+    }>
+  ) => Promise<string>;
+
+  nft_approve: (
+    args: ContractChangeMethodArgs<{
+      token_id: string;
+      account_id: string;
+      msg?: string;
+    }>
+  ) => Promise<number>;
+
+  nft_is_approved: (args: {
+    token_id: string;
+    approved_account_id: string;
+    approval_id?: number;
+  }) => Promise<boolean>;
+
+  nft_revoke: (
+    args: ContractChangeMethodArgs<{
+      token_id: string;
+      account_id: string;
+    }>
+  ) => Promise<void>;
+
   storage_balance_of: (args: {
     account_id: string;
   }) => Promise<StorageBalanceResult | null>;
@@ -47,8 +92,7 @@ export type NFTKeysContract = Contract & {
     args: ContractChangeMethodArgs<{
       account_id: string;
       registration_only: boolean;
-    }> &
-      Required<Pick<ContractChangeMethodArgs, "gas" | "amount">>
+    }>
   ) => Promise<StorageBalanceResult>;
 
   storage_unregister: (

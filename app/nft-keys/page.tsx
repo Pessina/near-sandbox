@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import useInitNear from "@/hooks/useInitNear"
-import { NFTKeysContractClient } from "./_contract/NFTKeysContract"
+import { createNFTContract } from "./_contract/NFTKeysContract"
 import Button from "@/components/Button"
 import Input from "@/components/Input"
 import Select from "@/components/Select"
 import Link from "@/components/Link"
 import Loader from "@/components/Loader"
 import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
+import { NFTKeysContract } from "./_contract/types"
+import { ONE_YOCTO_NEAR } from "./_contract/constants"
 
 type FormData = {
   tokenId: string
@@ -21,7 +23,7 @@ type FormData = {
 export default function NFTKeysPage() {
   const { register, handleSubmit, watch, reset } = useForm<FormData>()
   const { account, isLoading } = useInitNear()
-  const [contractClient, setContractClient] = useState<NFTKeysContractClient>()
+  const [nftContract, setNftContract] = useState<NFTKeysContract>()
   const [message, setMessage] = useState<{ type: 'success' | 'error', content: string } | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [nfts, setNfts] = useState<any[]>([])
@@ -33,26 +35,26 @@ export default function NFTKeysPage() {
   useEffect(() => {
     if (!account) return
 
-    const client = new NFTKeysContractClient({
+    const nftContract = createNFTContract({
       account,
       contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
     })
-    setContractClient(client)
+    setNftContract(nftContract)
   }, [account])
 
   useEffect(() => {
-    if (!contractClient || !account) return
+    if (!nftContract || !account) return
 
     const loadData = async () => {
       try {
         const [allNfts, userNfts, balance] = await Promise.all([
-          contractClient.nftTokens({}),
-          contractClient.nftTokensForOwner({
+          nftContract.nft_tokens({}),
+          nftContract.nft_tokens_for_owner({
             account_id: account.accountId,
             from_index: "0",
             limit: 100,
           }),
-          contractClient.getStorageBalanceOf(account.accountId),
+          nftContract.storage_balance_of({ account_id: account.accountId }),
         ])
 
         setNfts(allNfts)
@@ -64,19 +66,19 @@ export default function NFTKeysPage() {
     }
 
     loadData()
-  }, [contractClient, account])
+  }, [nftContract, account])
 
   const handleMint = async () => {
-    if (!contractClient) return
+    if (!nftContract) return
     setIsProcessing(true)
     try {
-      const tokenId = await contractClient.mint()
+      const tokenId = await nftContract.mint()
       setMessage({ type: 'success', content: `Minted token ID: ${tokenId}` })
       // Refresh NFT lists after minting
-      const allNfts = await contractClient.nftTokens({})
+      const allNfts = await nftContract.nft_tokens({})
       setNfts(allNfts)
       if (account) {
-        const userNfts = await contractClient.nftTokensForOwner({
+        const userNfts = await nftContract.nft_tokens_for_owner({
           account_id: account.accountId,
           from_index: "0",
           limit: 100,
@@ -92,18 +94,16 @@ export default function NFTKeysPage() {
   }
 
   const handleStorageDeposit = async (data: FormData) => {
-    if (!contractClient || !data.amount || !account) return
+    if (!nftContract || !data.amount || !account) return
 
     const amount = parseNearAmount(data.amount)
 
     if (!amount) return
 
-    console.log({ amount })
-
     setIsProcessing(true)
     try {
-      await contractClient.storageDeposit(account.accountId, false, "100000000000000", amount)
-      const balance = await contractClient.getStorageBalanceOf(account.accountId)
+      await nftContract.storage_deposit({ args: { account_id: account.accountId, registration_only: false }, amount })
+      const balance = await nftContract.storage_balance_of({ account_id: account.accountId })
       setStorageBalance(balance)
       setMessage({ type: 'success', content: "Storage deposit successful" })
       reset()
@@ -114,13 +114,18 @@ export default function NFTKeysPage() {
     }
   }
 
-  const handleStorageWithdraw = async () => {
-    if (!contractClient) return
+  const handleStorageWithdraw = async (data: FormData) => {
+    if (!nftContract || !data.amount) return
+
+    const amount = parseNearAmount(data.amount)
+
+    if (!amount) return
+
     setIsProcessing(true)
     try {
-      await contractClient.storageWithdraw()
+      await nftContract.storage_withdraw({ args: { amount }, amount: ONE_YOCTO_NEAR })
       if (account) {
-        const balance = await contractClient.getStorageBalanceOf(account.accountId)
+        const balance = await nftContract.storage_balance_of({ account_id: account.accountId })
         setStorageBalance(balance)
       }
       setMessage({ type: 'success', content: "Storage withdrawal successful" })
@@ -132,10 +137,10 @@ export default function NFTKeysPage() {
   }
 
   const handleStorageUnregister = async () => {
-    if (!contractClient) return
+    if (!nftContract) return
     setIsProcessing(true)
     try {
-      await contractClient.storageUnregister({ force: true })
+      await nftContract.storage_unregister({ args: { force: true }, amount: ONE_YOCTO_NEAR })
       setStorageBalance(null)
       setMessage({ type: 'success', content: "Storage unregistration successful" })
     } catch (error) {
@@ -149,6 +154,9 @@ export default function NFTKeysPage() {
     switch (data.action) {
       case 'storageDeposit':
         handleStorageDeposit(data)
+        break
+      case 'storageWithdraw':
+        handleStorageWithdraw(data)
         break
     }
   }
@@ -233,6 +241,7 @@ export default function NFTKeysPage() {
           label="Action"
           options={[
             { value: 'storageDeposit', label: 'Storage Deposit' },
+            { value: 'storageWithdraw', label: 'Storage Withdraw' },
           ]}
           placeholder="Select an action"
           {...register("action", { required: true })}
@@ -247,15 +256,21 @@ export default function NFTKeysPage() {
           />
         )}
 
+        {action === 'storageWithdraw' && (
+          <Input
+            label="Storage Amount (in NEAR)"
+            {...register("amount", { required: true })}
+            placeholder="Enter amount for storage withdrawal"
+            className="mb-4"
+          />
+        )}
+
         <Button type="submit" isLoading={isProcessing}>
-          {action === 'approve' ? 'Approve' : action === 'revoke' ? 'Revoke' : 'Deposit'}
+          {action === 'storageDeposit' ? 'Deposit' : 'Withdraw'}
         </Button>
       </form>
 
       <div className="mt-6 gap-4 flex">
-        <Button onClick={handleStorageWithdraw} variant="secondary" isLoading={isProcessing}>
-          Storage Withdraw
-        </Button>
         <Button onClick={handleStorageUnregister} variant="danger" isLoading={isProcessing}>
           Storage Unregister
         </Button>
