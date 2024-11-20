@@ -49,10 +49,12 @@ export type NFTKeysContract = Contract & {
     }>
   ) => Promise<void>;
 
-  ckt_public_key_for: (args: {
-    token_id: string;
-    path?: string;
-  }) => Promise<string>;
+  ckt_public_key_for: (
+    args: ContractChangeMethodArgs<{
+      token_id: string;
+      path?: string;
+    }>
+  ) => Promise<string>;
 
   ckt_sign_hash: (
     args: ContractChangeMethodArgs<{

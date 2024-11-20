@@ -18,6 +18,11 @@ type FormData = {
   accountId: string
   amount?: string
   action: string
+  path?: string
+  payload?: string
+  msg?: string
+  approvalId?: string
+  memo?: string
 }
 
 export default function NFTKeysPage() {
@@ -29,6 +34,7 @@ export default function NFTKeysPage() {
   const [nfts, setNfts] = useState<any[]>([])
   const [ownedNfts, setOwnedNfts] = useState<any[]>([])
   const [storageBalance, setStorageBalance] = useState<{ total: string; available: string } | null>(null)
+  const [publicKey, setPublicKey] = useState<string>('')
 
   const action = watch('action')
 
@@ -68,6 +74,7 @@ export default function NFTKeysPage() {
     loadData()
   }, [nftContract, account])
 
+
   const handleMint = async () => {
     if (!nftContract) return
     setIsProcessing(true)
@@ -92,6 +99,140 @@ export default function NFTKeysPage() {
       setIsProcessing(false)
     }
   }
+
+  const handleGetPublicKey = async (data: FormData) => {
+    if (!nftContract || !data.tokenId) return
+    setIsProcessing(true)
+    try {
+      const key = await nftContract.ckt_public_key_for({
+        args: {
+          token_id: data.tokenId,
+          path: data.path
+        }
+      })
+      setPublicKey(key)
+      setMessage({ type: 'success', content: `Public key retrieved` })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error getting public key: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleSignHash = async (data: FormData) => {
+    if (!nftContract || !data.tokenId || !data.payload) return
+    setIsProcessing(true)
+    try {
+      const payloadArray = data.payload.split(',').map(num => parseInt(num))
+      const signature = await nftContract.ckt_sign_hash({
+        args: {
+          token_id: data.tokenId,
+          path: data.path,
+          payload: payloadArray,
+          approval_id: data.approvalId ? parseInt(data.approvalId) : undefined
+        }
+      })
+      setMessage({ type: 'success', content: `Signature: ${signature}` })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error signing hash: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleApprove = async (data: FormData) => {
+    if (!nftContract || !data.tokenId || !data.accountId) return
+    setIsProcessing(true)
+    try {
+      const approvalId = await nftContract.nft_approve({
+        args: {
+          token_id: data.tokenId,
+          account_id: data.accountId,
+          msg: data.msg
+        }
+      })
+      setMessage({ type: 'success', content: `Approved with ID: ${approvalId}` })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error approving: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleCheckApproval = async (data: FormData) => {
+    if (!nftContract || !data.tokenId || !data.accountId) return
+    setIsProcessing(true)
+    try {
+      const isApproved = await nftContract.nft_is_approved({
+        token_id: data.tokenId,
+        approved_account_id: data.accountId,
+        approval_id: data.approvalId ? parseInt(data.approvalId) : undefined
+      })
+      setMessage({ type: 'success', content: `Approval status: ${isApproved}` })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error checking approval: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleRevoke = async (data: FormData) => {
+    if (!nftContract || !data.tokenId || !data.accountId) return
+    setIsProcessing(true)
+    try {
+      await nftContract.nft_revoke({
+        args: {
+          token_id: data.tokenId,
+          account_id: data.accountId
+        }
+      })
+      setMessage({ type: 'success', content: 'Successfully revoked approval' })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error revoking approval: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleTransfer = async (data: FormData) => {
+    if (!nftContract || !data.tokenId || !data.accountId) return
+    setIsProcessing(true)
+    try {
+      await nftContract.nft_transfer({
+        receiver_id: data.accountId,
+        token_id: data.tokenId,
+        approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
+        memo: data.memo
+      })
+      setMessage({ type: 'success', content: 'Transfer successful' })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error transferring: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleTransferCall = async (data: FormData) => {
+    if (!nftContract || !data.tokenId || !data.accountId || !data.msg) return
+    setIsProcessing(true)
+    try {
+      await nftContract.nft_transfer_call({
+        args: {
+          receiver_id: data.accountId,
+          token_id: data.tokenId,
+          msg: data.msg,
+          approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
+          memo: data.memo
+        }
+      })
+      setMessage({ type: 'success', content: 'Transfer call successful' })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error in transfer call: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
 
   const handleStorageDeposit = async (data: FormData) => {
     if (!nftContract || !data.amount || !account) return
@@ -136,22 +277,29 @@ export default function NFTKeysPage() {
     }
   }
 
-  const handleStorageUnregister = async () => {
-    if (!nftContract) return
-    setIsProcessing(true)
-    try {
-      await nftContract.storage_unregister({ args: { force: true }, amount: ONE_YOCTO_NEAR })
-      setStorageBalance(null)
-      setMessage({ type: 'success', content: "Storage unregistration successful" })
-    } catch (error) {
-      setMessage({ type: 'error', content: `Error unregistering storage: ${error}` })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
   const onSubmit = (data: FormData) => {
     switch (data.action) {
+      case 'getPublicKey':
+        handleGetPublicKey(data)
+        break
+      case 'signHash':
+        handleSignHash(data)
+        break
+      case 'approve':
+        handleApprove(data)
+        break
+      case 'checkApproval':
+        handleCheckApproval(data)
+        break
+      case 'revoke':
+        handleRevoke(data)
+        break
+      case 'transfer':
+        handleTransfer(data)
+        break
+      case 'transferCall':
+        handleTransferCall(data)
+        break
       case 'storageDeposit':
         handleStorageDeposit(data)
         break
@@ -186,6 +334,7 @@ export default function NFTKeysPage() {
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <h1 className="text-3xl font-bold mb-6 text-white">NFT Keys Management</h1>
+
 
       {storageBalance && (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
@@ -234,12 +383,20 @@ export default function NFTKeysPage() {
         )}
       </div>
 
+
       <form onSubmit={handleSubmit(onSubmit)} className="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
         <h2 className="text-xl font-bold mb-4 text-white">Manage NFT Keys</h2>
 
         <Select
           label="Action"
           options={[
+            { value: 'getPublicKey', label: 'Get Public Key' },
+            { value: 'signHash', label: 'Sign Hash' },
+            { value: 'approve', label: 'Approve' },
+            { value: 'checkApproval', label: 'Check Approval' },
+            { value: 'revoke', label: 'Revoke Approval' },
+            { value: 'transfer', label: 'Transfer NFT' },
+            { value: 'transferCall', label: 'Transfer Call' },
             { value: 'storageDeposit', label: 'Storage Deposit' },
             { value: 'storageWithdraw', label: 'Storage Withdraw' },
           ]}
@@ -247,6 +404,70 @@ export default function NFTKeysPage() {
           {...register("action", { required: true })}
           className="mb-4"
         />
+
+        {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'transfer', 'transferCall'].includes(action) && (
+          <Input
+            label="Token ID"
+            {...register("tokenId", { required: true })}
+            placeholder="Enter token ID"
+            className="mb-4"
+          />
+        )}
+
+        {['getPublicKey', 'signHash'].includes(action) && (
+          <Input
+            label="Path (optional)"
+            {...register("path")}
+            placeholder="Enter derivation path"
+            className="mb-4"
+          />
+        )}
+
+        {action === 'signHash' && (
+          <Input
+            label="Payload (comma-separated numbers)"
+            {...register("payload", { required: true })}
+            placeholder="Enter payload numbers"
+            className="mb-4"
+          />
+        )}
+
+        {['approve', 'checkApproval', 'revoke', 'transfer', 'transferCall'].includes(action) && (
+          <Input
+            label="Account ID"
+            {...register("accountId", { required: true })}
+            placeholder="Enter account ID"
+            className="mb-4"
+          />
+        )}
+
+        {['approve', 'transferCall'].includes(action) && (
+          <Input
+            label="Message"
+            {...register("msg")}
+            placeholder="Enter message"
+            className="mb-4"
+          />
+        )}
+
+        {['signHash', 'checkApproval', 'transfer', 'transferCall'].includes(action) && (
+          <Input
+            label="Approval ID (optional)"
+            {...register("approvalId")}
+            placeholder="Enter approval ID"
+            className="mb-4"
+          />
+        )}
+
+        {['transfer', 'transferCall'].includes(action) && (
+          <Input
+            label="Memo (optional)"
+            {...register("memo")}
+            placeholder="Enter memo"
+            className="mb-4"
+          />
+        )}
+
         {action === 'storageDeposit' && (
           <Input
             label="Storage Amount (in NEAR)"
@@ -266,15 +487,16 @@ export default function NFTKeysPage() {
         )}
 
         <Button type="submit" isLoading={isProcessing}>
-          {action === 'storageDeposit' ? 'Deposit' : 'Withdraw'}
+          Submit
         </Button>
       </form>
 
-      <div className="mt-6 gap-4 flex">
-        <Button onClick={handleStorageUnregister} variant="danger" isLoading={isProcessing}>
-          Storage Unregister
-        </Button>
-      </div>
+      {publicKey && (
+        <div className="mt-6 bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h3 className="text-lg font-bold mb-2 text-white">Public Key</h3>
+          <p className="text-gray-300 break-all">{publicKey}</p>
+        </div>
+      )}
 
       {message && (
         <div className={`mt-6 p-4 rounded-lg ${message.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>

@@ -9,7 +9,6 @@ const createNFTContract = (args: { account: Account; contractId: string }) => {
       "nft_token",
       "nft_tokens",
       "nft_tokens_for_owner",
-      "ckt_public_key_for",
       "nft_is_approved",
     ],
     changeMethods: [
@@ -24,6 +23,7 @@ const createNFTContract = (args: { account: Account; contractId: string }) => {
       "nft_revoke",
       "nft_revoke_all",
       "ckt_sign_hash",
+      "ckt_public_key_for",
     ],
     useLocalViewExecution: false,
   }) as unknown as NFTKeysContract;
