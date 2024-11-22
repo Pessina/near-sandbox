@@ -32,18 +32,10 @@ export type NFTKeysContract = Contract & {
     limit: number;
   }) => Promise<any[]>;
 
-  nft_transfer: (args: {
-    receiver_id: string;
-    token_id: string;
-    approval_id?: number;
-    memo?: string;
-  }) => Promise<void>;
-
-  nft_transfer_call: (
+  nft_transfer: (
     args: ContractChangeMethodArgs<{
       receiver_id: string;
       token_id: string;
-      msg: string;
       approval_id?: number;
       memo?: string;
     }>

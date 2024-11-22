@@ -11,7 +11,7 @@ import Link from "@/components/Link"
 import Loader from "@/components/Loader"
 import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
 import { NFTKeysContract } from "./_contract/types"
-import { ONE_YOCTO_NEAR } from "./_contract/constants"
+import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "./_contract/constants"
 
 type FormData = {
   tokenId: string
@@ -130,7 +130,9 @@ export default function NFTKeysPage() {
           path: data.path,
           payload: payloadArray,
           approval_id: data.approvalId ? parseInt(data.approvalId) : undefined
-        }
+        },
+        gas: NEAR_MAX_GAS,
+        amount: parseNearAmount("0.005") ?? '0'
       })
       setMessage({ type: 'success', content: `Signature: ${signature}` })
     } catch (error) {
@@ -149,7 +151,8 @@ export default function NFTKeysPage() {
           token_id: data.tokenId,
           account_id: data.accountId,
           msg: data.msg
-        }
+        },
+        amount: ONE_YOCTO_NEAR
       })
       setMessage({ type: 'success', content: `Approved with ID: ${approvalId}` })
     } catch (error) {
@@ -184,7 +187,8 @@ export default function NFTKeysPage() {
         args: {
           token_id: data.tokenId,
           account_id: data.accountId
-        }
+        },
+        amount: ONE_YOCTO_NEAR
       })
       setMessage({ type: 'success', content: 'Successfully revoked approval' })
     } catch (error) {
@@ -199,11 +203,15 @@ export default function NFTKeysPage() {
     setIsProcessing(true)
     try {
       await nftContract.nft_transfer({
-        receiver_id: data.accountId,
-        token_id: data.tokenId,
-        approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
-        memo: data.memo
-      })
+        args: {
+          receiver_id: data.accountId,
+          token_id: data.tokenId,
+          // approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
+          // memo: data.memo
+        },
+        amount: ONE_YOCTO_NEAR
+      },
+      )
       setMessage({ type: 'success', content: 'Transfer successful' })
     } catch (error) {
       setMessage({ type: 'error', content: `Error transferring: ${error}` })
@@ -211,28 +219,6 @@ export default function NFTKeysPage() {
       setIsProcessing(false)
     }
   }
-
-  const handleTransferCall = async (data: FormData) => {
-    if (!nftContract || !data.tokenId || !data.accountId || !data.msg) return
-    setIsProcessing(true)
-    try {
-      await nftContract.nft_transfer_call({
-        args: {
-          receiver_id: data.accountId,
-          token_id: data.tokenId,
-          msg: data.msg,
-          approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
-          memo: data.memo
-        }
-      })
-      setMessage({ type: 'success', content: 'Transfer call successful' })
-    } catch (error) {
-      setMessage({ type: 'error', content: `Error in transfer call: ${error}` })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
 
   const handleStorageDeposit = async (data: FormData) => {
     if (!nftContract || !data.amount || !account) return
@@ -297,9 +283,6 @@ export default function NFTKeysPage() {
       case 'transfer':
         handleTransfer(data)
         break
-      case 'transferCall':
-        handleTransferCall(data)
-        break
       case 'storageDeposit':
         handleStorageDeposit(data)
         break
@@ -335,7 +318,6 @@ export default function NFTKeysPage() {
     <div className="container mx-auto p-4 max-w-3xl">
       <h1 className="text-3xl font-bold mb-6 text-white">NFT Keys Management</h1>
 
-
       {storageBalance && (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
           <h2 className="text-xl font-bold mb-4 text-white">Storage Balance</h2>
@@ -359,7 +341,6 @@ export default function NFTKeysPage() {
           {ownedNfts.map((nft, index) => (
             <div key={index} className="p-4 bg-gray-700 rounded-lg">
               <p className="text-white">Token ID: {nft.token_id}</p>
-              {/* Add more NFT details as needed */}
             </div>
           ))}
         </div>
@@ -396,7 +377,6 @@ export default function NFTKeysPage() {
             { value: 'checkApproval', label: 'Check Approval' },
             { value: 'revoke', label: 'Revoke Approval' },
             { value: 'transfer', label: 'Transfer NFT' },
-            { value: 'transferCall', label: 'Transfer Call' },
             { value: 'storageDeposit', label: 'Storage Deposit' },
             { value: 'storageWithdraw', label: 'Storage Withdraw' },
           ]}
@@ -405,7 +385,7 @@ export default function NFTKeysPage() {
           className="mb-4"
         />
 
-        {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'transfer', 'transferCall'].includes(action) && (
+        {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'transfer'].includes(action) && (
           <Input
             label="Token ID"
             {...register("tokenId", { required: true })}
@@ -432,7 +412,7 @@ export default function NFTKeysPage() {
           />
         )}
 
-        {['approve', 'checkApproval', 'revoke', 'transfer', 'transferCall'].includes(action) && (
+        {['approve', 'checkApproval', 'revoke', 'transfer'].includes(action) && (
           <Input
             label="Account ID"
             {...register("accountId", { required: true })}
@@ -441,7 +421,7 @@ export default function NFTKeysPage() {
           />
         )}
 
-        {['approve', 'transferCall'].includes(action) && (
+        {['approve'].includes(action) && (
           <Input
             label="Message"
             {...register("msg")}
@@ -450,7 +430,7 @@ export default function NFTKeysPage() {
           />
         )}
 
-        {['signHash', 'checkApproval', 'transfer', 'transferCall'].includes(action) && (
+        {['signHash', 'checkApproval', 'transfer'].includes(action) && (
           <Input
             label="Approval ID (optional)"
             {...register("approvalId")}
@@ -459,7 +439,7 @@ export default function NFTKeysPage() {
           />
         )}
 
-        {['transfer', 'transferCall'].includes(action) && (
+        {['transfer'].includes(action) && (
           <Input
             label="Memo (optional)"
             {...register("memo")}
