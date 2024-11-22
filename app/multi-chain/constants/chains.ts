@@ -8,7 +8,8 @@ export enum Chain {
 
 export const chainsConfig = {
   ethereum: {
-    providerUrl: "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
+    providerUrl:
+      "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
     scanUrl: "https://etherscan.io",
     name: "ETH",
   },
@@ -20,8 +21,8 @@ export const chainsConfig = {
   btc: {
     name: "BTC",
     networkType: "testnet" as const,
-    rpcEndpoint: "https://blockstream.info/testnet/api/",
-    scanUrl: "https://blockstream.info",
+    rpcEndpoint: "https://mempool.space/testnet4/api",
+    scanUrl: "https://mempool.space/testnet4",
   },
   cosmos: {
     restEndpoint: "https://lcd.osmotest5.osmosis.zone/",
