@@ -206,8 +206,8 @@ export default function NFTKeysPage() {
         args: {
           receiver_id: data.accountId,
           token_id: data.tokenId,
-          // approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
-          // memo: data.memo
+          approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
+          memo: data.memo
         },
         amount: ONE_YOCTO_NEAR
       },
