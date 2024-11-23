@@ -30,7 +30,6 @@ export default function NFTMarketplace() {
     const [isRegistered, setIsRegistered] = useState(false)
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
     const [depositAmount, setDepositAmount] = useState("")
-    const [withdrawAmount, setWithdrawAmount] = useState("")
 
     useEffect(() => {
         if (!account) return
@@ -249,12 +248,12 @@ export default function NFTMarketplace() {
         await withErrorHandling(
             async () => {
                 await marketplaceContract.storage_withdraw({
+                    args: {},
                     amount: ONE_YOCTO_NEAR,
                 })
-                setWithdrawAmount("")
             },
             "Storage Withdrawn Successfully",
-            `You have withdrawn ${withdrawAmount} NEAR from your storage balance`
+            `You have withdrawn from your storage balance`
         )
     }
 
@@ -283,10 +282,8 @@ export default function NFTMarketplace() {
                 accountId={account.accountId}
                 storageBalance={storageBalance}
                 depositAmount={depositAmount}
-                withdrawAmount={withdrawAmount}
                 isProcessing={isProcessing}
                 onDepositAmountChange={setDepositAmount}
-                onWithdrawAmountChange={setWithdrawAmount}
                 onAddStorage={handleAddStorage}
                 onWithdrawStorage={handleWithdrawStorage}
             />

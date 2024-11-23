@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Wallet, Coins, Key } from 'lucide-react'
 import { formatNearAmount } from "near-api-js/lib/utils/format"
 
@@ -8,10 +9,8 @@ interface MarketplaceHeaderProps {
     accountId: string
     storageBalance: string | null
     depositAmount: string
-    withdrawAmount: string
     isProcessing: boolean
     onDepositAmountChange: (value: string) => void
-    onWithdrawAmountChange: (value: string) => void
     onAddStorage: () => void
     onWithdrawStorage: () => void
 }
@@ -20,10 +19,8 @@ export function MarketplaceHeader({
     accountId,
     storageBalance,
     depositAmount,
-    withdrawAmount,
     isProcessing,
     onDepositAmountChange,
-    onWithdrawAmountChange,
     onAddStorage,
     onWithdrawStorage
 }: MarketplaceHeaderProps) {
@@ -50,37 +47,37 @@ export function MarketplaceHeader({
                         </DialogHeader>
                         <div className="space-y-4">
                             <div>
-                                <label className="text-sm font-medium">Deposit Amount</label>
-                                <div className="mt-1 relative rounded-md">
+                                <Label htmlFor="deposit-amount">Deposit Amount</Label>
+                                <div className="flex mt-1">
                                     <Input
+                                        id="deposit-amount"
                                         type="number"
                                         placeholder="Amount in NEAR"
                                         value={depositAmount}
                                         onChange={(e) => onDepositAmountChange(e.target.value)}
+                                        className="flex-1 rounded-r-none"
                                     />
-                                    <Button onClick={onAddStorage} disabled={isProcessing} className="absolute inset-y-0 right-0">
+                                    <Button
+                                        onClick={onAddStorage}
+                                        disabled={isProcessing}
+                                        className="rounded-l-none"
+                                    >
                                         {isProcessing ? 'Processing...' : 'Add'}
                                     </Button>
                                 </div>
                             </div>
-                            <div>
-                                <label className="text-sm font-medium">Withdraw Amount</label>
-                                <div className="mt-1 relative rounded-md">
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount in NEAR"
-                                        value={withdrawAmount}
-                                        onChange={(e) => onWithdrawAmountChange(e.target.value)}
-                                    />
-                                    <Button onClick={onWithdrawStorage} disabled={isProcessing} className="absolute inset-y-0 right-0">
-                                        {isProcessing ? 'Processing...' : 'Withdraw'}
-                                    </Button>
-                                </div>
-                            </div>
+                            <Button
+                                onClick={onWithdrawStorage}
+                                disabled={isProcessing}
+                                variant="outline"
+                                className="w-full"
+                            >
+                                {isProcessing ? 'Processing...' : 'Withdraw All Storage'}
+                            </Button>
                         </div>
                     </DialogContent>
                 </Dialog>
             </div>
         </header>
     )
-} 
+}

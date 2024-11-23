@@ -43,7 +43,7 @@ export type NFTKeysMarketplaceContract = Contract & {
   ) => Promise<StorageBalanceResult>;
 
   storage_withdraw: (
-    args: ContractChangeMethodArgs
+    args: ContractChangeMethodArgs<{}>
   ) => Promise<StorageBalanceResult>;
 
   storage_minimum_balance: () => Promise<string>;
