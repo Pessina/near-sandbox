@@ -8,18 +8,17 @@ import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplace
 import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
 import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
 import useInitNear from "@/hooks/useInitNear"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { ThemeProvider } from "next-themes"
 import { NFTCard } from "./_components/NFTCard"
 import type { NFT, FormData } from "./types"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Wallet, Coins, ShoppingBag, Plus, ArrowUpDown, Key } from 'lucide-react'
+import { Wallet, Coins, ShoppingBag, Plus, Key } from 'lucide-react'
 
 export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear()
