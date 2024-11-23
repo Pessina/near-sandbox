@@ -14,6 +14,9 @@ import { MintNFTCard } from "./_components/MintNFTCard"
 import { NFTKeysGrid } from "./_components/NFTKeysGrid"
 import { ManageNFTForm } from "./_components/ManageNFTForm"
 import { useForm } from "react-hook-form"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { CheckCircle2, Key } from 'lucide-react'
 
 interface NFTToken {
   token_id: string
@@ -94,7 +97,8 @@ export default function NFTKeysPage() {
       const result = await action()
       toast({
         title: "Success",
-        description: successMessage + (result ? `: ${result}` : '')
+        description: successMessage + (result ? `: ${result}` : ''),
+        duration: 5000,
       })
       await loadNFTData()
       return result
@@ -102,7 +106,8 @@ export default function NFTKeysPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: String(error)
+        description: String(error),
+        duration: 5000,
       })
     } finally {
       setIsProcessing(false)
@@ -312,7 +317,7 @@ export default function NFTKeysPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary" />
+        <Skeleton className="h-32 w-32 rounded-full" />
       </div>
     )
   }
@@ -335,35 +340,48 @@ export default function NFTKeysPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">NFT Keys Management</h1>
+      <h1 className="text-3xl font-bold mb-6 flex items-center space-x-2">
+        <Key className="h-8 w-8" />
+        <span>NFT Keys Management</span>
+      </h1>
 
-      <StorageBalanceCard storageBalance={storageBalance} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StorageBalanceCard storageBalance={storageBalance} />
+        <MintNFTCard onMint={handleMint} isProcessing={isProcessing} />
+      </div>
 
-      <MintNFTCard onMint={handleMint} isProcessing={isProcessing} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Your NFT Keys</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NFTKeysGrid
+            nfts={ownedNfts}
+            emptyMessage="You don't own any NFT keys yet."
+          />
+        </CardContent>
+      </Card>
 
-      <NFTKeysGrid
-        title="Your NFT Keys"
-        nfts={ownedNfts}
-        emptyMessage="You don't own any NFT keys yet."
-      />
-
-      <NFTKeysGrid
-        title="All NFT Keys"
-        nfts={nfts}
-        emptyMessage="No NFT keys have been minted yet."
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>All NFT Keys</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NFTKeysGrid
+            nfts={nfts}
+            emptyMessage="No NFT keys have been minted yet."
+          />
+        </CardContent>
+      </Card>
 
       <ManageNFTForm onSubmit={onSubmit} isProcessing={isProcessing} register={register} handleSubmit={handleSubmit} watch={watch} />
 
       {publicKey && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Public Key</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="break-all">{publicKey}</p>
-          </CardContent>
-        </Card>
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Public Key Retrieved</AlertTitle>
+          <AlertDescription className="break-all mt-2">{publicKey}</AlertDescription>
+        </Alert>
       )}
     </div>
   )
