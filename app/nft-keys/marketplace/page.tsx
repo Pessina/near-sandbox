@@ -5,20 +5,18 @@ import { createNFTContract } from "../_contract/NFTKeysContract"
 import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
 import type { NFTKeysContract } from "../_contract/NFTKeysContract/types"
 import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
-import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
+import { parseNearAmount } from "near-api-js/lib/utils/format"
 import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
 import useInitNear from "@/hooks/useInitNear"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { NFTCard } from "./_components/NFTCard"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ShoppingBag, Wallet } from 'lucide-react'
 import type { NFT, FormData } from "./types"
-import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Wallet, Coins, ShoppingBag, Plus, Key } from 'lucide-react'
+import { ConnectWalletCard } from "./_components/ConnectWalletCard"
+import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
+import { MarketplaceHeader } from "./_components/MarketplaceHeader"
+import { NFTGrid } from "./_components/NFTGrid"
 
 export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear()
@@ -269,97 +267,29 @@ export default function NFTMarketplace() {
     }
 
     if (!account) {
-        return (
-            <Card className="max-w-md mx-auto mt-20">
-                <CardHeader>
-                    <CardTitle>Not Connected</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                        Please connect your NEAR wallet to access the NFT Keys Marketplace.
-                    </p>
-                    <Button className="w-full">
-                        <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
-                    </Button>
-                </CardContent>
-            </Card>
-        )
+        return <ConnectWalletCard />
     }
 
     if (!isRegistered) {
-        return (
-            <Card className="max-w-md mx-auto mt-20">
-                <CardHeader>
-                    <CardTitle>Marketplace Registration</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                        Register to start trading NFT Keys on our marketplace.
-                    </p>
-                    <Button onClick={handleRegisterMarketplace} disabled={isProcessing} className="w-full">
-                        {isProcessing ? 'Registering...' : 'Register to Marketplace'}
-                    </Button>
-                </CardContent>
-            </Card>
-        )
+        return <RegisterMarketplaceCard
+            onRegister={handleRegisterMarketplace}
+            isProcessing={isProcessing}
+        />
     }
 
     return (
         <div className="container mx-auto p-4 space-y-6">
-            <header className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold flex items-center space-x-2">
-                    <Key className="h-8 w-8" />
-                    <span>NFT Keys Marketplace</span>
-                </h1>
-                <div className="flex items-center space-x-4">
-                    <Button variant="outline">
-                        <Wallet className="mr-2 h-4 w-4" /> {account.accountId}
-                    </Button>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <Coins className="mr-2 h-4 w-4" /> Storage: {formatNearAmount(storageBalance || "0")} NEAR
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Manage Storage Balance</DialogTitle>
-                                <DialogDescription>Add or withdraw NEAR from your storage balance.</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-sm font-medium">Deposit Amount</label>
-                                    <div className="mt-1 relative rounded-md">
-                                        <Input
-                                            type="number"
-                                            placeholder="Amount in NEAR"
-                                            value={depositAmount}
-                                            onChange={(e) => setDepositAmount(e.target.value)}
-                                        />
-                                        <Button onClick={handleAddStorage} disabled={isProcessing} className="absolute inset-y-0 right-0">
-                                            {isProcessing ? 'Processing...' : 'Add'}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium">Withdraw Amount</label>
-                                    <div className="mt-1 relative rounded-md">
-                                        <Input
-                                            type="number"
-                                            placeholder="Amount in NEAR"
-                                            value={withdrawAmount}
-                                            onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        />
-                                        <Button onClick={handleWithdrawStorage} disabled={isProcessing} className="absolute inset-y-0 right-0">
-                                            {isProcessing ? 'Processing...' : 'Withdraw'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                </div>
-            </header>
+            <MarketplaceHeader
+                accountId={account.accountId}
+                storageBalance={storageBalance}
+                depositAmount={depositAmount}
+                withdrawAmount={withdrawAmount}
+                isProcessing={isProcessing}
+                onDepositAmountChange={setDepositAmount}
+                onWithdrawAmountChange={setWithdrawAmount}
+                onAddStorage={handleAddStorage}
+                onWithdrawStorage={handleWithdrawStorage}
+            />
 
             <Tabs defaultValue="browse">
                 <TabsList className="w-full mb-8">
@@ -371,45 +301,23 @@ export default function NFTMarketplace() {
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="browse">
-                    <ScrollArea className="h-[calc(100vh-300px)]">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {listedNfts.map((nft) => (
-                                <NFTCard
-                                    key={nft.token_id}
-                                    nft={nft}
-                                    isProcessing={isProcessing}
-                                    onBuy={handleBuyNFT}
-                                    variant="listed"
-                                />
-                            ))}
-                        </div>
-                    </ScrollArea>
+                    <NFTGrid
+                        nfts={listedNfts}
+                        variant="listed"
+                        isProcessing={isProcessing}
+                        onBuy={handleBuyNFT}
+                    />
                 </TabsContent>
                 <TabsContent value="my-nfts">
-                    <ScrollArea className="h-[calc(100vh-300px)]">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            <Card>
-                                <CardContent className="p-6 flex flex-col items-center justify-center h-full">
-                                    <Plus className="h-12 w-12 mb-4" />
-                                    <h3 className="font-semibold text-lg mb-2">Mint New NFT Key</h3>
-                                    <p className="text-muted-foreground text-center mb-4">Create a new NFT Key to hold funds on other chains</p>
-                                    <Button onClick={handleMint} disabled={isProcessing} className="w-full">
-                                        {isProcessing ? 'Minting...' : 'Mint NFT Key'}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                            {ownedNfts.map((nft) => (
-                                <NFTCard
-                                    key={nft.token_id}
-                                    nft={nft}
-                                    isProcessing={isProcessing}
-                                    onList={handleListNFT}
-                                    onRemoveListing={handleRemoveListing}
-                                    variant="owned"
-                                />
-                            ))}
-                        </div>
-                    </ScrollArea>
+                    <NFTGrid
+                        nfts={ownedNfts}
+                        variant="owned"
+                        isProcessing={isProcessing}
+                        onList={handleListNFT}
+                        onRemoveListing={handleRemoveListing}
+                        onMint={handleMint}
+                        showMintCard
+                    />
                 </TabsContent>
             </Tabs>
         </div>
