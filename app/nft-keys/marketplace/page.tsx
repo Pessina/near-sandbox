@@ -210,6 +210,7 @@ const NFTMarketplace = () => {
                         token_id: nft.token_id,
                         account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
                     },
+                    amount: ONE_YOCTO_NEAR
                 })
             },
             "Listing Removed Successfully",
