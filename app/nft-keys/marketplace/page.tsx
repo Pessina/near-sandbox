@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { createNFTContract } from "../_contract/NFTKeysContract"
 import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
-import { NFTKeysContract } from "../_contract/NFTKeysContract/types"
-import { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
+import type { NFTKeysContract } from "../_contract/NFTKeysContract/types"
+import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
 import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
 import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
 import useInitNear from "@/hooks/useInitNear"
@@ -15,12 +15,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme, ThemeProvider as NextThemesProvider } from "next-themes"
 import { NFTCard } from "./_components/NFTCard"
-import { NFT, FormData } from "./types"
+import type { NFT, FormData } from "./types"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
-export default function NFTMarketplace() {
+const NFTMarketplace = () => {
     const { account, isLoading } = useInitNear()
+    const { toast } = useToast()
+    const { setTheme } = useTheme()
+
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
     const [nfts, setNfts] = useState<NFT[]>([])
@@ -31,8 +34,6 @@ export default function NFTMarketplace() {
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
     const [depositAmount, setDepositAmount] = useState("")
     const [withdrawAmount, setWithdrawAmount] = useState("")
-    const { toast } = useToast()
-    const { setTheme } = useTheme()
 
     useEffect(() => {
         setTheme('dark')
@@ -53,6 +54,22 @@ export default function NFTMarketplace() {
         })
         setMarketplaceContract(marketplaceContract)
     }, [account])
+
+    const showErrorToast = useCallback((title: string, error: unknown) => {
+        toast({
+            title,
+            description: `${title}: ${error}`,
+            variant: "destructive",
+        })
+    }, [toast])
+
+    const showSuccessToast = useCallback((title: string, description: string) => {
+        toast({
+            title,
+            description,
+            variant: "default",
+        })
+    }, [toast])
 
     const loadData = useCallback(async () => {
         if (!nftContract || !marketplaceContract || !account) return
@@ -84,17 +101,9 @@ export default function NFTMarketplace() {
                 })
             )
 
-            // Update owned NFTs with price information from sales
             const ownedNftsWithPrice = userNfts.map(nft => {
                 const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
-                if (listedNft) {
-                    return {
-                        ...nft,
-                        price: listedNft.price,
-                        token: listedNft.token
-                    }
-                }
-                return nft
+                return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token } : nft
             })
 
             setNfts(allNfts)
@@ -103,226 +112,157 @@ export default function NFTMarketplace() {
             setStorageBalance(storageBalance)
             setIsRegistered(storageBalance !== null && storageBalance !== "0")
         } catch (error) {
-            toast({
-                title: "Error",
-                description: `Failed to load marketplace data: ${error}`,
-                variant: "destructive",
-            })
+            showErrorToast("Failed to load marketplace data", error)
         }
-    }, [nftContract, marketplaceContract, account, toast])
+    }, [nftContract, marketplaceContract, account, showErrorToast])
 
     useEffect(() => {
         loadData()
     }, [loadData])
 
-    const handleMint = async () => {
-        if (!nftContract) return
+    const withErrorHandling = useCallback(async (operation: () => Promise<void>, processingMessage: string, successMessage: string) => {
+        if (isProcessing) return
         setIsProcessing(true)
         try {
-            const tokenId = await nftContract.mint()
-            toast({
-                title: "NFT Minted Successfully",
-                description: `Your new NFT has been minted with token ID: ${tokenId}`,
-                variant: "default",
-            })
+            await operation()
+            showSuccessToast(processingMessage, successMessage)
             await loadData()
         } catch (error) {
-            toast({
-                title: "Minting Failed",
-                description: `There was an error minting your NFT: ${error}`,
-                variant: "destructive",
-            })
+            showErrorToast(processingMessage, error)
         } finally {
             setIsProcessing(false)
         }
+    }, [isProcessing, loadData, showSuccessToast, showErrorToast])
+
+    const handleMint = async () => {
+        if (!nftContract) return
+        await withErrorHandling(
+            async () => {
+                await nftContract.mint()
+            },
+            "NFT Minted Successfully",
+            "Your new NFT has been minted"
+        )
     }
 
     const handleListNFT = async (data: FormData) => {
         if (!nftContract || !marketplaceContract) return
-        setIsProcessing(true)
-        try {
-            const price = data.price
-            if (!price) throw new Error("Invalid price")
+        if (!data.price) throw new Error("Invalid price")
 
-            await nftContract.nft_approve({
-                args: {
-                    token_id: data.tokenId,
-                    account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
-                    msg: JSON.stringify({
-                        sale_conditions: {
-                            token: data.token,
-                            amount: price,
-                        },
-                    }),
-                },
-                amount: ONE_YOCTO_NEAR,
-            })
-
-            toast({
-                title: "NFT Listed Successfully",
-                description: `Your NFT ${data.tokenId} has been listed for ${data.price} ${data.token.toUpperCase()}`,
-                variant: "default",
-            })
-
-            await loadData()
-        } catch (error) {
-            toast({
-                title: "Listing Failed",
-                description: `There was an error listing your NFT: ${error}`,
-                variant: "destructive",
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+        await withErrorHandling(
+            async () => {
+                await nftContract.nft_approve({
+                    args: {
+                        token_id: data.tokenId,
+                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
+                        msg: JSON.stringify({
+                            sale_conditions: {
+                                token: data.token,
+                                amount: data.price,
+                            },
+                        }),
+                    },
+                    amount: ONE_YOCTO_NEAR,
+                })
+            },
+            "NFT Listed Successfully",
+            `Your NFT ${data.tokenId} has been listed for ${data.price} ${data.token.toUpperCase()}`
+        )
     }
 
     const handleBuyNFT = async (nft: NFT) => {
         if (!marketplaceContract || !nft.price) return
-        setIsProcessing(true)
-        try {
-            await marketplaceContract.offer({
-                args: {
-                    nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
-                    token_id: nft.token_id,
-                    offer_price: {
-                        token: nft.token || "near",
-                        amount: Number(parseNearAmount(nft.price)),
+
+        await withErrorHandling(
+            async () => {
+                await marketplaceContract.offer({
+                    args: {
+                        nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
+                        token_id: nft.token_id,
+                        offer_price: {
+                            token: nft.token || "near",
+                            amount: Number(parseNearAmount(nft.price)),
+                        },
                     },
-                },
-                amount: parseNearAmount(nft.price)!,
-                gas: NEAR_MAX_GAS,
-            })
-
-            toast({
-                title: "NFT Purchased Successfully",
-                description: `You have bought NFT ${nft.token_id} for ${nft.price} ${nft.token?.toUpperCase() || 'NEAR'}`,
-                variant: "default",
-            })
-
-            await loadData()
-        } catch (error) {
-            toast({
-                title: "Purchase Failed",
-                description: `There was an error buying the NFT: ${error}`,
-                variant: "destructive",
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+                    amount: parseNearAmount(nft.price)!,
+                    gas: NEAR_MAX_GAS,
+                })
+            },
+            "NFT Purchased Successfully",
+            `You have bought NFT ${nft.token_id} for ${nft.price} ${nft.token?.toUpperCase() || 'NEAR'}`
+        )
     }
 
     const handleRemoveListing = async (nft: NFT) => {
         if (!marketplaceContract) return
-        setIsProcessing(true)
-        try {
-            await marketplaceContract.remove_sale({
-                args: {
-                    nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
-                    token_id: nft.token_id,
-                },
-                amount: ONE_YOCTO_NEAR,
-            })
 
-            toast({
-                title: "Listing Removed Successfully",
-                description: `Your NFT ${nft.token_id} has been removed from the marketplace`,
-                variant: "default",
-            })
-
-            await loadData()
-        } catch (error) {
-            toast({
-                title: "Removal Failed",
-                description: `There was an error removing your NFT listing: ${error}`,
-                variant: "destructive",
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+        await withErrorHandling(
+            async () => {
+                await marketplaceContract.remove_sale({
+                    args: {
+                        nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
+                        token_id: nft.token_id,
+                    },
+                    amount: ONE_YOCTO_NEAR,
+                })
+                await nftContract?.nft_revoke({
+                    args: {
+                        token_id: nft.token_id,
+                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
+                    },
+                })
+            },
+            "Listing Removed Successfully",
+            `Your NFT ${nft.token_id} has been removed from the marketplace`
+        )
     }
 
     const handleRegisterMarketplace = async () => {
         if (!marketplaceContract) return
-        setIsProcessing(true)
-        try {
-            const storageMinimum = await marketplaceContract.storage_minimum_balance()
-            await marketplaceContract.storage_deposit({
-                args: {},
-                amount: storageMinimum,
-            })
 
-            toast({
-                title: "Marketplace Registration Successful",
-                description: "You have successfully registered to the NFT marketplace",
-                variant: "default",
-            })
-
-            setIsRegistered(true)
-            await loadData()
-        } catch (error) {
-            toast({
-                title: "Registration Failed",
-                description: `There was an error registering to the marketplace: ${error}`,
-                variant: "destructive",
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+        await withErrorHandling(
+            async () => {
+                const storageMinimum = await marketplaceContract.storage_minimum_balance()
+                await marketplaceContract.storage_deposit({
+                    args: {},
+                    amount: storageMinimum,
+                })
+                setIsRegistered(true)
+            },
+            "Marketplace Registration Successful",
+            "You have successfully registered to the NFT marketplace"
+        )
     }
 
     const handleAddStorage = async () => {
         if (!marketplaceContract) return
-        setIsProcessing(true)
-        try {
-            await marketplaceContract.storage_deposit({
-                args: {},
-                amount: parseNearAmount(depositAmount)!,
-            })
 
-            toast({
-                title: "Storage Added Successfully",
-                description: `You have added ${depositAmount} NEAR to your storage balance`,
-                variant: "default",
-            })
-
-            await loadData()
-            setDepositAmount("")
-        } catch (error) {
-            toast({
-                title: "Storage Deposit Failed",
-                description: `There was an error adding storage: ${error}`,
-                variant: "destructive",
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+        await withErrorHandling(
+            async () => {
+                await marketplaceContract.storage_deposit({
+                    args: {},
+                    amount: parseNearAmount(depositAmount)!,
+                })
+                setDepositAmount("")
+            },
+            "Storage Added Successfully",
+            `You have added ${depositAmount} NEAR to your storage balance`
+        )
     }
 
     const handleWithdrawStorage = async () => {
         if (!marketplaceContract) return
-        setIsProcessing(true)
-        try {
-            await marketplaceContract.storage_withdraw({
-                amount: ONE_YOCTO_NEAR,
-            })
 
-            toast({
-                title: "Storage Withdrawn Successfully",
-                description: `You have withdrawn ${withdrawAmount} NEAR from your storage balance`,
-                variant: "default",
-            })
-
-            await loadData()
-            setWithdrawAmount("")
-        } catch (error) {
-            toast({
-                title: "Storage Withdrawal Failed",
-                description: `There was an error withdrawing storage: ${error}`,
-                variant: "destructive",
-            })
-        } finally {
-            setIsProcessing(false)
-        }
+        await withErrorHandling(
+            async () => {
+                await marketplaceContract.storage_withdraw({
+                    amount: ONE_YOCTO_NEAR,
+                })
+                setWithdrawAmount("")
+            },
+            "Storage Withdrawn Successfully",
+            `You have withdrawn ${withdrawAmount} NEAR from your storage balance`
+        )
     }
 
     if (isLoading) {
@@ -473,3 +413,5 @@ export default function NFTMarketplace() {
         </NextThemesProvider>
     )
 }
+
+export default NFTMarketplace

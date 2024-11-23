@@ -78,6 +78,12 @@ export type NFTKeysContract = Contract & {
     }>
   ) => Promise<void>;
 
+  nft_revoke_all: (
+    args: ContractChangeMethodArgs<{
+      token_id: string;
+    }>
+  ) => Promise<void>;
+
   storage_balance_of: (args: {
     account_id: string;
   }) => Promise<StorageBalanceResult | null>;

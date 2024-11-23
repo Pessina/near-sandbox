@@ -198,6 +198,24 @@ export default function NFTKeysPage() {
     }
   }
 
+  const handleRevokeAll = async (data: FormData) => {
+    if (!nftContract || !data.tokenId) return
+    setIsProcessing(true)
+    try {
+      await nftContract.nft_revoke_all({
+        args: {
+          token_id: data.tokenId
+        },
+        amount: ONE_YOCTO_NEAR
+      })
+      setMessage({ type: 'success', content: 'Successfully revoked all approvals' })
+    } catch (error) {
+      setMessage({ type: 'error', content: `Error revoking all approvals: ${error}` })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const handleTransfer = async (data: FormData) => {
     if (!nftContract || !data.tokenId || !data.accountId) return
     setIsProcessing(true)
@@ -279,6 +297,9 @@ export default function NFTKeysPage() {
         break
       case 'revoke':
         handleRevoke(data)
+        break
+      case 'revokeAll':
+        handleRevokeAll(data)
         break
       case 'transfer':
         handleTransfer(data)
@@ -376,6 +397,7 @@ export default function NFTKeysPage() {
             { value: 'approve', label: 'Approve' },
             { value: 'checkApproval', label: 'Check Approval' },
             { value: 'revoke', label: 'Revoke Approval' },
+            { value: 'revokeAll', label: 'Revoke All Approvals' },
             { value: 'transfer', label: 'Transfer NFT' },
             { value: 'storageDeposit', label: 'Storage Deposit' },
             { value: 'storageWithdraw', label: 'Storage Withdraw' },
@@ -385,7 +407,7 @@ export default function NFTKeysPage() {
           className="mb-4"
         />
 
-        {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'transfer'].includes(action) && (
+        {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'revokeAll', 'transfer'].includes(action) && (
           <Input
             label="Token ID"
             {...register("tokenId", { required: true })}
