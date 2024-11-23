@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useForm } from "react-hook-form"
 import { createNFTContract } from "../_contract/NFTKeysContract"
 import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
 import { NFTKeysContract } from "../_contract/NFTKeysContract/types"
@@ -11,41 +10,12 @@ import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
 import useInitNear from "@/hooks/useInitNear"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme, ThemeProvider as NextThemesProvider } from "next-themes"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-type NFT = {
-    token_id: string
-    owner_id: string
-    metadata: {
-        title: string
-        description: string
-        media: string
-    }
-    price?: string
-    token?: string
-}
-
-type FormData = {
-    tokenId: string
-    price: string
-    token: string
-}
-
-const SUPPORTED_TOKENS = [
-    { id: "near", name: "NEAR" },
-    { id: "btc", name: "Bitcoin" },
-    { id: "eth", name: "Ethereum" },
-    { id: "usdt", name: "USDT" },
-    { id: "usdc", name: "USDC" }
-]
+import { NFTCard } from "./_components/NFTCard"
+import { NFT, FormData } from "./types"
 
 export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear()
@@ -55,11 +25,6 @@ export default function NFTMarketplace() {
     const [ownedNfts, setOwnedNfts] = useState<NFT[]>([])
     const [listedNfts, setListedNfts] = useState<NFT[]>([])
     const [isProcessing, setIsProcessing] = useState(false)
-    const { register, handleSubmit, reset, setValue, watch } = useForm<FormData>({
-        defaultValues: {
-            token: "near"
-        }
-    })
     const { toast } = useToast()
     const { setTheme } = useTheme()
 
@@ -184,7 +149,6 @@ export default function NFTMarketplace() {
             })
         } finally {
             setIsProcessing(false)
-            reset()
         }
     }
 
@@ -261,88 +225,26 @@ export default function NFTMarketplace() {
                     <TabsContent value="browse">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {listedNfts.map((nft) => (
-                                <Card key={nft.token_id} className="flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle>{nft.metadata.title || `NFT #${nft.token_id}`}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="flex-grow">
-                                        <p className="text-sm text-muted-foreground mb-2">{nft.metadata.description}</p>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center">
-                                                <Avatar className="h-6 w-6 mr-2">
-                                                    <AvatarImage src={`https://avatars.dicebear.com/api/initials/${nft.owner_id}.svg`} />
-                                                    <AvatarFallback>{nft.owner_id[0]}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm text-muted-foreground">{nft.owner_id}</span>
-                                            </div>
-                                            <Badge variant="secondary">{nft.price} {nft.token?.toUpperCase() || 'NEAR'}</Badge>
-                                        </div>
-                                    </CardContent>
-                                    <CardFooter>
-                                        <Button onClick={() => handleBuyNFT(nft)} disabled={isProcessing} className="w-full">
-                                            {isProcessing ? 'Processing...' : 'Buy'}
-                                        </Button>
-                                    </CardFooter>
-                                </Card>
+                                <NFTCard
+                                    key={nft.token_id}
+                                    nft={nft}
+                                    isProcessing={isProcessing}
+                                    onBuy={handleBuyNFT}
+                                    variant="listed"
+                                />
                             ))}
                         </div>
                     </TabsContent>
                     <TabsContent value="my-nfts">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {ownedNfts.map((nft) => (
-                                <Card key={nft.token_id} className="flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle>{nft.metadata.title || `NFT #${nft.token_id}`}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="flex-grow">
-                                        <p className="text-sm text-muted-foreground mb-2">{nft.metadata.description}</p>
-                                    </CardContent>
-                                    <CardFooter>
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="outline" className="w-full">List for Sale</Button>
-                                            </DialogTrigger>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>List NFT for Sale</DialogTitle>
-                                                    <DialogDescription>Enter the price and select the token for your NFT listing.</DialogDescription>
-                                                </DialogHeader>
-                                                <form onSubmit={handleSubmit(handleListNFT)} className="space-y-4">
-                                                    <input type="hidden" {...register("tokenId")} value={nft.token_id} />
-                                                    <div className="flex gap-4">
-                                                        <Input
-                                                            {...register("price", { required: true })}
-                                                            placeholder="Price"
-                                                            type="number"
-                                                            step="0.1"
-                                                            className="flex-1"
-                                                        />
-                                                        <Select
-                                                            defaultValue="near"
-                                                            onValueChange={(value) => setValue("token", value)}
-                                                        >
-                                                            <SelectTrigger className="w-[120px]">
-                                                                <SelectValue placeholder="Select token" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {SUPPORTED_TOKENS.map(token => (
-                                                                    <SelectItem key={token.id} value={token.id}>
-                                                                        {token.name}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <Button type="submit" disabled={isProcessing}>
-                                                            {isProcessing ? 'Processing...' : 'List NFT'}
-                                                        </Button>
-                                                    </DialogFooter>
-                                                </form>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </CardFooter>
-                                </Card>
+                                <NFTCard
+                                    key={nft.token_id}
+                                    nft={nft}
+                                    isProcessing={isProcessing}
+                                    onList={handleListNFT}
+                                    variant="owned"
+                                />
                             ))}
                         </div>
                         <div className="mt-6">
