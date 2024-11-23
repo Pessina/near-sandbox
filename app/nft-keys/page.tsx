@@ -97,7 +97,7 @@ export default function NFTKeysPage() {
       const result = await action()
       toast({
         title: "Success",
-        description: successMessage + (result ? `: ${result}` : ''),
+        description: successMessage + (result ? `: ${JSON.stringify(result)}` : ''),
         duration: 5000,
       })
       await loadNFTData()

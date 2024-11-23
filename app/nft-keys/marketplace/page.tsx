@@ -13,16 +13,17 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { useTheme, ThemeProvider as NextThemesProvider } from "next-themes"
+import { ThemeProvider } from "next-themes"
 import { NFTCard } from "./_components/NFTCard"
 import type { NFT, FormData } from "./types"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Wallet, Coins, ShoppingBag, Plus, ArrowUpDown, Key } from 'lucide-react'
 
-const NFTMarketplace = () => {
+export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear()
     const { toast } = useToast()
-    const { setTheme } = useTheme()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
@@ -34,10 +35,6 @@ const NFTMarketplace = () => {
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
     const [depositAmount, setDepositAmount] = useState("")
     const [withdrawAmount, setWithdrawAmount] = useState("")
-
-    useEffect(() => {
-        setTheme('dark')
-    }, [setTheme])
 
     useEffect(() => {
         if (!account) return
@@ -140,8 +137,8 @@ const NFTMarketplace = () => {
             async () => {
                 await nftContract.mint()
             },
-            "NFT Minted Successfully",
-            "Your new NFT has been minted"
+            "NFT Key Minted Successfully",
+            "Your new NFT Key has been minted"
         )
     }
 
@@ -165,8 +162,8 @@ const NFTMarketplace = () => {
                     amount: ONE_YOCTO_NEAR,
                 })
             },
-            "NFT Listed Successfully",
-            `Your NFT ${data.tokenId} has been listed for ${data.price} ${data.token.toUpperCase()}`
+            "NFT Key Listed Successfully",
+            `Your NFT Key ${data.tokenId} has been listed for ${data.price} ${data.token.toUpperCase()}`
         )
     }
 
@@ -188,8 +185,8 @@ const NFTMarketplace = () => {
                     gas: NEAR_MAX_GAS,
                 })
             },
-            "NFT Purchased Successfully",
-            `You have bought NFT ${nft.token_id} for ${nft.price} ${nft.token?.toUpperCase() || 'NEAR'}`
+            "NFT Key Purchased Successfully",
+            `You have bought NFT Key ${nft.token_id} for ${nft.price} ${nft.token?.toUpperCase() || 'NEAR'}`
         )
     }
 
@@ -214,7 +211,7 @@ const NFTMarketplace = () => {
                 })
             },
             "Listing Removed Successfully",
-            `Your NFT ${nft.token_id} has been removed from the marketplace`
+            `Your NFT Key ${nft.token_id} has been removed from the marketplace`
         )
     }
 
@@ -231,7 +228,7 @@ const NFTMarketplace = () => {
                 setIsRegistered(true)
             },
             "Marketplace Registration Successful",
-            "You have successfully registered to the NFT marketplace"
+            "You have successfully registered to the NFT Keys marketplace"
         )
     }
 
@@ -268,7 +265,7 @@ const NFTMarketplace = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-screen">
+            <div className="flex items-center justify-center h-screen bg-gray-900">
                 <Skeleton className="h-12 w-12 rounded-full" />
             </div>
         )
@@ -276,17 +273,17 @@ const NFTMarketplace = () => {
 
     if (!account) {
         return (
-            <div className="flex items-center justify-center h-screen">
-                <Card>
+            <div className="flex items-center justify-center h-screen bg-gray-900">
+                <Card className="w-96">
                     <CardHeader>
-                        <CardTitle>Not Connected</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-center">Welcome to NFT Keys</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>Please connect your NEAR wallet to access the NFT Marketplace.</p>
+                        <p className="text-center mb-6 text-gray-400">Connect your NEAR wallet to access the NFT Keys Marketplace.</p>
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                            <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
+                        </Button>
                     </CardContent>
-                    <CardFooter>
-                        <Button>Connect Wallet</Button>
-                    </CardFooter>
                 </Card>
             </div>
         )
@@ -294,125 +291,140 @@ const NFTMarketplace = () => {
 
     if (!isRegistered) {
         return (
-            <div className="flex items-center justify-center h-screen">
-                <Card>
+            <div className="flex items-center justify-center h-screen bg-gray-900">
+                <Card className="w-96">
                     <CardHeader>
-                        <CardTitle>Marketplace Registration Required</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-center">Marketplace Registration</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p>You need to register to the marketplace to start trading NFTs.</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button onClick={handleRegisterMarketplace} disabled={isProcessing}>
+                        <p className="text-center mb-6 text-gray-400">Register to start trading NFT Keys on our marketplace.</p>
+                        <Button onClick={handleRegisterMarketplace} disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                             {isProcessing ? 'Registering...' : 'Register to Marketplace'}
                         </Button>
-                    </CardFooter>
+                    </CardContent>
                 </Card>
             </div>
         )
     }
 
     return (
-        <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem>
-            <div className="container mx-auto p-4 bg-background text-foreground">
-                <h1 className="text-3xl font-bold mb-6">NFT Marketplace</h1>
-
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>Storage Balance</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p>Current Balance: {formatNearAmount(storageBalance || "0")} NEAR</p>
-                        <div className="flex gap-4 mt-4">
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline">Add Storage</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add Storage Balance</DialogTitle>
-                                        <DialogDescription>Enter the amount of NEAR to add to your storage balance.</DialogDescription>
-                                    </DialogHeader>
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount in NEAR"
-                                        value={depositAmount}
-                                        onChange={(e) => setDepositAmount(e.target.value)}
-                                    />
-                                    <DialogFooter>
-                                        <Button onClick={handleAddStorage} disabled={isProcessing}>
-                                            {isProcessing ? 'Processing...' : 'Add Storage'}
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline">Withdraw Storage</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Withdraw Storage Balance</DialogTitle>
-                                        <DialogDescription>Enter the amount of NEAR to withdraw from your storage balance.</DialogDescription>
-                                    </DialogHeader>
-                                    <Input
-                                        type="number"
-                                        placeholder="Amount in NEAR"
-                                        value={withdrawAmount}
-                                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                                    />
-                                    <DialogFooter>
-                                        <Button onClick={handleWithdrawStorage} disabled={isProcessing}>
-                                            {isProcessing ? 'Processing...' : 'Withdraw Storage'}
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Tabs defaultValue="browse" className="mb-6">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="browse">Browse</TabsTrigger>
-                        <TabsTrigger value="my-nfts">My NFTs</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="browse">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {listedNfts.map((nft) => (
-                                <NFTCard
-                                    key={nft.token_id}
-                                    nft={nft}
-                                    isProcessing={isProcessing}
-                                    onBuy={handleBuyNFT}
-                                    variant="listed"
-                                />
-                            ))}
-                        </div>
-                    </TabsContent>
-                    <TabsContent value="my-nfts">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {ownedNfts.map((nft) => (
-                                <NFTCard
-                                    key={nft.token_id}
-                                    nft={nft}
-                                    isProcessing={isProcessing}
-                                    onList={handleListNFT}
-                                    onRemoveListing={handleRemoveListing}
-                                    variant="owned"
-                                />
-                            ))}
-                        </div>
-                        <div className="mt-6">
-                            <Button onClick={handleMint} disabled={isProcessing} className="w-full">
-                                {isProcessing ? 'Processing...' : 'Mint New NFT'}
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+            <div className="min-h-screen bg-gray-900 text-gray-100">
+                <header className="bg-gray-800 sticky top-0 z-10">
+                    <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+                        <h1 className="text-2xl font-bold flex items-center space-x-2">
+                            <Key className="h-6 w-6 text-blue-400" />
+                            <span>NFT Keys Marketplace</span>
+                        </h1>
+                        <div className="flex items-center space-x-4">
+                            <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                                <Wallet className="mr-2 h-4 w-4" /> {account.accountId}
                             </Button>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+                                        <Coins className="mr-2 h-4 w-4" /> Storage: {formatNearAmount(storageBalance || "0")} NEAR
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="bg-gray-800 text-gray-100">
+                                    <DialogHeader>
+                                        <DialogTitle>Manage Storage Balance</DialogTitle>
+                                        <DialogDescription className="text-gray-400">Add or withdraw NEAR from your storage balance.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label htmlFor="deposit" className="block text-sm font-medium text-gray-300">Deposit Amount</label>
+                                            <div className="mt-1 relative rounded-md shadow-sm">
+                                                <Input
+                                                    type="number"
+                                                    id="deposit"
+                                                    placeholder="Amount in NEAR"
+                                                    value={depositAmount}
+                                                    onChange={(e) => setDepositAmount(e.target.value)}
+                                                    className="bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                                                />
+                                                <Button onClick={handleAddStorage} disabled={isProcessing} className="absolute inset-y-0 right-0 px-3 flex items-center bg-blue-600 hover:bg-blue-700 text-white">
+                                                    {isProcessing ? 'Processing...' : 'Add'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="withdraw" className="block text-sm font-medium text-gray-300">Withdraw Amount</label>
+                                            <div className="mt-1 relative rounded-md shadow-sm">
+                                                <Input
+                                                    type="number"
+                                                    id="withdraw"
+                                                    placeholder="Amount in NEAR"
+                                                    value={withdrawAmount}
+                                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                    className="bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                                                />
+                                                <Button onClick={handleWithdrawStorage} disabled={isProcessing} className="absolute inset-y-0 right-0 px-3 flex items-center bg-blue-600 hover:bg-blue-700 text-white">
+                                                    {isProcessing ? 'Processing...' : 'Withdraw'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
                         </div>
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                </header>
+
+                <main className="container mx-auto px-4 py-8">
+                    <Tabs defaultValue="browse" className="mb-6">
+                        <TabsList className="w-full mb-8 bg-gray-800 p-1 rounded-lg">
+                            <TabsTrigger value="browse" className="text-lg flex-1 rounded-md data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                                <ShoppingBag className="mr-2 h-5 w-5" /> Browse NFT Keys
+                            </TabsTrigger>
+                            <TabsTrigger value="my-nfts" className="text-lg flex-1 rounded-md data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                                <Wallet className="mr-2 h-5 w-5" /> My NFT Keys
+                            </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="browse">
+                            <ScrollArea className="h-[calc(100vh-200px)]">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {listedNfts.map((nft) => (
+                                        <NFTCard
+                                            key={nft.token_id}
+                                            nft={nft}
+                                            isProcessing={isProcessing}
+                                            onBuy={handleBuyNFT}
+                                            variant="listed"
+                                        />
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                        <TabsContent value="my-nfts">
+                            <ScrollArea className="h-[calc(100vh-200px)]">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    <Card className="overflow-hidden transition-all hover:shadow-lg bg-gray-800 border-gray-700">
+                                        <CardContent className="p-6 flex flex-col items-center justify-center h-full">
+                                            <Plus className="h-12 w-12 mb-4 text-blue-400" />
+                                            <h3 className="font-semibold text-lg mb-2 text-gray-100">Mint New NFT Key</h3>
+                                            <p className="text-sm text-gray-400 text-center mb-4">Create a new NFT Key to hold funds on other chains</p>
+                                            <Button onClick={handleMint} disabled={isProcessing} variant="secondary" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                                {isProcessing ? 'Minting...' : 'Mint NFT Key'}
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                    {ownedNfts.map((nft) => (
+                                        <NFTCard
+                                            key={nft.token_id}
+                                            nft={nft}
+                                            isProcessing={isProcessing}
+                                            onList={handleListNFT}
+                                            onRemoveListing={handleRemoveListing}
+                                            variant="owned"
+                                        />
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </TabsContent>
+                    </Tabs>
+                </main>
             </div>
-        </NextThemesProvider>
+        </ThemeProvider>
     )
 }
-
-export default NFTMarketplace
