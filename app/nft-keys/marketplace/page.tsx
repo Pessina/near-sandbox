@@ -84,8 +84,21 @@ export default function NFTMarketplace() {
                 })
             )
 
+            // Update owned NFTs with price information from sales
+            const ownedNftsWithPrice = userNfts.map(nft => {
+                const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
+                if (listedNft) {
+                    return {
+                        ...nft,
+                        price: listedNft.price,
+                        token: listedNft.token
+                    }
+                }
+                return nft
+            })
+
             setNfts(allNfts)
-            setOwnedNfts(userNfts)
+            setOwnedNfts(ownedNftsWithPrice)
             setListedNfts(listedNftsWithPrice)
             setStorageBalance(storageBalance)
             setIsRegistered(storageBalance !== null && storageBalance !== "0")
@@ -128,7 +141,7 @@ export default function NFTMarketplace() {
         if (!nftContract || !marketplaceContract) return
         setIsProcessing(true)
         try {
-            const price = parseNearAmount(data.price)
+            const price = data.price
             if (!price) throw new Error("Invalid price")
 
             await nftContract.nft_approve({
