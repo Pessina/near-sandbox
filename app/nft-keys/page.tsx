@@ -10,7 +10,7 @@ import Select from "@/components/Select"
 import Link from "@/components/Link"
 import Loader from "@/components/Loader"
 import { parseNearAmount, formatNearAmount } from "near-api-js/lib/utils/format"
-import { NFTKeysContract } from "./_contract/types"
+import { NFTKeysContract } from "./_contract/NFTKeysContract/types"
 import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "./_contract/constants"
 
 type FormData = {
@@ -345,7 +345,7 @@ export default function NFTKeysPage() {
           ))}
         </div>
         {ownedNfts.length === 0 && (
-          <p className="text-gray-400">You don't own any NFT keys yet.</p>
+          <p className="text-gray-400">You don&apos;t own any NFT keys yet.</p>
         )}
       </div>
 
