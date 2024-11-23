@@ -28,29 +28,29 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
     }
 
     return (
-        <Card className="overflow-hidden transition-all hover:shadow-lg bg-gray-800 border-gray-700">
+        <Card className="overflow-hidden transition-all hover:shadow-lg">
             <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center">
-                        <Key className="h-8 w-8 text-blue-400 mr-2" />
-                        <h3 className="font-semibold text-lg text-gray-100">NFT Key #{nft.token_id}</h3>
+                        <Key className="h-8 w-8 mr-2" />
+                        <h3 className="font-semibold text-lg">NFT Key #{nft.token_id}</h3>
                     </div>
                     {nft.price && (
-                        <Badge variant="secondary" className="bg-blue-600 text-white">
+                        <Badge variant="secondary">
                             <Tag className="mr-1 h-3 w-3" />
                             {nft.price} {nft.token?.toUpperCase() || 'NEAR'}
                         </Badge>
                     )}
                 </div>
-                <p className="text-sm text-gray-400 mb-4">{nft.metadata.description || "This NFT Key holds funds on other chains"}</p>
-                <div className="flex items-center text-gray-400 text-sm">
+                <p className="text-sm text-muted-foreground mb-4">{nft.metadata.description || "This NFT Key holds funds on other chains"}</p>
+                <div className="flex items-center text-muted-foreground text-sm">
                     <Lock className="h-4 w-4 mr-1" />
                     <span>Secure Multi-Chain Asset</span>
                 </div>
             </CardContent>
-            <CardFooter className="p-4 bg-gray-900 bg-opacity-50">
+            <CardFooter className="p-4">
                 {variant === "listed" && onBuy && (
-                    <Button onClick={() => onBuy(nft)} disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button onClick={() => onBuy(nft)} disabled={isProcessing} className="w-full">
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         {isProcessing ? 'Processing...' : 'Buy Now'}
                     </Button>
@@ -58,22 +58,22 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
                 {variant === "owned" && (
                     <>
                         {nft.price ? (
-                            <Button onClick={() => onRemoveListing && onRemoveListing(nft)} disabled={isProcessing} className="w-full bg-red-600 hover:bg-red-700 text-white">
+                            <Button onClick={() => onRemoveListing && onRemoveListing(nft)} disabled={isProcessing} variant="destructive" className="w-full">
                                 <XCircle className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Processing...' : 'Remove Listing'}
                             </Button>
                         ) : (
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full border-blue-500 text-blue-400 hover:bg-blue-900 hover:text-blue-300">
+                                    <Button variant="outline" className="w-full">
                                         <ListPlus className="mr-2 h-4 w-4" />
                                         List for Sale
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="bg-gray-800 text-gray-100">
+                                <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>List NFT Key for Sale</DialogTitle>
-                                        <DialogDescription className="text-gray-400">Set the price and token for your NFT Key listing.</DialogDescription>
+                                        <DialogDescription>Set the price and token for your NFT Key listing.</DialogDescription>
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4">
                                         <div className="grid grid-cols-4 items-center gap-4">
@@ -84,13 +84,13 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
                                                 step="0.1"
                                                 value={price}
                                                 onChange={(e) => setPrice(e.target.value)}
-                                                className="col-span-3 bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                                                className="col-span-3"
                                             />
                                             <Select value={token} onValueChange={setToken}>
-                                                <SelectTrigger className="bg-gray-700 text-gray-100 border-gray-600">
+                                                <SelectTrigger>
                                                     <SelectValue placeholder="Token" />
                                                 </SelectTrigger>
-                                                <SelectContent className="bg-gray-800 text-gray-100 border-gray-700">
+                                                <SelectContent>
                                                     <SelectItem value="near">NEAR</SelectItem>
                                                     <SelectItem value="usdc">USDC</SelectItem>
                                                 </SelectContent>
@@ -98,7 +98,7 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <Button onClick={handleList} disabled={isProcessing} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                        <Button onClick={handleList} disabled={isProcessing}>
                                             {isProcessing ? 'Processing...' : 'List NFT Key'}
                                         </Button>
                                     </DialogFooter>
