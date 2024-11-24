@@ -21,12 +21,18 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
   const onSubmit = async (data: Transaction) => {
     setIsSendingTransaction(true);
 
+    if (!connection || !account) {
+      console.error("Connection or account not found");
+      setIsSendingTransaction(false);
+      return;
+    }
+
     const nearAuthentication = {
       networkId: "testnet" as const,
       keypair: await connection.config.keyStore.getKey(
         "testnet",
         process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
-      ), 
+      ),
       accountId: account.accountId,
     }
 
@@ -37,12 +43,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
         case Chain.ETH:
           res = await signAndSendEVMTransaction({
             transaction: data.data
-            ? {
+              ? {
                 to: data.to,
                 value: ethers.parseEther(data.value).toString(),
                 data: data.data,
               }
-            : {
+              : {
                 to: data.to,
                 value: ethers.parseEther(data.value).toString(),
               },
@@ -57,8 +63,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               meta: {
                 path: derivedPath,
               }
-            }
-          }); 
+            },
+          },
+            nearAuthentication.keypair
+          );
           break;
         case Chain.BTC:
           res = await signAndSendBTCTransaction({
@@ -79,7 +87,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               }
             },
             nearAuthentication,
-          });
+          }, nearAuthentication.keypair);
           break;
         case Chain.COSMOS:
           res = await signAndSendCosmosTransaction({
@@ -107,7 +115,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               }
             },
             nearAuthentication,
-          });
+          }, nearAuthentication.keypair);
           break;
         default:
           throw new Error("Unsupported chain selected");

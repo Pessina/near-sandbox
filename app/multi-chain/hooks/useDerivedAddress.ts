@@ -1,14 +1,22 @@
 // src/hooks/useDerivedAddress.ts
-import { useState, useEffect } from 'react';
-import { fetchDerivedBTCAddressAndPublicKey, fetchDerivedEVMAddress, fetchDerivedCosmosAddressAndPublicKey } from "multichain-tools";
-import { Chain } from '../constants/chains';
+import { useState, useEffect } from "react";
+import {
+  fetchDerivedBTCAddressAndPublicKey,
+  fetchDerivedEVMAddress,
+  fetchDerivedCosmosAddressAndPublicKey,
+} from "multichain-tools";
+import { Chain } from "../constants/chains";
 
-export const useDerivedAddress = (account: any, chain: Chain, derivedPath: string, mpcPublicKey: string) => {
+export const useDerivedAddress = (
+  account: any,
+  chain: Chain,
+  derivedPath: string
+) => {
   const [derivedAddress, setDerivedAddress] = useState("");
 
   useEffect(() => {
     const getAddress = async () => {
-      if (!account || !mpcPublicKey) {
+      if (!account) {
         setDerivedAddress("");
         return;
       }
@@ -24,10 +32,11 @@ export const useDerivedAddress = (account: any, chain: Chain, derivedPath: strin
               domain: "",
               meta: {
                 path: derivedPath,
-              }
+              },
             },
             nearNetworkId: "testnet",
-            multichainContractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+            multichainContractId:
+              process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
           });
           break;
         case Chain.BTC:
@@ -39,28 +48,31 @@ export const useDerivedAddress = (account: any, chain: Chain, derivedPath: strin
                 domain: "",
                 meta: {
                   path: derivedPath,
-                }
+                },
               },
-              btcNetworkId:  'testnet',
+              btcNetworkId: "testnet",
               nearNetworkId: "testnet",
-              multichainContractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!
+              multichainContractId:
+                process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
             })
           ).address;
           break;
         case Chain.COSMOS:
-          const { address: cosmosAddress } = await fetchDerivedCosmosAddressAndPublicKey({
-            signerId: account.accountId,
-            path: {
-              chain: 118,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              }
-            },
-            nearNetworkId: "testnet",
-            multichainContractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-            prefix: "osmo",
-          });
+          const { address: cosmosAddress } =
+            await fetchDerivedCosmosAddressAndPublicKey({
+              signerId: account.accountId,
+              path: {
+                chain: 118,
+                domain: "",
+                meta: {
+                  path: derivedPath,
+                },
+              },
+              nearNetworkId: "testnet",
+              multichainContractId:
+                process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              prefix: "osmo",
+            });
           address = cosmosAddress;
           break;
       }
@@ -69,8 +81,7 @@ export const useDerivedAddress = (account: any, chain: Chain, derivedPath: strin
     };
 
     getAddress();
-  }, [account, chain, derivedPath, mpcPublicKey]);
+  }, [account, chain, derivedPath]);
 
   return derivedAddress;
 };
-

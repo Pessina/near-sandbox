@@ -13,15 +13,13 @@ import { TransactionForm } from "./components/TransactionForm";
 import { Chain } from "./constants/chains";
 import { useAccountBalance } from "./hooks/useAccountBalance";
 import { useDerivedAddress } from "./hooks/useDerivedAddress";
-import { useMpcPublicKey } from "./hooks/useMpcPublicKey";
 
 export default function Home() {
   const { account, isLoading: isNearLoading } = useInitNear();
   const [derivedPath, setDerivedPath] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
-  
-  const mpcPublicKey = useMpcPublicKey(account);
-  const derivedAddress = useDerivedAddress(account, chain, derivedPath, mpcPublicKey);
+
+  const derivedAddress = useDerivedAddress(account, chain, derivedPath);
   const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddress);
 
   const handleChainChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -33,7 +31,7 @@ export default function Home() {
     toast.success("Address copied!");
   }, [derivedAddress]);
 
-  if (!account || isNearLoading || !mpcPublicKey) {
+  if (!account || isNearLoading) {
     return <Loader />;
   }
 
@@ -70,19 +68,19 @@ export default function Home() {
               onClick: handleCopyAddress,
             }}
           />
-            <Button onClick={getAccountBalance} className="flex-1">
-              Check Balance
-            </Button>
-            <Input
-              label="Balance"
-              name="balance"
-              value={accountBalance}
-              disabled
-              className="flex-1"
-            />
+          <Button onClick={getAccountBalance} className="flex-1">
+            Check Balance
+          </Button>
+          <Input
+            label="Balance"
+            name="balance"
+            value={accountBalance}
+            disabled
+            className="flex-1"
+          />
         </div>
         <h2 className="text-white text-2xl font-bold mt-6">Transaction</h2>
-        <TransactionForm 
+        <TransactionForm
           chain={chain}
           derivedPath={derivedPath}
         />
