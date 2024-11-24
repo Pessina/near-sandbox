@@ -1,28 +1,41 @@
-// src/components/TransactionForm.tsx
 import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
-import Input from "@/components/Input";
-import Button from "@/components/Button";
-import { Chain, chainsConfig } from '../constants/chains';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Chain, chainsConfig } from '../_constants/chains';
 import { signAndSendBTCTransaction, signAndSendEVMTransaction, signAndSendCosmosTransaction } from "multichain-tools";
 import { ethers } from "ethers";
-import useInitNear from '@/hooks/useInitNear';
+import useInitNear from "@/hooks/useInitNear";
+import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, CheckCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface TransactionFormProps {
   chain: Chain;
   derivedPath: string;
 }
 
+interface Transaction {
+  to: string;
+  value: string;
+  data?: string;
+}
+
 export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derivedPath }) => {
-  const { register, handleSubmit } = useForm<Transaction>();
+  const { register, handleSubmit, formState: { errors } } = useForm<Transaction>();
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, connection } = useInitNear();
+  const { toast } = useToast();
 
   const onSubmit = async (data: Transaction) => {
     setIsSendingTransaction(true);
 
     if (!connection || !account) {
-      console.error("Connection or account not found");
+      toast({
+        title: "Error",
+        description: "Connection or account not found",
+        variant: "destructive",
+      });
       setIsSendingTransaction(false);
       return;
     }
@@ -87,13 +100,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               }
             },
             nearAuthentication,
-          }, nearAuthentication.keypair);
+          },
+            nearAuthentication.keypair
+          );
           break;
-        case Chain.COSMOS:
+        case Chain.OSMOSIS:
           res = await signAndSendCosmosTransaction({
             chainConfig: {
               contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-              chainId: chainsConfig.cosmos.chainId,
+              chainId: chainsConfig.osmosis.chainId,
             },
             transaction: {
               messages: [
@@ -115,27 +130,77 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               }
             },
             nearAuthentication,
-          }, nearAuthentication.keypair);
+          },
+            nearAuthentication.keypair
+          );
           break;
         default:
           throw new Error("Unsupported chain selected");
       }
+      toast({
+        title: "Transaction Sent",
+        description: "Your transaction has been successfully sent.",
+        duration: 5000,
+      });
       console.log(res);
     } catch (e) {
       console.error("Transaction failed:", e);
-      // You might want to show an error message to the user here
+      toast({
+        title: "Transaction Failed",
+        description: e instanceof Error ? e.message : "An unknown error occurred",
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       setIsSendingTransaction(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <Input label="Address" {...register("to")} placeholder="To Address" />
-      <Input label="Value" {...register("value")} placeholder="Value" />
-      <Input label="Data" {...register("data")} placeholder="0x" />
-      <Button type="submit" isLoading={isSendingTransaction}>
-        Send Transaction
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="space-y-2">
+        <label htmlFor="to" className="text-sm font-medium text-gray-200">To Address</label>
+        <Input
+          id="to"
+          {...register("to", { required: "To address is required" })}
+          placeholder="Recipient Address"
+        />
+        {errors.to && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.to.message}</AlertDescription>
+          </Alert>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="value" className="text-sm font-medium text-gray-200">Value</label>
+        <Input
+          id="value"
+          {...register("value", { required: "Value is required" })}
+          placeholder="Amount to send"
+        />
+        {errors.value && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errors.value.message}</AlertDescription>
+          </Alert>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="data" className="text-sm font-medium text-gray-200">Data (Optional)</label>
+        <Input
+          id="data"
+          {...register("data")}
+          placeholder="Transaction data (0x...)"
+        />
+      </div>
+
+      <Button type="submit" className="w-full" disabled={isSendingTransaction}>
+        {isSendingTransaction ? "Sending..." : "Send Transaction"}
       </Button>
     </form>
   );

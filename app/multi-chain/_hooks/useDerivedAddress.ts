@@ -5,7 +5,7 @@ import {
   fetchDerivedEVMAddress,
   fetchDerivedCosmosAddressAndPublicKey,
 } from "multichain-tools";
-import { Chain } from "../constants/chains";
+import { Chain } from "../_constants/chains";
 
 export const useDerivedAddress = (
   account: any,
@@ -57,7 +57,7 @@ export const useDerivedAddress = (
             })
           ).address;
           break;
-        case Chain.COSMOS:
+        case Chain.OSMOSIS:
           const { address: cosmosAddress } =
             await fetchDerivedCosmosAddressAndPublicKey({
               signerId: account.accountId,

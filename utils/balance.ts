@@ -68,7 +68,7 @@ export async function getBalance(
       return await getEVMBalance(providerUrl, address);
     case "BTC":
       return await getBTCBalance(providerUrl, address);
-    case "COSMOS":
+    case "OSMOSIS":
       return await fetchCosmosBalance(address, providerUrl, config?.denom);
     default:
       throw new Error("Unsupported chain");

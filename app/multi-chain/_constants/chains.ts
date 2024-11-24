@@ -3,7 +3,7 @@ export enum Chain {
   ETH = "ETH",
   BNB = "BNB",
   BTC = "BTC",
-  COSMOS = "COSMOS",
+  OSMOSIS = "OSMOSIS",
 }
 
 export const chainsConfig = {
@@ -24,7 +24,7 @@ export const chainsConfig = {
     rpcEndpoint: "https://mempool.space/testnet4/api",
     scanUrl: "https://mempool.space/testnet4",
   },
-  cosmos: {
+  osmosis: {
     restEndpoint: "https://lcd.osmotest5.osmosis.zone/",
     chainId: "osmo-test-5",
   },

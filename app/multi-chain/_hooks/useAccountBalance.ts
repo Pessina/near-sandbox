@@ -1,7 +1,7 @@
 // src/hooks/useAccountBalance.ts
 import { useState, useCallback } from "react";
 import { getBalance } from "@/utils/balance";
-import { Chain, chainsConfig } from "../constants/chains";
+import { Chain, chainsConfig } from "../_constants/chains";
 
 export const useAccountBalance = (chain: Chain, derivedAddress: string) => {
   const [accountBalance, setAccountBalance] = useState("");
@@ -34,14 +34,14 @@ export const useAccountBalance = (chain: Chain, derivedAddress: string) => {
           );
           balance = `${parseFloat(balance).toFixed(8)} BNB`;
           break;
-        case Chain.COSMOS:
+        case Chain.OSMOSIS:
           balance = await getBalance(
-            "COSMOS",
-            chainsConfig.cosmos.restEndpoint,
+            "OSMOSIS",
+            chainsConfig.osmosis.restEndpoint,
             derivedAddress,
             { denom: "uosmo" }
           );
-          balance = `${balance} COSMOS`;
+          balance = `${balance} OSMO`;
           break;
         default:
           throw new Error("Unsupported chain");
