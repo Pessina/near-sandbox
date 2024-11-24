@@ -14,7 +14,7 @@ import { Chain } from "./constants/chains";
 import { useAccountBalance } from "./hooks/useAccountBalance";
 import { useDerivedAddress } from "./hooks/useDerivedAddress";
 
-export default function Home() {
+export default function MultiChain() {
   const { account, isLoading: isNearLoading } = useInitNear();
   const [derivedPath, setDerivedPath] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
