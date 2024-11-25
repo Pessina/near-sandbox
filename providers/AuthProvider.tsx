@@ -1,12 +1,13 @@
-import { setupWalletSelector, WalletSelector } from '@near-wallet-selector/core';
-import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
-import React, { createContext, useContext, useEffect, useState } from 'react';
+"use client";
 
-const networkId = (import.meta as any).env.VITE_NETWORK_ID || 'testnet';
+import { NetworkId, setupWalletSelector, WalletSelector } from '@near-wallet-selector/core';
+// import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
+import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
     walletSelector: WalletSelector | null;
-    signedIn: boolean;
+    accountId: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,14 +17,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
     const [walletSelector, setWalletSelector] =
         useState<WalletSelector | null>(null);
-    const [signedIn, setSignedIn] = useState(false);
+    const [accountId, setAccountId] = useState<string | null>(null);
 
     useEffect(() => {
         async function init() {
             const selector = await setupWalletSelector({
-                network: networkId,
+                network: process.env.NEXT_PUBLIC_NETWORK_ID! as NetworkId,
                 modules: [
-                    setupMeteorWallet(),
+                    setupMyNearWallet(),
                 ],
             });
 
@@ -37,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const fetchAccountId = async () => {
             const wallet = await walletSelector?.wallet();
             wallet?.getAccounts().then((accounts) => {
-                setSignedIn(!!accounts[0]?.accountId)
+                setAccountId(accounts[0]?.accountId || null)
             })
         }
 
@@ -48,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         <AuthContext.Provider
             value={{
                 walletSelector,
-                signedIn,
+                accountId,
             }}
         >
             {children}

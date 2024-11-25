@@ -8,7 +8,7 @@ import {
 import { Chain } from "../_constants/chains";
 
 export const useDerivedAddress = (
-  account: any,
+  accountId: string,
   chain: Chain,
   derivedPath: string
 ) => {
@@ -16,7 +16,7 @@ export const useDerivedAddress = (
 
   useEffect(() => {
     const getAddress = async () => {
-      if (!account) {
+      if (!accountId) {
         setDerivedAddress("");
         return;
       }
@@ -26,7 +26,7 @@ export const useDerivedAddress = (
         case Chain.BNB:
         case Chain.ETH:
           address = await fetchDerivedEVMAddress({
-            signerId: account.accountId,
+            signerId: accountId,
             path: {
               chain: 60,
               domain: "",
@@ -42,7 +42,7 @@ export const useDerivedAddress = (
         case Chain.BTC:
           address = (
             await fetchDerivedBTCAddressAndPublicKey({
-              signerId: account.accountId,
+              signerId: accountId,
               path: {
                 chain: 0,
                 domain: "",
@@ -60,7 +60,7 @@ export const useDerivedAddress = (
         case Chain.OSMOSIS:
           const { address: cosmosAddress } =
             await fetchDerivedCosmosAddressAndPublicKey({
-              signerId: account.accountId,
+              signerId: accountId,
               path: {
                 chain: 118,
                 domain: "",
@@ -81,7 +81,7 @@ export const useDerivedAddress = (
     };
 
     getAddress();
-  }, [account, chain, derivedPath]);
+  }, [accountId, chain, derivedPath]);
 
   return derivedAddress;
 };

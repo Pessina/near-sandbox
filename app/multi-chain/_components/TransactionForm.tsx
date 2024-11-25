@@ -3,12 +3,12 @@ import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Chain, chainsConfig } from '../_constants/chains';
-import { signAndSendBTCTransaction, signAndSendEVMTransaction, signAndSendCosmosTransaction } from "multichain-tools";
 import { ethers } from "ethers";
 import useInitNear from "@/hooks/useInitNear";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, CheckCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useMultiChainTransactions } from '../_utils';
 
 interface TransactionFormProps {
   chain: Chain;
@@ -26,6 +26,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
   const [isSendingTransaction, setIsSendingTransaction] = useState(false);
   const { account, connection } = useInitNear();
   const { toast } = useToast();
+  const { signAndSendEVMTransaction } = useMultiChainTransactions();
 
   const onSubmit = async (data: Transaction) => {
     setIsSendingTransaction(true);
@@ -77,63 +78,61 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                 path: derivedPath,
               }
             },
-          },
-            nearAuthentication.keypair
-          );
+          });
           break;
-        case Chain.BTC:
-          res = await signAndSendBTCTransaction({
-            chainConfig: {
-              providerUrl: chainsConfig.btc.rpcEndpoint,
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-              network: "testnet",
-            },
-            transaction: {
-              to: data.to,
-              value: data.value,
-            },
-            derivationPath: {
-              chain: 0,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              }
-            },
-            nearAuthentication,
-          },
-            nearAuthentication.keypair
-          );
-          break;
-        case Chain.OSMOSIS:
-          res = await signAndSendCosmosTransaction({
-            chainConfig: {
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-              chainId: chainsConfig.osmosis.chainId,
-            },
-            transaction: {
-              messages: [
-                {
-                  typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-                  value: {
-                    toAddress: data.to,
-                    amount: [{ denom: "uosmo", amount: data.value }],
-                  },
-                },
-              ],
-              memo: data.data || "",
-            },
-            derivationPath: {
-              chain: 118,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              }
-            },
-            nearAuthentication,
-          },
-            nearAuthentication.keypair
-          );
-          break;
+        // case Chain.BTC:
+        //   res = await signAndSendBTCTransaction({
+        //     chainConfig: {
+        //       providerUrl: chainsConfig.btc.rpcEndpoint,
+        //       contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+        //       network: "testnet",
+        //     },
+        //     transaction: {
+        //       to: data.to,
+        //       value: data.value,
+        //     },
+        //     derivationPath: {
+        //       chain: 0,
+        //       domain: "",
+        //       meta: {
+        //         path: derivedPath,
+        //       }
+        //     },
+        //     nearAuthentication,
+        //   },
+        //     nearAuthentication.keypair
+        //   );
+        //   break;
+        // case Chain.OSMOSIS:
+        //   res = await signAndSendCosmosTransaction({
+        //     chainConfig: {
+        //       contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+        //       chainId: chainsConfig.osmosis.chainId,
+        //     },
+        //     transaction: {
+        //       messages: [
+        //         {
+        //           typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+        //           value: {
+        //             toAddress: data.to,
+        //             amount: [{ denom: "uosmo", amount: data.value }],
+        //           },
+        //         },
+        //       ],
+        //       memo: data.data || "",
+        //     },
+        //     derivationPath: {
+        //       chain: 118,
+        //       domain: "",
+        //       meta: {
+        //         path: derivedPath,
+        //       }
+        //     },
+        //     nearAuthentication,
+        //   },
+        //     nearAuthentication.keypair
+        //   );
+        //   break;
         default:
           throw new Error("Unsupported chain selected");
       }

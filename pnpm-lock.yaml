@@ -20,6 +20,9 @@ importers:
       '@near-wallet-selector/meteor-wallet':
         specifier: 8.9.5
         version: 8.9.5(near-api-js@5.0.1)
+      '@near-wallet-selector/my-near-wallet':
+        specifier: 8.9.5
+        version: 8.9.5(near-api-js@5.0.1)
       '@radix-ui/react-accordion':
         specifier: ^1.2.1
         version: 1.2.1(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -65,6 +68,9 @@ importers:
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
+      canonicalize:
+        specifier: ^2.0.0
+        version: 2.0.0
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.0
@@ -89,6 +95,9 @@ importers:
       keccak:
         specifier: ^3.0.4
         version: 3.0.4
+      lodash.pickby:
+        specifier: ^4.6.0
+        version: 4.6.0
       lucide-react:
         specifier: ^0.460.0
         version: 0.460.0(react@18.3.1)
@@ -141,6 +150,9 @@ importers:
       '@types/keccak':
         specifier: ^3.0.4
         version: 3.0.5
+      '@types/lodash.pickby':
+        specifier: ^4.6.9
+        version: 4.6.9
       '@types/node':
         specifier: ^20
         version: 20.17.6
@@ -532,6 +544,16 @@ packages:
 
   '@near-wallet-selector/meteor-wallet@8.9.5':
     resolution: {integrity: sha512-nO7xFS60nCpUM/MBGwUhA855FbQCs7kDhIeSFnDAnmsdcNPakREoIzp7s64WaZsD4tsZI4tVdvITnuqP+8X5wA==}
+    peerDependencies:
+      near-api-js: ^1.0.0 || ^2.0.0
+
+  '@near-wallet-selector/my-near-wallet@8.9.5':
+    resolution: {integrity: sha512-oX/l0jaj73Vg3fIoAqRs8paZ83wBhtbjtNWtak8CaQ3SOtJjKd8RH58kbPaoxSPa+KqqNbC1J7V2WtdVC0leGQ==}
+    peerDependencies:
+      near-api-js: ^1.0.0 || ^2.0.0
+
+  '@near-wallet-selector/wallet-utils@8.9.5':
+    resolution: {integrity: sha512-TBeQheoizs4EQIGQPJxz44ZsxL4VbjLQJLlpDsNpwQfkxjcyThsZ19hOvcj5XZjwdJxwM10VBcf/qh1mKzv1uQ==}
     peerDependencies:
       near-api-js: ^1.0.0 || ^2.0.0
 
@@ -1177,6 +1199,12 @@ packages:
   '@types/keccak@3.0.5':
     resolution: {integrity: sha512-Mvu4StIJ9KyfPXDVRv3h0fWNBAjHPBQZ8EPcxhqA8FG6pLzxtytVXU5owB6J2/8xZ+ZspWTXJEUjAHt0pk0I1Q==}
 
+  '@types/lodash.pickby@4.6.9':
+    resolution: {integrity: sha512-SPI248FYnyd3jOxDeJq2vX2UKQnDzqacuqdeOVqwE1MPSk8gN8TA3FcHSMQWLlpBnuHgXvgKInvywbOFbidpJA==}
+
+  '@types/lodash@4.17.13':
+    resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
+
   '@types/node@20.17.6':
     resolution: {integrity: sha512-VEI7OdvK2wP7XHnsuXbAJnEpEkF6NjSN45QJlL4VGqZSXsnicpesdTWsg9RISeSdYd3yeRj/y3k5KGjUXYnFwQ==}
 
@@ -1473,6 +1501,9 @@ packages:
 
   caniuse-lite@1.0.30001680:
     resolution: {integrity: sha512-rPQy70G6AGUMnbwS1z6Xg+RkHYPAi18ihs47GH0jcxIG7wArmPgY3XbS2sRdBbxJljp3thdT8BIqv9ccCypiPA==}
+
+  canonicalize@2.0.0:
+    resolution: {integrity: sha512-ulDEYPv7asdKvqahuAY35c1selLdzDwHqugK92hfkzvlDCwXRRelDkR+Er33md/PtnpqHemgkuDPanZ4fiYZ8w==}
 
   chai@4.5.0:
     resolution: {integrity: sha512-RITGBfijLkBddZvnn8jdqoTypxvqbOLYQkGGxXzeFjVHvudaPw0HNFD9x928/eUwYWd2dPCugVqspGALTZZQKw==}
@@ -2358,6 +2389,9 @@ packages:
 
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
+
+  lodash.pickby@4.6.0:
+    resolution: {integrity: sha512-AZV+GsS/6ckvPOVQPXSiFFacKvKB4kOQu6ynt9wz0F3LO4R9Ij4K1ddYsIytDpSgLz88JHd9P+oaLeej5/Sl7Q==}
 
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
@@ -3802,6 +3836,18 @@ snapshots:
       '@near-wallet-selector/core': 8.9.5(near-api-js@5.0.1)
       near-api-js: 5.0.1
 
+  '@near-wallet-selector/my-near-wallet@8.9.5(near-api-js@5.0.1)':
+    dependencies:
+      '@near-wallet-selector/core': 8.9.5(near-api-js@5.0.1)
+      '@near-wallet-selector/wallet-utils': 8.9.5(near-api-js@5.0.1)
+      near-api-js: 5.0.1
+
+  '@near-wallet-selector/wallet-utils@8.9.5(near-api-js@5.0.1)':
+    dependencies:
+      '@near-wallet-selector/core': 8.9.5(near-api-js@5.0.1)
+      bn.js: 5.2.1
+      near-api-js: 5.0.1
+
   '@next/env@14.1.0': {}
 
   '@next/eslint-plugin-next@14.1.0':
@@ -4374,6 +4420,12 @@ snapshots:
     dependencies:
       '@types/node': 20.17.6
 
+  '@types/lodash.pickby@4.6.9':
+    dependencies:
+      '@types/lodash': 4.17.13
+
+  '@types/lodash@4.17.13': {}
+
   '@types/node@20.17.6':
     dependencies:
       undici-types: 6.19.8
@@ -4729,6 +4781,8 @@ snapshots:
   camelcase-css@2.0.1: {}
 
   caniuse-lite@1.0.30001680: {}
+
+  canonicalize@2.0.0: {}
 
   chai@4.5.0:
     dependencies:
@@ -5847,6 +5901,8 @@ snapshots:
       p-locate: 5.0.0
 
   lodash.merge@4.6.2: {}
+
+  lodash.pickby@4.6.0: {}
 
   loose-envify@1.4.0:
     dependencies:

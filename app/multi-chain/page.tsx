@@ -13,14 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Wallet } from 'lucide-react';
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function MultiChain() {
-  const { account, isLoading: isNearLoading } = useInitNear();
+  const { accountId, walletSelector } = useAuth()
   const [derivedPath, setDerivedPath] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
   const { toast } = useToast();
 
-  const derivedAddress = useDerivedAddress(account, chain, derivedPath);
+  const derivedAddress = useDerivedAddress(accountId ?? '', chain, derivedPath);
   const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddress);
 
   const handleChainChange = useCallback((value: string) => {
@@ -37,10 +38,22 @@ export default function MultiChain() {
     }
   }, [derivedAddress, toast]);
 
-  if (!account || isNearLoading) {
+  if (!accountId) {
     return (
-      <div className="h-screen w-full flex justify-center items-center bg-gray-900">
-        <Skeleton className="h-[600px] w-[400px] rounded-xl" />
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="mb-4">Please sign in to continue</div>
+        <Button
+          onClick={async () => {
+            const wallet = await walletSelector?.wallet('my-near-wallet');
+            await wallet?.signIn({
+              contractId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+              accounts: []
+            });
+          }}
+        >
+          <Wallet className="mr-2 h-4 w-4" />
+          Connect Wallet
+        </Button>
       </div>
     );
   }
