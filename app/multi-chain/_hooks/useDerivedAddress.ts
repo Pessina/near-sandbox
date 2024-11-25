@@ -6,6 +6,7 @@ import {
   fetchDerivedCosmosAddressAndPublicKey,
 } from "multichain-tools";
 import { Chain } from "../_constants/chains";
+import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
 
 export const useDerivedAddress = (
   accountId: string,
@@ -27,13 +28,13 @@ export const useDerivedAddress = (
         case Chain.ETH:
           address = await fetchDerivedEVMAddress({
             signerId: accountId,
-            path: {
+            path: getCanonicalizedDerivationPath({
               chain: 60,
               domain: "",
               meta: {
                 path: derivedPath,
               },
-            },
+            }),
             nearNetworkId: "testnet",
             multichainContractId:
               process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
@@ -43,13 +44,13 @@ export const useDerivedAddress = (
           address = (
             await fetchDerivedBTCAddressAndPublicKey({
               signerId: accountId,
-              path: {
+              path: getCanonicalizedDerivationPath({
                 chain: 0,
                 domain: "",
                 meta: {
                   path: derivedPath,
                 },
-              },
+              }),
               btcNetworkId: "testnet",
               nearNetworkId: "testnet",
               multichainContractId:
@@ -61,13 +62,13 @@ export const useDerivedAddress = (
           const { address: cosmosAddress } =
             await fetchDerivedCosmosAddressAndPublicKey({
               signerId: accountId,
-              path: {
+              path: getCanonicalizedDerivationPath({
                 chain: 118,
                 domain: "",
                 meta: {
                   path: derivedPath,
                 },
-              },
+              }),
               nearNetworkId: "testnet",
               multichainContractId:
                 process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,

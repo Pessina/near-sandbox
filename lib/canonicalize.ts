@@ -1,10 +1,13 @@
 import canonicalize from "canonicalize";
 import pickBy from "lodash.pickby";
-import { KeyDerivationPath } from "multichain-tools";
 
-export const getCanonicalizedDerivationPath = (
-  derivationPath: KeyDerivationPath
-): string =>
+export const getCanonicalizedDerivationPath = (derivationPath: {
+  chain: number;
+  domain: string;
+  meta: {
+    path: string;
+  };
+}): string =>
   canonicalize(
     pickBy(
       {

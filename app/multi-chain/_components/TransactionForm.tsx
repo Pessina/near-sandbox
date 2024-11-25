@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMultiChainTransactions } from '../_utils';
+import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
 
 interface TransactionFormProps {
   chain: Chain;
@@ -71,13 +72,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
               contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
             },
             nearAuthentication,
-            derivationPath: {
+            derivationPath: getCanonicalizedDerivationPath({
               chain: 60,
               domain: "",
               meta: {
                 path: derivedPath,
               }
-            },
+            }),
           });
           break;
         // case Chain.BTC:

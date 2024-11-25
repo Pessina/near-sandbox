@@ -1,7 +1,4 @@
 import { useAuth } from "@/providers/AuthProvider";
-import { getCanonicalizedDerivationPath } from "@/utils/canonicalize";
-import { FunctionCall } from "@near-js/transactions";
-import { FunctionCallAction } from "@near-wallet-selector/core";
 import { ethers } from "ethers";
 import {
   EVMRequest,
@@ -12,7 +9,7 @@ import {
   Bitcoin,
   ChainSignaturesContract,
 } from "multichain-tools";
-import { MPCSignature } from "multichain-tools/src/signature/types";
+import { nearWallet } from "multichain-tools";
 import { ExecutionOutcomeWithId } from "near-api-js/lib/providers";
 import { useCallback } from "react";
 
@@ -36,65 +33,27 @@ export const useMultiChainTransactions = () => {
           throw new Error("Wallet not found");
         }
 
-        let currentDeposit = await ChainSignaturesContract.getCurrentFee({
-          networkId: "testnet",
-          contract: req.chainConfig.contract,
-        });
-
         const response = await wallet.signAndSendTransaction({
           callbackUrl: window.location.href,
-          receiverId: req.chainConfig.contract,
-          actions: [
-            {
-              type: "FunctionCall",
-              params: {
-                methodName: "sign",
-                args: {
-                  request: {
-                    payload: Array.from(
-                      ethers.getBytes(mpcPayloads[0].payload)
-                    ),
-                    path: getCanonicalizedDerivationPath(req.derivationPath),
-                    key_version: 0,
-                  },
-                },
-                gas: "300000000000000",
-                deposit: currentDeposit?.toString() ?? "50",
-              },
-            },
-          ],
+          ...(await nearWallet.utils.mpcPayloadsToTransaction({
+            networkId: "testnet",
+            contractId: req.chainConfig.contract,
+            mpcPayloads,
+            path: req.derivationPath,
+          })),
         });
 
         console.log({ response });
 
         if (response) {
-          const signature: string = response.receipts_outcome.reduce<string>(
-            (acc: string, curr: ExecutionOutcomeWithId) => {
-              if (acc) {
-                return acc;
-              }
-              const { status } = curr.outcome;
-              return (
-                (typeof status === "object" &&
-                  status.SuccessValue &&
-                  status.SuccessValue !== "" &&
-                  Buffer.from(status.SuccessValue, "base64").toString(
-                    "utf-8"
-                  )) ||
-                ""
-              );
-            },
-            ""
-          );
+          const signature = nearWallet.utils.responseToMpcSignature({
+            response,
+          });
 
           if (signature) {
-            const parsedJSONSignature = JSON.parse(signature) as {
-              Ok: MPCSignature;
-            };
-
             const txHash = await evm.reconstructAndSendTransaction({
               txSerialized,
-              mpcSignatures: [parsedJSONSignature.Ok],
+              mpcSignatures: [signature],
             });
 
             return {
