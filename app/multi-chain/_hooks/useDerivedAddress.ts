@@ -1,12 +1,9 @@
-// src/hooks/useDerivedAddress.ts
 import { useState, useEffect } from "react";
-import {
-  fetchDerivedBTCAddressAndPublicKey,
-  fetchDerivedEVMAddress,
-  fetchDerivedCosmosAddressAndPublicKey,
-} from "multichain-tools";
 import { Chain } from "../_constants/chains";
 import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
+import { useBTC } from "./useBTC";
+import { useCosmos } from "./useCosmos";
+import { useEVM } from "./useEVM";
 
 export const useDerivedAddress = (
   accountId: string,
@@ -14,6 +11,10 @@ export const useDerivedAddress = (
   derivedPath: string
 ) => {
   const [derivedAddress, setDerivedAddress] = useState("");
+
+  const evm = useEVM();
+  const btc = useBTC();
+  const cosmos = useCosmos();
 
   useEffect(() => {
     const getAddress = async () => {
@@ -26,54 +27,46 @@ export const useDerivedAddress = (
       switch (chain) {
         case Chain.BNB:
         case Chain.ETH:
-          address = await fetchDerivedEVMAddress({
-            signerId: accountId,
-            path: getCanonicalizedDerivationPath({
-              chain: 60,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              },
-            }),
-            nearNetworkId: "testnet",
-            multichainContractId:
-              process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-          });
+          address = (
+            await evm.deriveAddressAndPublicKey(
+              accountId,
+              getCanonicalizedDerivationPath({
+                chain: 60,
+                domain: "",
+                meta: {
+                  path: derivedPath,
+                },
+              })
+            )
+          ).address;
           break;
         case Chain.BTC:
           address = (
-            await fetchDerivedBTCAddressAndPublicKey({
-              signerId: accountId,
-              path: getCanonicalizedDerivationPath({
+            await btc.deriveAddressAndPublicKey(
+              accountId,
+              getCanonicalizedDerivationPath({
                 chain: 0,
                 domain: "",
                 meta: {
                   path: derivedPath,
                 },
-              }),
-              btcNetworkId: "testnet",
-              nearNetworkId: "testnet",
-              multichainContractId:
-                process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-            })
+              })
+            )
           ).address;
           break;
         case Chain.OSMOSIS:
           const { address: cosmosAddress } =
-            await fetchDerivedCosmosAddressAndPublicKey({
-              signerId: accountId,
-              path: getCanonicalizedDerivationPath({
+            await cosmos.deriveAddressAndPublicKey(
+              accountId,
+              getCanonicalizedDerivationPath({
                 chain: 118,
                 domain: "",
                 meta: {
                   path: derivedPath,
                 },
               }),
-              nearNetworkId: "testnet",
-              multichainContractId:
-                process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-              prefix: "osmo",
-            });
+              "osmo"
+            );
           address = cosmosAddress;
           break;
       }

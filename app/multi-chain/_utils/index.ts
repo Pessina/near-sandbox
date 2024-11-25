@@ -1,3 +1,4 @@
+import { useEnv } from "@/hooks/useEnv";
 import { useAuth } from "@/providers/AuthProvider";
 import { ethers } from "ethers";
 import {
@@ -8,24 +9,40 @@ import {
   Cosmos,
   Bitcoin,
   ChainSignaturesContract,
+  KeyDerivationPath,
 } from "multichain-tools";
 import { nearWallet } from "multichain-tools";
-import { ExecutionOutcomeWithId } from "near-api-js/lib/providers";
 import { useCallback } from "react";
+import { useEVM } from "../_hooks/useEVM";
+import { useBTC } from "../_hooks/useBTC";
+import { useCosmos } from "../_hooks/useCosmos";
 
 export const useMultiChainTransactions = () => {
-  const { walletSelector } = useAuth();
+  const { walletSelector, accountId } = useAuth();
+  const { networkId, chainSignatureContract } = useEnv();
+  const evm = useEVM();
+  const btc = useBTC();
+  const cosmos = useCosmos();
 
   const signAndSendEVMTransaction = useCallback(
-    async (req: EVMRequest) => {
-      try {
-        const evm = new EVM(req.chainConfig);
+    async (
+      transactionRequest: ethers.TransactionLike,
+      path: KeyDerivationPath
+    ) => {
+      if (!accountId) {
+        throw new Error("Account ID not found");
+      }
 
-        const { txSerialized, mpcPayloads } =
-          await evm.getMPCPayloadAndTxSerialized({
-            data: req.transaction,
-            nearAuthentication: req.nearAuthentication,
-            path: req.derivationPath,
+      try {
+        const { address } = await evm.deriveAddressAndPublicKey(
+          accountId,
+          path
+        );
+
+        const { transaction, mpcPayloads } =
+          await evm.getMPCPayloadAndTransaction({
+            ...transactionRequest,
+            from: address,
           });
 
         const wallet = await walletSelector?.wallet();
@@ -36,10 +53,10 @@ export const useMultiChainTransactions = () => {
         const response = await wallet.signAndSendTransaction({
           callbackUrl: window.location.href,
           ...(await nearWallet.utils.mpcPayloadsToTransaction({
-            networkId: "testnet",
-            contractId: req.chainConfig.contract,
+            networkId,
+            contractId: chainSignatureContract,
             mpcPayloads,
-            path: req.derivationPath,
+            path,
           })),
         });
 
@@ -51,8 +68,8 @@ export const useMultiChainTransactions = () => {
           });
 
           if (signature) {
-            const txHash = await evm.reconstructAndSendTransaction({
-              txSerialized,
+            const txHash = await evm.addSignatureAndBroadcast({
+              transaction,
               mpcSignatures: [signature],
             });
 

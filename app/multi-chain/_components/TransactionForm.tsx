@@ -56,30 +56,24 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
       switch (chain) {
         case Chain.BNB:
         case Chain.ETH:
-          res = await signAndSendEVMTransaction({
-            transaction: data.data
-              ? {
-                to: data.to,
-                value: ethers.parseEther(data.value).toString(),
-                data: data.data,
-              }
-              : {
-                to: data.to,
-                value: ethers.parseEther(data.value).toString(),
-              },
-            chainConfig: {
-              providerUrl: chain === Chain.ETH ? chainsConfig.ethereum.providerUrl : chainsConfig.bsc.providerUrl,
-              contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
+          res = await signAndSendEVMTransaction(data.data
+            ? {
+              to: data.to,
+              value: ethers.parseEther(data.value).toString(),
+              data: data.data,
+            }
+            : {
+              to: data.to,
+              value: ethers.parseEther(data.value).toString(),
             },
-            nearAuthentication,
-            derivationPath: getCanonicalizedDerivationPath({
+            getCanonicalizedDerivationPath({
               chain: 60,
               domain: "",
               meta: {
                 path: derivedPath,
               }
-            }),
-          });
+            })
+          );
           break;
         // case Chain.BTC:
         //   res = await signAndSendBTCTransaction({
