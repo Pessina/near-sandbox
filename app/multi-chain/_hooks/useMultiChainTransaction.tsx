@@ -88,7 +88,7 @@ export const useMultiChainTransaction = () => {
                         response,
                     });
 
-                    const transaction = evm.getTransaction('evm-transaction');
+                    const transaction = evm.getTransaction('evm-transaction', { remove: true });
 
                     if (signature && transaction) {
                         const txHash = await evm.addSignatureAndBroadcast({
