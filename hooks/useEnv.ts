@@ -1,15 +1,21 @@
 import { useMemo } from "react";
 
 interface EnvVariables {
-  nearAccountId: string;
-  nearPrivateKey: string;
+  nearAccountId: string | undefined;
+  nearPrivateKey: string | undefined;
   chainSignatureContract: string;
   nftKeysContract: string;
   nftKeysMarketplaceContract: string;
-  networkId: "mainnet" | "testnet";
+  nearNetworkId: "mainnet" | "testnet";
 }
 
-export const useEnv = (): EnvVariables => {
+export const useEnv = ({
+  options,
+}: {
+  options?: {
+    isViewOnly?: boolean;
+  };
+}): EnvVariables => {
   return useMemo(() => {
     const nearAccountId = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID;
     const nearPrivateKey = process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY;
@@ -18,12 +24,12 @@ export const useEnv = (): EnvVariables => {
     const nftKeysContract = process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT;
     const nftKeysMarketplaceContract =
       process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT;
-    const networkId = process.env.NEXT_PUBLIC_NETWORK_ID;
+    const nearNetworkId = process.env.NEXT_PUBLIC_NEAR_NETWORK_ID;
 
-    if (!nearAccountId) {
+    if (!nearAccountId && !options?.isViewOnly) {
       throw new Error("NEXT_PUBLIC_NEAR_ACCOUNT_ID is not defined");
     }
-    if (!nearPrivateKey) {
+    if (!nearPrivateKey && !options?.isViewOnly) {
       throw new Error("NEXT_PUBLIC_NEAR_PRIVATE_KEY is not defined");
     }
     if (!chainSignatureContract) {
@@ -37,7 +43,10 @@ export const useEnv = (): EnvVariables => {
         "NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT is not defined"
       );
     }
-    if (!networkId || (networkId !== "mainnet" && networkId !== "testnet")) {
+    if (
+      !nearNetworkId ||
+      (nearNetworkId !== "mainnet" && nearNetworkId !== "testnet")
+    ) {
       throw new Error(
         'NEXT_PUBLIC_NETWORK_ID must be either "mainnet" or "testnet"'
       );
@@ -49,7 +58,7 @@ export const useEnv = (): EnvVariables => {
       chainSignatureContract,
       nftKeysContract,
       nftKeysMarketplaceContract,
-      networkId: networkId as "mainnet" | "testnet",
+      nearNetworkId: nearNetworkId as "mainnet" | "testnet",
     };
-  }, []);
+  }, [options?.isViewOnly]);
 };

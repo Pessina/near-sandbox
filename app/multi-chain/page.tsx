@@ -38,7 +38,7 @@ export default function MultiChain() {
     }
   }, [derivedAddress, toast]);
 
-  if (!accountId) {
+  if (!walletSelector?.isSignedIn()) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="mb-4">Please sign in to continue</div>

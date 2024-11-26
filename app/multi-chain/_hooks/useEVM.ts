@@ -4,15 +4,19 @@ import { useEnv } from "@/hooks/useEnv";
 import { chainsConfig } from "../_constants/chains";
 
 export const useEVM = () => {
-  const { networkId, chainSignatureContract } = useEnv();
+  const { nearNetworkId, chainSignatureContract } = useEnv({
+    options: {
+      isViewOnly: true,
+    },
+  });
 
   const evm = useMemo(() => {
     return new EVM({
       ...chainsConfig.ethereum,
-      nearNetworkId: networkId,
+      nearNetworkId,
       contract: chainSignatureContract,
     });
-  }, [networkId, chainSignatureContract]);
+  }, [nearNetworkId, chainSignatureContract]);
 
   return evm;
 };

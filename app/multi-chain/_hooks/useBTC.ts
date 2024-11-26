@@ -4,16 +4,20 @@ import { useEnv } from "@/hooks/useEnv";
 import { chainsConfig } from "../_constants/chains";
 
 export const useBTC = () => {
-  const { networkId, chainSignatureContract } = useEnv();
+  const { nearNetworkId, chainSignatureContract } = useEnv({
+    options: {
+      isViewOnly: true,
+    },
+  });
 
   const btc = useMemo(() => {
     return new Bitcoin({
       providerUrl: chainsConfig.btc.rpcEndpoint,
       network: chainsConfig.btc.networkType,
-      nearNetworkId: networkId,
+      nearNetworkId,
       contract: chainSignatureContract,
     });
-  }, [networkId, chainSignatureContract]);
+  }, [nearNetworkId, chainSignatureContract]);
 
   return btc;
 };

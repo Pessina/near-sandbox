@@ -1,5 +1,6 @@
 "use client";
 
+import { useEnv } from '@/hooks/useEnv';
 import { NetworkId, setupWalletSelector, WalletSelector } from '@near-wallet-selector/core';
 // import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
@@ -18,11 +19,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [walletSelector, setWalletSelector] =
         useState<WalletSelector | null>(null);
     const [accountId, setAccountId] = useState<string | null>(null);
+    const { nearNetworkId } = useEnv({ options: { isViewOnly: true } });
 
     useEffect(() => {
         async function init() {
             const selector = await setupWalletSelector({
-                network: process.env.NEXT_PUBLIC_NETWORK_ID! as NetworkId,
+                network: nearNetworkId,
                 modules: [
                     setupMyNearWallet(),
                 ],
@@ -32,9 +34,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         init();
-    }, []);
+    }, [nearNetworkId]);
 
     useEffect(() => {
+        // TODO: cache the accountId (maybe React Query)
         const fetchAccountId = async () => {
             const wallet = await walletSelector?.wallet();
             wallet?.getAccounts().then((accounts) => {

@@ -19,7 +19,11 @@ import { MarketplaceHeader } from "./_components/MarketplaceHeader"
 import { NFTGrid } from "./_components/NFTGrid"
 
 export default function NFTMarketplace() {
-    const { account, isLoading } = useInitNear()
+    const { account, isLoading } = useInitNear({
+        options: {
+            isViewOnly: false,
+        },
+    })
     const { toast } = useToast()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)

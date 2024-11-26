@@ -4,15 +4,19 @@ import { useEnv } from "@/hooks/useEnv";
 import { chainsConfig } from "../_constants/chains";
 
 export const useCosmos = () => {
-  const { networkId, chainSignatureContract } = useEnv();
+  const { nearNetworkId, chainSignatureContract } = useEnv({
+    options: {
+      isViewOnly: true,
+    },
+  });
 
   const cosmos = useMemo(() => {
     return new Cosmos({
       chainId: chainsConfig.osmosis.chainId,
-      nearNetworkId: networkId,
+      nearNetworkId,
       contract: chainSignatureContract,
     });
-  }, [networkId, chainSignatureContract]);
+  }, [nearNetworkId, chainSignatureContract]);
 
   return cosmos;
 };
