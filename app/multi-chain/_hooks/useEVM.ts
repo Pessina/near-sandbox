@@ -4,11 +4,7 @@ import { useEnv } from "@/hooks/useEnv";
 import { chainsConfig } from "../_constants/chains";
 
 export const useEVM = () => {
-  const { nearNetworkId, chainSignatureContract } = useEnv({
-    options: {
-      isViewOnly: true,
-    },
-  });
+  const { nearNetworkId, chainSignatureContract } = useEnv();
 
   const evm = useMemo(() => {
     return new EVM({

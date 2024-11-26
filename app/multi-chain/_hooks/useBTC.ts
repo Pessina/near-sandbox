@@ -4,11 +4,7 @@ import { useEnv } from "@/hooks/useEnv";
 import { chainsConfig } from "../_constants/chains";
 
 export const useBTC = () => {
-  const { nearNetworkId, chainSignatureContract } = useEnv({
-    options: {
-      isViewOnly: true,
-    },
-  });
+  const { nearNetworkId, chainSignatureContract } = useEnv();
 
   const btc = useMemo(() => {
     return new Bitcoin({

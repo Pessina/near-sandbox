@@ -21,12 +21,8 @@ import useInitNear from "@/hooks/useInitNear";
 
 export const useMultiChainTransaction = () => {
     const { walletSelector, accountId } = useAuth();
-    const { nearNetworkId, chainSignatureContract } = useEnv({ options: { isViewOnly: true } });
-    const { account } = useInitNear({
-        options: {
-            isViewOnly: true,
-        },
-    });
+    const { nearNetworkId, chainSignatureContract } = useEnv();
+    const { account } = useInitNear();
     const evm = useEVM();
     // const btc = useBTC();
     // const cosmos = useCosmos();
@@ -38,8 +34,6 @@ export const useMultiChainTransaction = () => {
         if (!accountId) {
             throw new Error("Account ID not found");
         }
-
-
 
         try {
             const { address } = await evm.deriveAddressAndPublicKey(

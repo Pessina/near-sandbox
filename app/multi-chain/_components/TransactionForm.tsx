@@ -25,11 +25,7 @@ interface Transaction {
 export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derivedPath }) => {
     const { register, handleSubmit, formState: { errors } } = useForm<Transaction>();
     const [isSendingTransaction, setIsSendingTransaction] = useState(false);
-    const { account, connection } = useInitNear({
-        options: {
-            isViewOnly: true,
-        },
-    });
+    const { account, connection } = useInitNear();
     const { toast } = useToast();
     const { signEvmTransaction } = useMultiChainTransaction();
 

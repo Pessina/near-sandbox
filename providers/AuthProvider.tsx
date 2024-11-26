@@ -19,7 +19,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [walletSelector, setWalletSelector] =
         useState<WalletSelector | null>(null);
     const [accountId, setAccountId] = useState<string | null>(null);
-    const { nearNetworkId } = useEnv({ options: { isViewOnly: true } });
+    const { nearNetworkId } = useEnv();
 
     useEffect(() => {
         async function init() {

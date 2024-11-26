@@ -19,11 +19,7 @@ type FormsData = {
 const NearPage = () => {
     const { register, handleSubmit } = useForm<FormsData>();
 
-    const { account } = useInitNear({
-        options: {
-            isViewOnly: true,
-        },
-    });
+    const { account } = useInitNear();
 
     const showNonce = async () => {
         if (!account) return;

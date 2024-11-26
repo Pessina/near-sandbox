@@ -20,9 +20,7 @@ import { NFTGrid } from "./_components/NFTGrid"
 
 export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear({
-        options: {
-            isViewOnly: false,
-        },
+        isViewOnly: false,
     })
     const { toast } = useToast()
 

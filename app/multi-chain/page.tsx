@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import useInitNear from "@/hooks/useInitNear";
 import { useAccountBalance } from "./_hooks/useAccountBalance";
 import { useDerivedAddress } from "./_hooks/useDerivedAddress";
 import { TransactionForm } from "./_components/TransactionForm";
@@ -10,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Wallet } from 'lucide-react';
 import { useAuth } from "@/providers/AuthProvider";

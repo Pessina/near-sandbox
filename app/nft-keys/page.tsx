@@ -41,9 +41,7 @@ type FormData = {
 
 export default function NFTKeysPage() {
   const { account, isLoading } = useInitNear({
-    options: {
-      isViewOnly: false,
-    },
+    isViewOnly: false,
   })
   const { toast } = useToast()
   const [nftContract, setNftContract] = useState<NFTKeysContract>()

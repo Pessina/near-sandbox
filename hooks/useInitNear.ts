@@ -3,18 +3,16 @@ import { Account, connect, KeyPair, keyStores, Near } from "near-api-js";
 import { useEnv } from "./useEnv";
 import { KeyPairString } from "near-api-js/lib/utils";
 
-const useInitNear = ({
-  options,
-}: {
-  options?: {
-    isViewOnly?: boolean;
-  };
-}) => {
+const useInitNear = (
+  options: { isViewOnly?: boolean } = {
+    isViewOnly: true,
+  }
+) => {
   const [state, setState] = useState<
     { account: Account; connection: Near } | undefined
   >(undefined);
   const [isLoading, setIsLoading] = useState(true);
-  const { nearPrivateKey, nearAccountId, nearNetworkId } = useEnv({ options });
+  const { nearPrivateKey, nearAccountId, nearNetworkId } = useEnv(options);
 
   useEffect(() => {
     const initialize = async () => {

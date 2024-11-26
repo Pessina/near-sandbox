@@ -9,13 +9,11 @@ interface EnvVariables {
   nearNetworkId: "mainnet" | "testnet";
 }
 
-export const useEnv = ({
-  options,
-}: {
-  options?: {
-    isViewOnly?: boolean;
-  };
-}): EnvVariables => {
+export const useEnv = (
+  options: { isViewOnly?: boolean } = {
+    isViewOnly: true,
+  }
+): EnvVariables => {
   return useMemo(() => {
     const nearAccountId = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID;
     const nearPrivateKey = process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY;
