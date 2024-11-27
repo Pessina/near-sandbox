@@ -1,32 +1,21 @@
-import { useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { NFT, FormData } from "../types"
-import { Tag, ShoppingCart, ListPlus, XCircle, Key, Lock } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tag, ShoppingCart, XCircle, Key, Lock } from 'lucide-react'
+import { NFTListDialog } from "./NFTListDialog"
+import { NFTOfferDialog } from "./NFTOfferDialog"
 
 interface NFTCardProps {
     nft: NFT
     isProcessing: boolean
-    onBuy?: (nft: NFT) => Promise<void>
     onList?: (data: FormData) => Promise<void>
     onRemoveListing?: (nft: NFT) => Promise<void>
+    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
     variant: "listed" | "owned"
 }
 
-export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, variant }: NFTCardProps) {
-    const [price, setPrice] = useState("")
-    const [token, setToken] = useState("near")
-
-    const handleList = () => {
-        if (onList) {
-            onList({ tokenId: nft.token_id, price, token })
-        }
-    }
-
+export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, variant }: NFTCardProps) {
     return (
         <Card className="overflow-hidden transition-all hover:shadow-lg">
             <CardContent className="p-6">
@@ -48,12 +37,17 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
                     <span>Secure Multi-Chain Asset</span>
                 </div>
             </CardContent>
-            <CardFooter className="p-4">
-                {variant === "listed" && onBuy && (
-                    <Button onClick={() => onBuy(nft)} disabled={isProcessing} className="w-full">
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {isProcessing ? 'Processing...' : 'Buy Now'}
-                    </Button>
+            <CardFooter className="p-4 flex flex-col gap-2">
+                {variant === "listed" && (
+                    <>
+                        {onOffer && (
+                            <NFTOfferDialog
+                                isProcessing={isProcessing}
+                                onOffer={onOffer}
+                                nftId={nft.token_id}
+                            />
+                        )}
+                    </>
                 )}
                 {variant === "owned" && (
                     <>
@@ -63,47 +57,11 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
                                 {isProcessing ? 'Processing...' : 'Remove Listing'}
                             </Button>
                         ) : (
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full">
-                                        <ListPlus className="mr-2 h-4 w-4" />
-                                        List for Sale
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>List NFT Key for Sale</DialogTitle>
-                                        <DialogDescription>Set the price and token for your NFT Key listing.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Input
-                                                id="price"
-                                                placeholder="Price"
-                                                type="number"
-                                                step="0.1"
-                                                value={price}
-                                                onChange={(e) => setPrice(e.target.value)}
-                                                className="col-span-3"
-                                            />
-                                            <Select value={token} onValueChange={setToken}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Token" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="near">NEAR</SelectItem>
-                                                    <SelectItem value="usdc">USDC</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button onClick={handleList} disabled={isProcessing}>
-                                            {isProcessing ? 'Processing...' : 'List NFT Key'}
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            onList && <NFTListDialog
+                                isProcessing={isProcessing}
+                                onList={onList}
+                                tokenId={nft.token_id}
+                            />
                         )}
                     </>
                 )}

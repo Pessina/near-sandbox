@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Account, connect, KeyPair, keyStores, Near } from "near-api-js";
+import {
+  Account,
+  connect,
+  ConnectConfig,
+  KeyPair,
+  keyStores,
+  Near,
+} from "near-api-js";
 import { useEnv } from "./useEnv";
 import { KeyPairString } from "near-api-js/lib/utils";
 
@@ -29,17 +36,13 @@ const useInitNear = (
         const keyStore = new keyStores.InMemoryKeyStore();
         keyStore.setKey(nearNetworkId, accountId, keyPair);
 
-        const config = {
+        const config: ConnectConfig = {
           networkId: nearNetworkId,
           keyStore,
           nodeUrl:
             nearNetworkId === "mainnet"
               ? "https://rpc.mainnet.near.org"
               : "https://rpc.testnet.near.org",
-          walletUrl:
-            nearNetworkId === "mainnet"
-              ? "https://wallet.mainnet.near.org"
-              : "https://wallet.testnet.near.org",
           helperUrl:
             nearNetworkId === "mainnet"
               ? "https://helper.mainnet.near.org"

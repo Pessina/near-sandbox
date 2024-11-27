@@ -9,9 +9,9 @@ interface NFTGridProps {
     nfts: NFT[]
     variant: "listed" | "owned"
     isProcessing: boolean
-    onBuy?: (nft: NFT) => Promise<void>
     onList?: (data: FormData) => Promise<void>
     onRemoveListing?: (nft: NFT) => Promise<void>
+    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
     onMint?: () => Promise<void>
     showMintCard?: boolean
 }
@@ -20,9 +20,9 @@ export function NFTGrid({
     nfts,
     variant,
     isProcessing,
-    onBuy,
     onList,
     onRemoveListing,
+    onOffer,
     onMint,
     showMintCard = false
 }: NFTGridProps) {
@@ -46,9 +46,9 @@ export function NFTGrid({
                         key={nft.token_id}
                         nft={nft}
                         isProcessing={isProcessing}
-                        onBuy={onBuy}
                         onList={onList}
                         onRemoveListing={onRemoveListing}
+                        onOffer={onOffer}
                         variant={variant}
                     />
                 ))}

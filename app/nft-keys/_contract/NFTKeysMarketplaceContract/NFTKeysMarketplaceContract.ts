@@ -20,7 +20,6 @@ const createMarketplaceContract = (args: {
       "new",
       "storage_deposit",
       "storage_withdraw",
-      "list_nft_for_sale",
       "remove_sale",
       "offer",
     ],

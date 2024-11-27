@@ -14,7 +14,7 @@ type StorageBalanceResult = {
 
 type SaleCondition = {
   token: string;
-  amount: number;
+  amount: string;
 };
 
 type Sale = {
@@ -22,11 +22,9 @@ type Sale = {
   approval_id: number;
   nft_contract_id: string;
   token_id: string;
+  path: string;
+  token: string;
   sale_conditions: SaleCondition;
-};
-
-type Payout = {
-  payout: Record<string, string>;
 };
 
 export type NFTKeysMarketplaceContract = Contract & {
@@ -71,15 +69,6 @@ export type NFTKeysMarketplaceContract = Contract & {
   }) => Promise<Sale[]>;
 
   get_sale: (args: { nft_contract_token: string }) => Promise<Sale | null>;
-
-  list_nft_for_sale: (
-    args: ContractChangeMethodArgs<{
-      nft_contract_id: string;
-      token_id: string;
-      approval_id: number;
-      sale_conditions: SaleCondition;
-    }>
-  ) => Promise<void>;
 
   remove_sale: (
     args: ContractChangeMethodArgs<{

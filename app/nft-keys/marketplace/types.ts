@@ -12,8 +12,12 @@ export type NFT = {
 
 export type FormData = {
   tokenId: string;
-  price: string;
+  path: string;
   token: string;
+  saleConditions: {
+    token: string;
+    amount: string;
+  };
 };
 
 export const SUPPORTED_TOKENS = [

@@ -90,14 +90,15 @@ export default function NFTMarketplace() {
                     return {
                         ...nft,
                         price: sale.sale_conditions.amount.toString(),
-                        token: sale.sale_conditions.token
+                        token: sale.sale_conditions.token,
+                        path: sale.path
                     }
                 })
             )
 
             const ownedNftsWithPrice = userNfts.map(nft => {
                 const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
-                return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token } : nft
+                return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token, path: listedNft.path } : nft
             })
 
             setOwnedNfts(ownedNftsWithPrice)
@@ -140,7 +141,7 @@ export default function NFTMarketplace() {
 
     const handleListNFT = async (data: FormData) => {
         if (!nftContract || !marketplaceContract) return
-        if (!data.price) throw new Error("Invalid price")
+        if (!data.saleConditions.amount) throw new Error("Invalid price")
 
         await withErrorHandling(
             async () => {
@@ -149,9 +150,11 @@ export default function NFTMarketplace() {
                         token_id: data.tokenId,
                         account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
                         msg: JSON.stringify({
+                            path: data.path,
+                            token: data.token,
                             sale_conditions: {
-                                token: data.token,
-                                amount: data.price,
+                                token: data.saleConditions.token,
+                                amount: data.saleConditions.amount,
                             },
                         }),
                     },
@@ -159,30 +162,30 @@ export default function NFTMarketplace() {
                 })
             },
             "NFT Key Listed Successfully",
-            `Your NFT Key ${data.tokenId} has been listed for ${data.price} ${data.token.toUpperCase()}`
+            `Your NFT Key ${data.tokenId} has been listed for ${data.saleConditions.amount} ${data.saleConditions.token.toUpperCase()}`
         )
     }
 
-    const handleBuyNFT = async (nft: NFT) => {
-        if (!marketplaceContract || !nft.price) return
+    const handleOfferNFT = async (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => {
+        if (!nftContract || !data.offerTokenId) return
 
         await withErrorHandling(
             async () => {
-                await marketplaceContract.offer({
+                await nftContract.nft_approve({
                     args: {
-                        nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
-                        token_id: nft.token_id,
-                        offer_price: {
-                            token: nft.token || "near",
-                            amount: Number(parseNearAmount(nft.price)),
-                        },
+                        token_id: data.offerTokenId,
+                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
+                        msg: JSON.stringify({
+                            token_id: data.purchaseTokenId,
+                            path: data.path
+                        }),
                     },
-                    amount: parseNearAmount(nft.price)!,
+                    amount: ONE_YOCTO_NEAR,
                     gas: NEAR_MAX_GAS,
                 })
             },
-            "NFT Key Purchased Successfully",
-            `You have bought NFT Key ${nft.token_id} for ${nft.price} ${nft.token?.toUpperCase() || 'NEAR'}`
+            "NFT Key Offer Submitted Successfully",
+            `Your NFT Key ${data.offerTokenId} offer has been submitted`
         )
     }
 
@@ -304,7 +307,7 @@ export default function NFTMarketplace() {
                         nfts={listedNfts}
                         variant="listed"
                         isProcessing={isProcessing}
-                        onBuy={handleBuyNFT}
+                        onOffer={handleOfferNFT}
                     />
                 </TabsContent>
                 <TabsContent value="my-nfts">
