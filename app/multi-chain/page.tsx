@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, Wallet } from 'lucide-react';
 import { useAuth } from "@/providers/AuthProvider";
 
+
 export default function MultiChain() {
   const { accountId, walletSelector } = useAuth()
   const [derivedPath, setDerivedPath] = useState("");

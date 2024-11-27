@@ -15,15 +15,17 @@ import { useCallback, useEffect } from "react";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import useInitNear from "@/hooks/useInitNear";
 import { useChains } from "./useChains";
+import { chainsConfig } from "../_constants/chains";
+import { toast } from "@/hooks/use-toast";
 
-type MultiChainTransactionHook = {
+interface MultiChainTransactionHook {
     signEvmTransaction: (transactionRequest: EVMTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
     sendEvmTransaction: (transaction: EVMUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
     signBtcTransaction: (transactionRequest: BTCTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
     sendBtcTransaction: (transaction: BTCUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
     signCosmosTransaction: (transactionRequest: CosmosTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
     sendCosmosTransaction: (transaction: CosmosUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
-};
+}
 
 export const useMultiChainTransaction = (): MultiChainTransactionHook => {
     const { walletSelector, accountId } = useAuth();
@@ -36,12 +38,12 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
         transactionRequest: TRequest,
         path: KeyDerivationPath,
         storageKey: string
-    ) => {
+    ): Promise<FinalExecutionOutcome | void> => {
         if (!accountId) {
             throw new Error("Account ID not found");
         }
-        const { transaction, mpcPayloads } = await chain.getMPCPayloadAndTransaction(transactionRequest);
 
+        const { transaction, mpcPayloads } = await chain.getMPCPayloadAndTransaction(transactionRequest);
         chain.setTransaction(transaction, storageKey);
 
         const wallet = await walletSelector?.wallet('my-near-wallet');
@@ -49,7 +51,7 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
             throw new Error("Wallet not found");
         }
 
-        const response = await wallet.signAndSendTransaction({
+        return wallet.signAndSendTransaction({
             ...(await transactionBuilder.near.mpcPayloadsToTransaction({
                 networkId: nearNetworkId,
                 contractId: chainSignatureContract,
@@ -57,15 +59,13 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
                 path,
             })),
         });
-
-        return response;
     }, [accountId, chainSignatureContract, nearNetworkId, walletSelector]);
 
     const sendTransaction = useCallback(async <TRequest, TUnsigned>(
         chain: Chain<TRequest, TUnsigned>,
         transaction: TUnsigned,
         txOutcome: FinalExecutionOutcome
-    ) => {
+    ): Promise<string> => {
         const mpcSignature = transactionBuilder.near.responseToMpcSignature({
             response: txOutcome,
         });
@@ -74,98 +74,107 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
             throw new Error("MPC signatures not found");
         }
 
-        const txHash = await chain.addSignatureAndBroadcast({
+        return chain.addSignatureAndBroadcast({
             transaction,
             mpcSignatures: [mpcSignature],
             publicKey: '' // TODO: Get public key from somewhere
         });
-
-        return txHash;
     }, []);
 
     const signEvmTransaction = useCallback((
         transactionRequest: EVMTransactionRequest,
         path: KeyDerivationPath
-    ) => {
-        return signTransaction(evm, transactionRequest, path, 'evm-transaction');
-    }, [evm, signTransaction]);
+    ) => signTransaction(evm, transactionRequest, path, 'evm-transaction'),
+        [evm, signTransaction]);
 
     const signBtcTransaction = useCallback((
         transactionRequest: BTCTransactionRequest,
         path: KeyDerivationPath
-    ) => {
-        return signTransaction(btc, transactionRequest, path, 'btc-transaction');
-    }, [btc, signTransaction]);
+    ) => signTransaction(btc, transactionRequest, path, 'btc-transaction'),
+        [btc, signTransaction]);
 
     const signCosmosTransaction = useCallback((
         transactionRequest: CosmosTransactionRequest,
         path: KeyDerivationPath
-    ) => {
-        return signTransaction(cosmos, transactionRequest, path, 'cosmos-transaction');
-    }, [cosmos, signTransaction]);
+    ) => signTransaction(cosmos, transactionRequest, path, 'cosmos-transaction'),
+        [cosmos, signTransaction]);
 
     const sendEvmTransaction = useCallback((
         transaction: EVMUnsignedTransaction,
         txOutcome: FinalExecutionOutcome
-    ) => {
-        return sendTransaction(evm, transaction, txOutcome);
-    }, [evm, sendTransaction]);
+    ) => sendTransaction(evm, transaction, txOutcome),
+        [evm, sendTransaction]);
 
     const sendBtcTransaction = useCallback((
         transaction: BTCUnsignedTransaction,
         txOutcome: FinalExecutionOutcome
-    ) => {
-        return sendTransaction(btc, transaction, txOutcome);
-    }, [btc, sendTransaction]);
+    ) => sendTransaction(btc, transaction, txOutcome),
+        [btc, sendTransaction]);
 
     const sendCosmosTransaction = useCallback((
         transaction: CosmosUnsignedTransaction,
         txOutcome: FinalExecutionOutcome
-    ) => {
-        return sendTransaction(cosmos, transaction, txOutcome);
-    }, [cosmos, sendTransaction]);
+    ) => sendTransaction(cosmos, transaction, txOutcome),
+        [cosmos, sendTransaction]);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const urlParams = new URLSearchParams(window.location.search);
-            const nearTxHash = urlParams.get('transactionHashes');
+        if (typeof window === 'undefined' || !account) return;
 
-            if (nearTxHash && account) {
-                const resumeTransaction = async () => {
-                    try {
-                        const txOutcome = await account.connection.provider.txStatus(nearTxHash, account.accountId, 'FINAL');
+        const urlParams = new URLSearchParams(window.location.search);
+        const nearTxHash = urlParams.get('transactionHashes');
+        if (!nearTxHash) return;
 
-                        if (!txOutcome) {
-                            throw new Error("Transaction not found");
-                        }
+        const resumeTransaction = async () => {
+            try {
+                const txOutcome = await account.connection.provider.txStatus(
+                    nearTxHash,
+                    account.accountId,
+                    'FINAL'
+                );
 
-                        const evmTransaction = evm.getTransaction('evm-transaction', { remove: true });
-                        const btcTransaction = btc.getTransaction('btc-transaction', { remove: true });
-                        const cosmosTransaction = cosmos.getTransaction('cosmos-transaction', { remove: true });
+                if (!txOutcome) {
+                    throw new Error("Transaction not found");
+                }
 
-                        let foreignerChainTxHash;
-                        if (evmTransaction) {
-                            foreignerChainTxHash = await sendEvmTransaction(evmTransaction, txOutcome);
-                        } else if (btcTransaction) {
-                            foreignerChainTxHash = await sendBtcTransaction(btcTransaction, txOutcome);
-                        } else if (cosmosTransaction) {
-                            foreignerChainTxHash = await sendCosmosTransaction(cosmosTransaction, txOutcome);
-                        } else {
-                            throw new Error("Transaction not found");
-                        }
+                const evmTransaction = evm.getTransaction('evm-transaction', { remove: true });
+                const btcTransaction = btc.getTransaction('btc-transaction', { remove: true });
+                const cosmosTransaction = cosmos.getTransaction('cosmos-transaction', { remove: true });
 
-                        const newUrl = window.location.pathname;
-                        window.history.replaceState({}, '', newUrl);
+                let foreignerChainTxHash: string | undefined;
 
-                        console.log("Foreign transaction hash:", foreignerChainTxHash);
-                    } catch (error) {
-                        console.error("Error resuming transaction:", error);
-                    }
-                };
+                if (evmTransaction) {
+                    foreignerChainTxHash = await sendEvmTransaction(evmTransaction, txOutcome);
+                } else if (btcTransaction) {
+                    foreignerChainTxHash = await sendBtcTransaction(btcTransaction, txOutcome);
+                } else if (cosmosTransaction) {
+                    foreignerChainTxHash = await sendCosmosTransaction(cosmosTransaction, txOutcome);
+                } else {
+                    throw new Error("Transaction not found");
+                }
 
-                resumeTransaction();
+                window.history.replaceState({}, '', window.location.pathname);
+                let explorerUrl = '';
+                if (evmTransaction) {
+                    explorerUrl = `${chainsConfig.ethereum.explorerUrl}/tx/${foreignerChainTxHash}`;
+                } else if (btcTransaction) {
+                    explorerUrl = `${chainsConfig.btc.explorerUrl}/tx/${foreignerChainTxHash}`;
+                } else if (cosmosTransaction) {
+                    explorerUrl = `${chainsConfig.osmosis.explorerUrl}/tx/${foreignerChainTxHash}`;
+                }
+                toast({
+                    title: "Transaction sent!",
+                    description: (
+                        <div>
+                            <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="underline">View transaction on explorer</a>
+                        </div>
+                    ),
+                });
+            } catch (error) {
+                console.error("Error resuming transaction:", error);
             }
-        }
+        };
+
+        void resumeTransaction();
     }, [
         account,
         btc,

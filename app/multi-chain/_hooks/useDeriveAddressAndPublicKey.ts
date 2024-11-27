@@ -3,70 +3,60 @@ import { Chain } from "../_constants/chains";
 import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
 import { useChains } from "./useChains";
 
+interface DerivedAddressAndPublicKey {
+  address: string;
+  publicKey: string;
+}
+
+const CHAIN_CONFIGS = {
+  [Chain.BNB]: { chainId: 60 },
+  [Chain.ETH]: { chainId: 60 },
+  [Chain.BTC]: { chainId: 0 },
+  [Chain.OSMOSIS]: { chainId: 118 },
+} as const;
+
 export const useDeriveAddressAndPublicKey = (
   accountId: string,
   chain: Chain,
   derivedPath: string
-) => {
-  const [derivedAddressAndPublicKey, setDerivedAddressAndPublicKey] = useState<{
-    address: string;
-    publicKey: string;
-  } | null>(null);
+): DerivedAddressAndPublicKey | null => {
+  const [derivedAddressAndPublicKey, setDerivedAddressAndPublicKey] =
+    useState<DerivedAddressAndPublicKey | null>(null);
 
   const { evm, btc, cosmos } = useChains();
 
   useEffect(() => {
-    const getAddress = async () => {
+    const deriveAddressAndPublicKey = async () => {
       if (!accountId) {
         setDerivedAddressAndPublicKey(null);
         return;
       }
 
-      let addressAndPublicKey = { address: "", publicKey: "" };
-      switch (chain) {
-        case Chain.BNB:
-        case Chain.ETH:
-          addressAndPublicKey = await evm.deriveAddressAndPublicKey(
-            accountId,
-            getCanonicalizedDerivationPath({
-              chain: 60,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              },
-            })
-          );
-          break;
-        case Chain.BTC:
-          addressAndPublicKey = await btc.deriveAddressAndPublicKey(
-            accountId,
-            getCanonicalizedDerivationPath({
-              chain: 0,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              },
-            })
-          );
-          break;
-        case Chain.OSMOSIS:
-          await cosmos.deriveAddressAndPublicKey(
-            accountId,
-            getCanonicalizedDerivationPath({
-              chain: 118,
-              domain: "",
-              meta: {
-                path: derivedPath,
-              },
-            })
-          );
-          break;
-      }
+      const chainConfig = CHAIN_CONFIGS[chain];
+      const derivationPath = getCanonicalizedDerivationPath({
+        chain: chainConfig.chainId,
+        domain: "",
+        meta: { path: derivedPath },
+      });
 
-      setDerivedAddressAndPublicKey(addressAndPublicKey);
+      let result: DerivedAddressAndPublicKey;
+
+      if (chain === Chain.BNB || chain === Chain.ETH) {
+        result = await evm.deriveAddressAndPublicKey(accountId, derivationPath);
+      } else if (chain === Chain.BTC) {
+        result = await btc.deriveAddressAndPublicKey(accountId, derivationPath);
+      } else if (chain === Chain.OSMOSIS) {
+        result = await cosmos.deriveAddressAndPublicKey(
+          accountId,
+          derivationPath
+        );
+      } else {
+        throw new Error(`Unsupported chain: ${chain}`);
+      }
+      setDerivedAddressAndPublicKey(result);
     };
 
-    getAddress();
+    deriveAddressAndPublicKey().catch(console.error);
   }, [accountId, btc, chain, cosmos, derivedPath, evm]);
 
   return derivedAddressAndPublicKey;
