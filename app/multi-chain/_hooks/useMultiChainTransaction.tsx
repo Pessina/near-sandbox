@@ -1,217 +1,139 @@
 import { useEnv } from "@/hooks/useEnv";
 import { useAuth } from "@/providers/AuthProvider";
-import { ethers } from "ethers";
 import {
     KeyDerivationPath,
     transactionBuilder,
     CosmosTransactionRequest,
     CosmosUnsignedTransaction,
     BTCTransactionRequest,
-    BTCUnsignedTransaction
+    BTCUnsignedTransaction,
+    Chain,
+    EVMTransactionRequest,
+    EVMUnsignedTransaction
 } from "multichain-tools";
 import { useCallback, useEffect } from "react";
-import { useEVM } from "../_hooks/useEVM";
-import { useBTC } from "../_hooks/useBTC";
-import { useCosmos } from "../_hooks/useCosmos";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import useInitNear from "@/hooks/useInitNear";
+import { useChains } from "./useChains";
 
-export const useMultiChainTransaction = () => {
+type MultiChainTransactionHook = {
+    signEvmTransaction: (transactionRequest: EVMTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
+    sendEvmTransaction: (transaction: EVMUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
+    signBtcTransaction: (transactionRequest: BTCTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
+    sendBtcTransaction: (transaction: BTCUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
+    signCosmosTransaction: (transactionRequest: CosmosTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
+    sendCosmosTransaction: (transaction: CosmosUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
+};
+
+export const useMultiChainTransaction = (): MultiChainTransactionHook => {
     const { walletSelector, accountId } = useAuth();
     const { nearNetworkId, chainSignatureContract } = useEnv();
     const { account } = useInitNear();
-    const evm = useEVM();
-    const btc = useBTC();
-    const cosmos = useCosmos();
+    const { evm, btc, cosmos } = useChains();
 
-    const signEvmTransaction = useCallback(async (
-        transactionRequest: ethers.TransactionLike,
-        path: KeyDerivationPath
+    const signTransaction = useCallback(async <TRequest, TUnsigned>(
+        chain: Chain<TRequest, TUnsigned>,
+        transactionRequest: TRequest,
+        path: KeyDerivationPath,
+        storageKey: string
     ) => {
         if (!accountId) {
             throw new Error("Account ID not found");
         }
+        const { transaction, mpcPayloads } = await chain.getMPCPayloadAndTransaction(transactionRequest);
 
-        try {
-            const { address } = await evm.deriveAddressAndPublicKey(
-                accountId,
-                path
-            );
+        chain.setTransaction(transaction, storageKey);
 
-            const { transaction, mpcPayloads } =
-                await evm.getMPCPayloadAndTransaction({
-                    ...transactionRequest,
-                    from: address,
-                });
-
-            evm.setTransaction(transaction, 'evm-transaction');
-
-            const wallet = await walletSelector?.wallet('my-near-wallet');
-            if (!wallet) {
-                throw new Error("Wallet not found");
-            }
-
-            const response = await wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToTransaction({
-                    networkId: nearNetworkId,
-                    contractId: chainSignatureContract,
-                    mpcPayloads,
-                    path,
-                })),
-            });
-
-            return response;
-        } catch (e: unknown) {
-            console.error(e);
+        const wallet = await walletSelector?.wallet('my-near-wallet');
+        if (!wallet) {
+            throw new Error("Wallet not found");
         }
-    }, [accountId, chainSignatureContract, evm, nearNetworkId, walletSelector])
 
-    const sendEvmTransaction = useCallback(
-        async (
-            transaction: ethers.TransactionLike,
-            txOutcome: FinalExecutionOutcome
-        ) => {
-            try {
-                const signature = transactionBuilder.near.responseToMpcSignature({
-                    response: txOutcome,
-                });
+        const response = await wallet.signAndSendTransaction({
+            ...(await transactionBuilder.near.mpcPayloadsToTransaction({
+                networkId: nearNetworkId,
+                contractId: chainSignatureContract,
+                mpcPayloads,
+                path,
+            })),
+        });
 
-                if (signature && transaction) {
-                    const txHash = await evm.addSignatureAndBroadcast({
-                        transaction,
-                        mpcSignatures: [signature],
-                    });
+        return response;
+    }, [accountId, chainSignatureContract, nearNetworkId, walletSelector]);
 
-                    return {
-                        transactionHash: txHash,
-                        success: true,
-                    };
-                }
-            } catch (e: unknown) {
-                console.error(e);
-                return {
-                    success: false,
-                    errorMessage: e instanceof Error ? e.message : String(e),
-                };
-            }
-        },
-        [evm]
-    );
+    const sendTransaction = useCallback(async <TRequest, TUnsigned>(
+        chain: Chain<TRequest, TUnsigned>,
+        transaction: TUnsigned,
+        txOutcome: FinalExecutionOutcome
+    ) => {
+        const mpcSignature = transactionBuilder.near.responseToMpcSignature({
+            response: txOutcome,
+        });
 
-    const signBtcTransaction = useCallback(
-        async (transactionRequest: BTCTransactionRequest, path: KeyDerivationPath) => {
-            if (!accountId) {
-                throw new Error("Account ID not found");
-            }
+        if (!mpcSignature) {
+            throw new Error("MPC signatures not found");
+        }
 
-            const { address, publicKey: compressedPublicKey } = await btc.deriveAddressAndPublicKey(accountId, path);
+        const txHash = await chain.addSignatureAndBroadcast({
+            transaction,
+            mpcSignatures: [mpcSignature],
+            publicKey: '' // TODO: Get public key from somewhere
+        });
 
-            const { transaction, mpcPayloads } = await btc.getMPCPayloadAndTransaction({ ...transactionRequest, from: address, compressedPublicKey });
+        return txHash;
+    }, []);
 
-            btc.setTransaction(transaction, 'btc-transaction');
+    const signEvmTransaction = useCallback((
+        transactionRequest: EVMTransactionRequest,
+        path: KeyDerivationPath
+    ) => {
+        return signTransaction(evm, transactionRequest, path, 'evm-transaction');
+    }, [evm, signTransaction]);
 
-            const wallet = await walletSelector?.wallet('my-near-wallet');
-            if (!wallet) {
-                throw new Error("Wallet not found");
-            }
+    const signBtcTransaction = useCallback((
+        transactionRequest: BTCTransactionRequest,
+        path: KeyDerivationPath
+    ) => {
+        return signTransaction(btc, transactionRequest, path, 'btc-transaction');
+    }, [btc, signTransaction]);
 
-            const response = await wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToTransaction({
-                    networkId: nearNetworkId,
-                    contractId: chainSignatureContract,
-                    mpcPayloads,
-                    path,
-                })),
-            });
+    const signCosmosTransaction = useCallback((
+        transactionRequest: CosmosTransactionRequest,
+        path: KeyDerivationPath
+    ) => {
+        return signTransaction(cosmos, transactionRequest, path, 'cosmos-transaction');
+    }, [cosmos, signTransaction]);
 
-            return response;
-        },
-        [accountId, btc, chainSignatureContract, nearNetworkId, walletSelector]
-    );
+    const sendEvmTransaction = useCallback((
+        transaction: EVMUnsignedTransaction,
+        txOutcome: FinalExecutionOutcome
+    ) => {
+        return sendTransaction(evm, transaction, txOutcome);
+    }, [evm, sendTransaction]);
 
-    const sendBtcTransaction = useCallback(
-        async (transaction: BTCUnsignedTransaction, txOutcome: FinalExecutionOutcome) => {
-            const mpcSignature = transactionBuilder.near.responseToMpcSignature({
-                response: txOutcome,
-            });
+    const sendBtcTransaction = useCallback((
+        transaction: BTCUnsignedTransaction,
+        txOutcome: FinalExecutionOutcome
+    ) => {
+        return sendTransaction(btc, transaction, txOutcome);
+    }, [btc, sendTransaction]);
 
-            if (!mpcSignature) {
-                throw new Error("MPC signatures not found");
-            }
-
-            const txHash = await btc.addSignatureAndBroadcast({
-                transaction,
-                mpcSignatures: [mpcSignature],
-            });
-
-            return txHash;
-        },
-        [btc]
-    );
-
-    const signCosmosTransaction = useCallback(
-        async (transactionRequest: CosmosTransactionRequest, path: KeyDerivationPath) => {
-            if (!accountId) {
-                throw new Error("Account ID not found");
-            }
-
-            const { address, publicKey: compressedPublicKey } = await cosmos.deriveAddressAndPublicKey(accountId, path);
-            const { transaction, mpcPayloads } = await cosmos.getMPCPayloadAndTransaction({
-                ...transactionRequest, address, compressedPublicKey
-            });
-
-            cosmos.setTransaction(transaction, 'cosmos-transaction');
-
-            const wallet = await walletSelector?.wallet('my-near-wallet');
-            if (!wallet) {
-                throw new Error("Wallet not found");
-            }
-
-            const response = await wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToTransaction({
-                    networkId: nearNetworkId,
-                    contractId: chainSignatureContract,
-                    mpcPayloads,
-                    path,
-                })),
-            });
-
-            return response;
-        },
-        [accountId, chainSignatureContract, cosmos, nearNetworkId, walletSelector]
-    );
-
-    const sendCosmosTransaction = useCallback(
-        // TODO: fix the types here and on multichain-tools
-        async (transaction: CosmosUnsignedTransaction, txOutcome: FinalExecutionOutcome) => {
-            const mpcSignature = transactionBuilder.near.responseToMpcSignature({
-                response: txOutcome,
-            });
-
-            if (!mpcSignature) {
-                throw new Error("MPC signatures not found");
-            }
-
-            const txHash = await cosmos.addSignatureAndBroadcast({
-                transaction,
-                mpcSignatures: [mpcSignature],
-            });
-
-            return txHash;
-        },
-        [cosmos]
-    );
+    const sendCosmosTransaction = useCallback((
+        transaction: CosmosUnsignedTransaction,
+        txOutcome: FinalExecutionOutcome
+    ) => {
+        return sendTransaction(cosmos, transaction, txOutcome);
+    }, [cosmos, sendTransaction]);
 
     useEffect(() => {
-        // Check URL for transaction hash parameter
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
             const nearTxHash = urlParams.get('transactionHashes');
 
-            if (nearTxHash) {
+            if (nearTxHash && account) {
                 const resumeTransaction = async () => {
                     try {
-                        const txOutcome = await account?.connection.provider.txStatus(nearTxHash, account.accountId, 'FINAL');
+                        const txOutcome = await account.connection.provider.txStatus(nearTxHash, account.accountId, 'FINAL');
 
                         if (!txOutcome) {
                             throw new Error("Transaction not found");
@@ -232,7 +154,6 @@ export const useMultiChainTransaction = () => {
                             throw new Error("Transaction not found");
                         }
 
-                        // Clear URL parameter after processing
                         const newUrl = window.location.pathname;
                         window.history.replaceState({}, '', newUrl);
 
@@ -246,15 +167,14 @@ export const useMultiChainTransaction = () => {
             }
         }
     }, [
-        account?.accountId,
-        account?.connection.provider,
+        account,
         btc,
         cosmos,
         evm,
         sendBtcTransaction,
         sendCosmosTransaction,
         sendEvmTransaction
-    ])
+    ]);
 
     return {
         signEvmTransaction,

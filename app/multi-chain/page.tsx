@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { useAccountBalance } from "./_hooks/useAccountBalance";
-import { useDerivedAddress } from "./_hooks/useDerivedAddress";
+import { useDeriveAddressAndPublicKey } from "./_hooks/useDeriveAddressAndPublicKey";
 import { TransactionForm } from "./_components/TransactionForm";
 import { Chain } from "./_constants/chains";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,22 +19,22 @@ export default function MultiChain() {
   const [chain, setChain] = useState<Chain>(Chain.ETH);
   const { toast } = useToast();
 
-  const derivedAddress = useDerivedAddress(accountId ?? '', chain, derivedPath);
-  const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddress);
+  const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, derivedPath);
+  const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddressAndPublicKey?.address ?? '');
 
   const handleChainChange = useCallback((value: string) => {
     setChain(value as Chain);
   }, []);
 
   const handleCopyAddress = useCallback(() => {
-    if (derivedAddress) {
-      navigator.clipboard.writeText(derivedAddress);
+    if (derivedAddressAndPublicKey?.address) {
+      navigator.clipboard.writeText(derivedAddressAndPublicKey.address);
       toast({
         title: "Address copied!",
         description: "The derived address has been copied to your clipboard.",
       });
     }
-  }, [derivedAddress, toast]);
+  }, [derivedAddressAndPublicKey?.address, toast]);
 
   if (!walletSelector?.isSignedIn()) {
     return (
@@ -91,7 +91,7 @@ export default function MultiChain() {
               <div className="relative">
                 <Input
                   id="derivedAddress"
-                  value={derivedAddress || ""}
+                  value={derivedAddressAndPublicKey?.address || ""}
                   readOnly
                   className="pr-10"
                 />

@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Chain } from '../_constants/chains';
+import { Chain, chainsConfig } from '../_constants/chains';
 import { ethers } from "ethers";
-import useInitNear from "@/hooks/useInitNear";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMultiChainTransaction } from '../_hooks/useMultiChainTransaction';
 import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
+import { useDeriveAddressAndPublicKey } from '../_hooks/useDeriveAddressAndPublicKey';
+import { useAuth } from '@/providers/AuthProvider';
 
 interface TransactionFormProps {
     chain: Chain;
@@ -25,46 +26,25 @@ interface Transaction {
 export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derivedPath }) => {
     const { register, handleSubmit, formState: { errors } } = useForm<Transaction>();
     const [isSendingTransaction, setIsSendingTransaction] = useState(false);
-    const { account, connection } = useInitNear();
     const { toast } = useToast();
-    const { signEvmTransaction } = useMultiChainTransaction();
+    const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainTransaction();
+    const { accountId } = useAuth();
+    const addressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, derivedPath);
 
     const onSubmit = async (data: Transaction) => {
         setIsSendingTransaction(true);
-
-        if (!connection || !account) {
-            toast({
-                title: "Error",
-                description: "Connection or account not found",
-                variant: "destructive",
-            });
-            setIsSendingTransaction(false);
-            return;
-        }
-
-        const nearAuthentication = {
-            networkId: "testnet" as const,
-            keypair: await connection.config.keyStore.getKey(
-                "testnet",
-                process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID!
-            ),
-            accountId: account.accountId,
-        }
 
         try {
             let res: any;
             switch (chain) {
                 case Chain.BNB:
                 case Chain.ETH:
-                    res = await signEvmTransaction(data.data
-                        ? {
+                    res = await signEvmTransaction(
+                        {
+                            from: addressAndPublicKey?.address ?? '',
                             to: data.to,
                             value: ethers.parseEther(data.value).toString(),
-                            data: data.data,
-                        }
-                        : {
-                            to: data.to,
-                            value: ethers.parseEther(data.value).toString(),
+                            ...(data.data && { data: data.data })
                         },
                         getCanonicalizedDerivationPath({
                             chain: 60,
@@ -75,59 +55,48 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                         })
                     );
                     break;
-                // case Chain.BTC:
-                //   res = await signAndSendBTCTransaction({
-                //     chainConfig: {
-                //       providerUrl: chainsConfig.btc.rpcEndpoint,
-                //       contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-                //       network: "testnet",
-                //     },
-                //     transaction: {
-                //       to: data.to,
-                //       value: data.value,
-                //     },
-                //     derivationPath: {
-                //       chain: 0,
-                //       domain: "",
-                //       meta: {
-                //         path: derivedPath,
-                //       }
-                //     },
-                //     nearAuthentication,
-                //   },
-                //     nearAuthentication.keypair
-                //   );
-                //   break;
-                // case Chain.OSMOSIS:
-                //   res = await signAndSendCosmosTransaction({
-                //     chainConfig: {
-                //       contract: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
-                //       chainId: chainsConfig.osmosis.chainId,
-                //     },
-                //     transaction: {
-                //       messages: [
-                //         {
-                //           typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-                //           value: {
-                //             toAddress: data.to,
-                //             amount: [{ denom: "uosmo", amount: data.value }],
-                //           },
-                //         },
-                //       ],
-                //       memo: data.data || "",
-                //     },
-                //     derivationPath: {
-                //       chain: 118,
-                //       domain: "",
-                //       meta: {
-                //         path: derivedPath,
-                //       }
-                //     },
-                //     nearAuthentication,
-                //   },
-                //     nearAuthentication.keypair
-                //   );
-                //   break;
+                case Chain.BTC:
+                    res = await signBtcTransaction(
+                        {
+                            from: addressAndPublicKey?.address ?? '',
+                            publicKey: addressAndPublicKey?.publicKey ?? '',
+                            to: data.to,
+                            value: data.value
+                        },
+                        getCanonicalizedDerivationPath({
+                            chain: 0,
+                            domain: "",
+                            meta: {
+                                path: derivedPath,
+                            }
+                        })
+                    );
+                    break;
+                case Chain.OSMOSIS:
+                    res = await signCosmosTransaction(
+                        {
+                            address: addressAndPublicKey?.address ?? '',
+                            publicKey: addressAndPublicKey?.publicKey ?? '',
+                            messages: [
+                                {
+                                    typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+                                    value: {
+                                        toAddress: data.to,
+                                        amount: [{ denom: "uosmo", amount: data.value }],
+                                    },
+                                },
+                            ],
+                            memo: data.data || "",
+                        },
+                        getCanonicalizedDerivationPath({
+                            chain: 118,
+                            domain: "",
+                            meta: {
+                                path: derivedPath,
+                            }
+                        })
+                    );
+                    break;
                 default:
                     throw new Error("Unsupported chain selected");
             }

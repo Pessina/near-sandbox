@@ -1,15 +1,11 @@
 import { useState, useCallback } from "react";
 import { Chain } from "../_constants/chains";
-import { useBTC } from "./useBTC";
-import { useCosmos } from "./useCosmos";
-import { useEVM } from "./useEVM";
+import { useChains } from "./useChains";
 
 export const useAccountBalance = (chain: Chain, derivedAddress: string) => {
   const [accountBalance, setAccountBalance] = useState("");
 
-  const evm = useEVM();
-  const btc = useBTC();
-  const cosmos = useCosmos();
+  const { evm, btc, cosmos } = useChains();
 
   const getAccountBalance = useCallback(async () => {
     let balance = "";
@@ -28,7 +24,7 @@ export const useAccountBalance = (chain: Chain, derivedAddress: string) => {
           balance = `${parseFloat(balance).toFixed(8)} BNB`;
           break;
         case Chain.OSMOSIS:
-          balance = await cosmos.getBalance(derivedAddress, "osmo-test-5");
+          balance = await cosmos.getBalance(derivedAddress);
           balance = `${balance} OSMO`;
           break;
         default:
@@ -39,7 +35,7 @@ export const useAccountBalance = (chain: Chain, derivedAddress: string) => {
       console.error("Error fetching balance:", error);
       setAccountBalance("Error");
     }
-  }, [chain, derivedAddress]);
+  }, [btc, chain, cosmos, derivedAddress, evm]);
 
   return { accountBalance, getAccountBalance };
 };
