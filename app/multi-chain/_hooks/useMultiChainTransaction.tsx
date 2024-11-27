@@ -2,15 +2,12 @@ import { useEnv } from "@/hooks/useEnv";
 import { useAuth } from "@/providers/AuthProvider";
 import { ethers } from "ethers";
 import {
-    EVMRequest,
-    EVM,
-    BitcoinRequest,
-    CosmosRequest,
-    Cosmos,
-    Bitcoin,
-    ChainSignaturesContract,
     KeyDerivationPath,
-    nearWallet,
+    transactionBuilder,
+    CosmosTransactionRequest,
+    CosmosUnsignedTransaction,
+    BTCTransactionRequest,
+    BTCUnsignedTransaction
 } from "multichain-tools";
 import { useCallback, useEffect } from "react";
 import { useEVM } from "../_hooks/useEVM";
@@ -18,8 +15,6 @@ import { useBTC } from "../_hooks/useBTC";
 import { useCosmos } from "../_hooks/useCosmos";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import useInitNear from "@/hooks/useInitNear";
-import { BTCTransaction } from "multichain-tools/src/chains/Bitcoin/types";
-import { CosmosTransaction } from "multichain-tools/src/chains/Cosmos/types";
 
 export const useMultiChainTransaction = () => {
     const { walletSelector, accountId } = useAuth();
@@ -57,7 +52,7 @@ export const useMultiChainTransaction = () => {
             }
 
             const response = await wallet.signAndSendTransaction({
-                ...(await nearWallet.utils.mpcPayloadsToTransaction({
+                ...(await transactionBuilder.near.mpcPayloadsToTransaction({
                     networkId: nearNetworkId,
                     contractId: chainSignatureContract,
                     mpcPayloads,
@@ -77,7 +72,7 @@ export const useMultiChainTransaction = () => {
             txOutcome: FinalExecutionOutcome
         ) => {
             try {
-                const signature = nearWallet.utils.responseToMpcSignature({
+                const signature = transactionBuilder.near.responseToMpcSignature({
                     response: txOutcome,
                 });
 
@@ -103,17 +98,15 @@ export const useMultiChainTransaction = () => {
         [evm]
     );
 
-
-
     const signBtcTransaction = useCallback(
-        async (transactionRequest: { to: string, value: string }, path: KeyDerivationPath) => {
+        async (transactionRequest: BTCTransactionRequest, path: KeyDerivationPath) => {
             if (!accountId) {
                 throw new Error("Account ID not found");
             }
 
-            const { address, publicKey } = await btc.deriveAddressAndPublicKey(accountId, path);
+            const { address, publicKey: compressedPublicKey } = await btc.deriveAddressAndPublicKey(accountId, path);
 
-            const { transaction, mpcPayloads } = await btc.getMPCPayloadAndTransaction({ ...transactionRequest, from: address, publicKey });
+            const { transaction, mpcPayloads } = await btc.getMPCPayloadAndTransaction({ ...transactionRequest, from: address, compressedPublicKey });
 
             btc.setTransaction(transaction, 'btc-transaction');
 
@@ -123,7 +116,7 @@ export const useMultiChainTransaction = () => {
             }
 
             const response = await wallet.signAndSendTransaction({
-                ...(await nearWallet.utils.mpcPayloadsToTransaction({
+                ...(await transactionBuilder.near.mpcPayloadsToTransaction({
                     networkId: nearNetworkId,
                     contractId: chainSignatureContract,
                     mpcPayloads,
@@ -137,9 +130,8 @@ export const useMultiChainTransaction = () => {
     );
 
     const sendBtcTransaction = useCallback(
-        // TODO: fix the types here and on multichain-tools
-        async (transaction: any, txOutcome: FinalExecutionOutcome) => {
-            const mpcSignature = nearWallet.utils.responseToMpcSignature({
+        async (transaction: BTCUnsignedTransaction, txOutcome: FinalExecutionOutcome) => {
+            const mpcSignature = transactionBuilder.near.responseToMpcSignature({
                 response: txOutcome,
             });
 
@@ -148,10 +140,8 @@ export const useMultiChainTransaction = () => {
             }
 
             const txHash = await btc.addSignatureAndBroadcast({
-                transaction: transaction.transaction,
+                transaction,
                 mpcSignatures: [mpcSignature],
-                // TODO: this doesn't exist on the transaction object
-                publicKey: transaction.publicKey,
             });
 
             return txHash;
@@ -160,14 +150,14 @@ export const useMultiChainTransaction = () => {
     );
 
     const signCosmosTransaction = useCallback(
-        async (transactionRequest: CosmosTransaction, path: KeyDerivationPath) => {
+        async (transactionRequest: CosmosTransactionRequest, path: KeyDerivationPath) => {
             if (!accountId) {
                 throw new Error("Account ID not found");
             }
 
-            const { address, publicKey } = await cosmos.deriveAddressAndPublicKey(accountId, path);
+            const { address, publicKey: compressedPublicKey } = await cosmos.deriveAddressAndPublicKey(accountId, path);
             const { transaction, mpcPayloads } = await cosmos.getMPCPayloadAndTransaction({
-                ...transactionRequest, address, publicKey
+                ...transactionRequest, address, compressedPublicKey
             });
 
             cosmos.setTransaction(transaction, 'cosmos-transaction');
@@ -178,7 +168,7 @@ export const useMultiChainTransaction = () => {
             }
 
             const response = await wallet.signAndSendTransaction({
-                ...(await nearWallet.utils.mpcPayloadsToTransaction({
+                ...(await transactionBuilder.near.mpcPayloadsToTransaction({
                     networkId: nearNetworkId,
                     contractId: chainSignatureContract,
                     mpcPayloads,
@@ -193,8 +183,8 @@ export const useMultiChainTransaction = () => {
 
     const sendCosmosTransaction = useCallback(
         // TODO: fix the types here and on multichain-tools
-        async (transaction: any, txOutcome: FinalExecutionOutcome) => {
-            const mpcSignature = nearWallet.utils.responseToMpcSignature({
+        async (transaction: CosmosUnsignedTransaction, txOutcome: FinalExecutionOutcome) => {
+            const mpcSignature = transactionBuilder.near.responseToMpcSignature({
                 response: txOutcome,
             });
 
@@ -203,10 +193,8 @@ export const useMultiChainTransaction = () => {
             }
 
             const txHash = await cosmos.addSignatureAndBroadcast({
-                transaction: transaction.transaction,
+                transaction,
                 mpcSignatures: [mpcSignature],
-                // TODO: this doesn't exist on the transaction object
-                publicKey: transaction.publicKey,
             });
 
             return txHash;
