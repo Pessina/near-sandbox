@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { createNFTContract } from "../_contract/NFTKeysContract"
 import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
-import type { NFTKeysContract } from "../_contract/NFTKeysContract/types"
+import type { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types"
 import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
 import { parseNearAmount } from "near-api-js/lib/utils/format"
 import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Wallet } from 'lucide-react'
-import type { NFT, FormData } from "./types"
+import type { FormData, NFTWithPrice } from "./types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { MarketplaceHeader } from "./_components/MarketplaceHeader"
@@ -27,7 +27,7 @@ export default function NFTMarketplace() {
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
     const [ownedNfts, setOwnedNfts] = useState<NFT[]>([])
-    const [listedNfts, setListedNfts] = useState<NFT[]>([])
+    const [listedNfts, setListedNfts] = useState<NFTWithPrice[]>([])
     const [isProcessing, setIsProcessing] = useState(false)
     const [isRegistered, setIsRegistered] = useState(false)
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
@@ -84,22 +84,26 @@ export default function NFTMarketplace() {
                 marketplaceContract.storage_balance_of({ account_id: account.accountId }),
             ])
 
-            const listedNftsWithPrice = await Promise.all(
+            const listedNftsWithPrice: NFTWithPrice[] = await Promise.all(
                 sales.map(async (sale) => {
                     const nft = allNfts.find((nft) => nft.token_id === sale.token_id)
+                    if (!nft) return null
                     return {
                         ...nft,
+                        approved_account_ids: nft.approved_account_ids,
                         price: sale.sale_conditions.amount.toString(),
                         token: sale.sale_conditions.token,
                         path: sale.path
                     }
                 })
-            )
+            ).then(results => results.flatMap((item) => item !== null ? [item] : []))
 
-            const ownedNftsWithPrice = userNfts.map(nft => {
-                const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
-                return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token, path: listedNft.path } : nft
-            })
+            const ownedNftsWithPrice = userNfts
+                .filter(nft => nft.owner_id === account.accountId) // Contract it's not listing owned NFTs properly, so we re-filter on FE, but it should be fixed on the contract
+                .map(nft => {
+                    const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
+                    return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token, path: listedNft.path } : nft
+                })
 
             setOwnedNfts(ownedNftsWithPrice)
             setListedNfts(listedNftsWithPrice)

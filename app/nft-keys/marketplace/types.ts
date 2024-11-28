@@ -1,13 +1,9 @@
-export type NFT = {
-  token_id: string;
-  owner_id: string;
-  metadata: {
-    title: string;
-    description: string;
-    media: string;
-  };
+import type { NFT } from "@/app/nft-keys/_contract/NFTKeysContract/types";
+
+export type NFTWithPrice = NFT & {
   price?: string;
   token?: string;
+  path?: string;
 };
 
 export type FormData = {

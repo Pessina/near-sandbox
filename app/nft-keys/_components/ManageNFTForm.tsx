@@ -63,102 +63,95 @@ export function ManageNFTForm({ onSubmit, isProcessing, register, handleSubmit, 
                         </Select>
                     </div>
 
-                    <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="details">
-                            <AccordionTrigger>Action Details</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="space-y-4">
-                                    {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'revokeAll', 'transfer'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="tokenId">Token ID</Label>
-                                            <Input
-                                                id="tokenId"
-                                                placeholder="Enter token ID"
-                                                {...register("tokenId", { required: true })}
-                                            />
-                                        </div>
-                                    )}
+                    <div className="space-y-4">
+                        {['getPublicKey', 'signHash', 'approve', 'checkApproval', 'revoke', 'revokeAll', 'transfer'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="tokenId">Token ID</Label>
+                                <Input
+                                    id="tokenId"
+                                    placeholder="Enter token ID"
+                                    {...register("tokenId", { required: true })}
+                                />
+                            </div>
+                        )}
 
-                                    {['getPublicKey', 'signHash'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="path">Derivation Path (optional)</Label>
-                                            <Input
-                                                id="path"
-                                                placeholder="Enter derivation path"
-                                                {...register("path")}
-                                            />
-                                        </div>
-                                    )}
+                        {['getPublicKey', 'signHash'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="path">Derivation Path (optional)</Label>
+                                <Input
+                                    id="path"
+                                    placeholder="Enter derivation path"
+                                    {...register("path")}
+                                />
+                            </div>
+                        )}
 
-                                    {action === 'signHash' && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="payload">Payload</Label>
-                                            <Input
-                                                id="payload"
-                                                placeholder="Enter payload numbers (comma-separated)"
-                                                {...register("payload", { required: true })}
-                                            />
-                                        </div>
-                                    )}
+                        {action === 'signHash' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="payload">Payload</Label>
+                                <Input
+                                    id="payload"
+                                    placeholder="Enter payload numbers (comma-separated)"
+                                    {...register("payload", { required: true })}
+                                />
+                            </div>
+                        )}
 
-                                    {['approve', 'checkApproval', 'revoke', 'transfer'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="accountId">Account ID</Label>
-                                            <Input
-                                                id="accountId"
-                                                placeholder="Enter account ID"
-                                                {...register("accountId", { required: true })}
-                                            />
-                                        </div>
-                                    )}
+                        {['approve', 'checkApproval', 'revoke', 'transfer'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="accountId">Account ID</Label>
+                                <Input
+                                    id="accountId"
+                                    placeholder="Enter account ID"
+                                    {...register("accountId", { required: true })}
+                                />
+                            </div>
+                        )}
 
-                                    {['approve'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="msg">Message</Label>
-                                            <Input
-                                                id="msg"
-                                                placeholder="Enter message"
-                                                {...register("msg")}
-                                            />
-                                        </div>
-                                    )}
+                        {['approve'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="msg">Message</Label>
+                                <Input
+                                    id="msg"
+                                    placeholder="Enter message"
+                                    {...register("msg")}
+                                />
+                            </div>
+                        )}
 
-                                    {['signHash', 'checkApproval', 'transfer'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="approvalId">Approval ID (optional)</Label>
-                                            <Input
-                                                id="approvalId"
-                                                placeholder="Enter approval ID"
-                                                {...register("approvalId")}
-                                            />
-                                        </div>
-                                    )}
+                        {['signHash', 'checkApproval', 'transfer'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="approvalId">Approval ID (optional)</Label>
+                                <Input
+                                    id="approvalId"
+                                    placeholder="Enter approval ID"
+                                    {...register("approvalId")}
+                                />
+                            </div>
+                        )}
 
-                                    {['transfer'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="memo">Memo (optional)</Label>
-                                            <Input
-                                                id="memo"
-                                                placeholder="Enter memo"
-                                                {...register("memo")}
-                                            />
-                                        </div>
-                                    )}
+                        {['transfer'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="memo">Memo (optional)</Label>
+                                <Input
+                                    id="memo"
+                                    placeholder="Enter memo"
+                                    {...register("memo")}
+                                />
+                            </div>
+                        )}
 
-                                    {['storageDeposit', 'storageWithdraw'].includes(action) && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="amount">Amount</Label>
-                                            <Input
-                                                id="amount"
-                                                placeholder="Enter amount"
-                                                {...register("amount", { required: true })}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
+                        {['storageDeposit', 'storageWithdraw'].includes(action) && (
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">Amount</Label>
+                                <Input
+                                    id="amount"
+                                    placeholder="Enter amount"
+                                    {...register("amount", { required: true })}
+                                />
+                            </div>
+                        )}
+                    </div>
 
                     <Button type="submit" disabled={isProcessing} className="w-full">
                         {isProcessing ? "Processing..." : "Submit"}
