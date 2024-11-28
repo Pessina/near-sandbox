@@ -19,17 +19,17 @@ import { chainsConfig } from "../constants/chains";
 import { toast } from "@/hooks/use-toast";
 
 interface MultiChainTransactionHook {
-    signEvmTransaction: (transactionRequest: EVMTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
+    signEvmTransaction: (transactionRequest: EVMTransactionRequest, path: KeyDerivationPath, tokenId?: string) => Promise<FinalExecutionOutcome | void>;
     sendEvmTransaction: (transaction: EVMUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
-    signBtcTransaction: (transactionRequest: BTCTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
+    signBtcTransaction: (transactionRequest: BTCTransactionRequest, path: KeyDerivationPath, tokenId?: string) => Promise<FinalExecutionOutcome | void>;
     sendBtcTransaction: (transaction: BTCUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
-    signCosmosTransaction: (transactionRequest: CosmosTransactionRequest, path: KeyDerivationPath) => Promise<FinalExecutionOutcome | void>;
+    signCosmosTransaction: (transactionRequest: CosmosTransactionRequest, path: KeyDerivationPath, tokenId?: string) => Promise<FinalExecutionOutcome | void>;
     sendCosmosTransaction: (transaction: CosmosUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
 }
 
 export const useMultiChainTransaction = (): MultiChainTransactionHook => {
     const { walletSelector, accountId } = useAuth();
-    const { nearNetworkId, chainSignatureContract } = useEnv();
+    const { nearNetworkId, chainSignatureContract, nftKeysContract } = useEnv();
     const { account } = useInitNear();
     const { evm, btc, cosmos } = useChains();
 
@@ -37,7 +37,8 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
         chain: Chain<TRequest, TUnsigned>,
         transactionRequest: TRequest,
         path: KeyDerivationPath,
-        storageKey: string
+        storageKey: string,
+        tokenId?: string
     ): Promise<FinalExecutionOutcome | void> => {
         if (!accountId) {
             throw new Error("Account ID not found");
@@ -51,15 +52,30 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
             throw new Error("Wallet not found");
         }
 
-        return wallet.signAndSendTransaction({
-            ...(await transactionBuilder.near.mpcPayloadsToTransaction({
-                networkId: nearNetworkId,
-                contractId: chainSignatureContract,
-                mpcPayloads,
-                path,
-            })),
-        });
-    }, [accountId, chainSignatureContract, nearNetworkId, walletSelector]);
+        if (tokenId) {
+            // NFT Keys flow
+            return wallet.signAndSendTransaction({
+                ...(await transactionBuilder.near.mpcPayloadsToNFTKeysTransaction({
+                    networkId: nearNetworkId,
+                    chainSigContract: chainSignatureContract,
+                    nftKeysContract,
+                    mpcPayloads,
+                    path,
+                    tokenId
+                })),
+            });
+        } else {
+            // Chain Signature flow
+            return wallet.signAndSendTransaction({
+                ...(await transactionBuilder.near.mpcPayloadsToChainSigTransaction({
+                    networkId: nearNetworkId,
+                    contractId: chainSignatureContract,
+                    mpcPayloads,
+                    path,
+                })),
+            });
+        }
+    }, [accountId, chainSignatureContract, nearNetworkId, nftKeysContract, walletSelector]);
 
     const sendTransaction = useCallback(async <TRequest, TUnsigned>(
         chain: Chain<TRequest, TUnsigned>,
@@ -83,20 +99,23 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
 
     const signEvmTransaction = useCallback((
         transactionRequest: EVMTransactionRequest,
-        path: KeyDerivationPath
-    ) => signTransaction(evm, transactionRequest, path, 'evm-transaction'),
+        path: KeyDerivationPath,
+        tokenId?: string
+    ) => signTransaction(evm, transactionRequest, path, 'evm-transaction', tokenId),
         [evm, signTransaction]);
 
     const signBtcTransaction = useCallback((
         transactionRequest: BTCTransactionRequest,
-        path: KeyDerivationPath
-    ) => signTransaction(btc, transactionRequest, path, 'btc-transaction'),
+        path: KeyDerivationPath,
+        tokenId?: string
+    ) => signTransaction(btc, transactionRequest, path, 'btc-transaction', tokenId),
         [btc, signTransaction]);
 
     const signCosmosTransaction = useCallback((
         transactionRequest: CosmosTransactionRequest,
-        path: KeyDerivationPath
-    ) => signTransaction(cosmos, transactionRequest, path, 'cosmos-transaction'),
+        path: KeyDerivationPath,
+        tokenId?: string
+    ) => signTransaction(cosmos, transactionRequest, path, 'cosmos-transaction', tokenId),
         [cosmos, signTransaction]);
 
     const sendEvmTransaction = useCallback((

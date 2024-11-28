@@ -1,13 +1,13 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { NFTKeysContract } from "../../_contract/NFTKeysContract/types";
-import { NFTListed, FormData, TransactionData, DerivedKeys } from "../types";
+import { NFTListed, FormData } from "../types";
 import { Chain } from "@/constants/chains";
 import { parseTokenAmount } from "../_utils/chains";
 import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../../_contract/constants";
-import { KeyDerivationPath } from "multichain-tools";
 import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
 import { useEnv } from "@/hooks/useEnv";
+import { ethers } from "ethers";
 
 interface UseNFTMarketplaceProps {
   nftContract: NFTKeysContract | null;
@@ -116,53 +116,79 @@ export function useNFTMarketplace({
     [nftContract, nftKeysMarketplaceContract, withErrorHandling]
   );
 
+  // TODO: The path should not be hardcoded
   const handleTransaction = useCallback(
     async (
       nft: NFTListed,
       derivedAddressAndPublicKey: { address: string; publicKey: string },
-      data: { to: string; value: string }
+      data: { to: string; value: string; chain: Chain }
     ) => {
-      if (!nft.path || !nft.token) {
-        throw new Error("Missing path or token information");
-      }
-
-      const path = nft.path as KeyDerivationPath;
-      const baseRequest = {
-        from: derivedAddressAndPublicKey.address,
-        to: data.to,
-        value: data.value,
-        publicKey: derivedAddressAndPublicKey.publicKey,
-      };
-
-      let txOutcome;
-      switch (nft.token) {
-        case Chain.ETH:
-          // case Chain.BNB:
-          txOutcome = await signEvmTransaction(baseRequest, path);
-          break;
-        case Chain.BTC:
-          txOutcome = await signBtcTransaction(
-            {
-              ...baseRequest,
-            },
-            path
-          );
-          break;
-        case Chain.OSMOSIS:
-          txOutcome = await signCosmosTransaction(
-            {
-              ...baseRequest,
-              address: accountId,
-              messages: [],
-            },
-            path
-          );
-          break;
-        default:
-          throw new Error(`Unsupported token: ${nft.token}`);
+      try {
+        let res: any;
+        switch (data.chain) {
+          case Chain.ETH:
+            res = await signEvmTransaction(
+              {
+                from: derivedAddressAndPublicKey.address,
+                to: data.to,
+                value: ethers.parseEther(data.value).toString(),
+              },
+              "",
+              nft.token_id
+            );
+            break;
+          case Chain.BTC:
+            res = await signBtcTransaction(
+              {
+                from: derivedAddressAndPublicKey.address,
+                publicKey: derivedAddressAndPublicKey.publicKey,
+                to: data.to,
+                value: data.value,
+              },
+              "",
+              nft.token_id
+            );
+            break;
+          case Chain.OSMOSIS:
+            res = await signCosmosTransaction(
+              {
+                address: derivedAddressAndPublicKey.address,
+                publicKey: derivedAddressAndPublicKey.publicKey,
+                messages: [
+                  {
+                    typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+                    value: {
+                      toAddress: data.to,
+                      amount: [{ denom: "uosmo", amount: data.value }],
+                    },
+                  },
+                ],
+              },
+              "",
+              nft.token_id
+            );
+            break;
+          default:
+            throw new Error(`Unsupported chain: ${data.chain}`);
+        }
+        toast({
+          title: "Transaction Sent",
+          description: "Your transaction has been successfully sent.",
+          duration: 5000,
+        });
+        console.log(res);
+      } catch (e) {
+        console.error("Transaction failed:", e);
+        toast({
+          title: "Transaction Failed",
+          description:
+            e instanceof Error ? e.message : "An unknown error occurred",
+          variant: "destructive",
+          duration: 5000,
+        });
       }
     },
-    [accountId, signEvmTransaction, signBtcTransaction, signCosmosTransaction]
+    [signEvmTransaction, signBtcTransaction, signCosmosTransaction, toast]
   );
 
   return {

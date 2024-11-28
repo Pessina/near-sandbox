@@ -13,8 +13,6 @@ import { useCopy } from "@/hooks/useCopy"
 import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
-import { NFT } from "../../_contract/NFTKeysContract"
-import { formatBalance } from "../_utils/balance"
 import { formatTokenAmount } from "../_utils/chains"
 
 interface NFTCardProps {
@@ -23,7 +21,7 @@ interface NFTCardProps {
     onList?: (data: FormData) => Promise<void>
     onRemoveListing?: (nft: NFTListed) => Promise<void>
     onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
-    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
+    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     variant: "listed" | "owned"
 }
 
@@ -117,9 +115,8 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                                     onList={onList}
                                     tokenId={nft.token_id}
                                 />}
-                                {onTransaction && derivedAddressAndPublicKey && <NFTTransactionDialog
+                                {onTransaction && <NFTTransactionDialog
                                     nft={nft}
-                                    derivedAddressAndPublicKey={derivedAddressAndPublicKey}
                                     isProcessing={isProcessing}
                                     onTransaction={onTransaction}
                                     path={nft.path || ""}
