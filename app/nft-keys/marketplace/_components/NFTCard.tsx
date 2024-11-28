@@ -31,13 +31,11 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
     const { nftKeysContract } = useEnv()
     const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(
         nftKeysContract,
-        nft.saleConditions?.token as Chain,
+        nft.token as Chain,
         getPath(nft.token_id, nft.path || "")
     )
 
     const { accountBalance, getAccountBalance } = useAccountBalance(nft.token as Chain, derivedAddressAndPublicKey?.address ?? "")
-
-    console.log({ accountBalance, derivedAddressAndPublicKey })
 
     useEffect(() => {
         getAccountBalance()
@@ -47,8 +45,6 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
         if (address.length <= 13) return address
         return `${address.slice(0, 6)}...${address.slice(-4)}`
     }
-
-    console.log({ nft })
 
     return (
         <Card className="overflow-hidden transition-all hover:shadow-lg">

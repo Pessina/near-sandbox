@@ -33,8 +33,6 @@ export const NFTTransactionDialog: React.FC<NFTTransactionDialogProps> = ({
         })
     }
 
-
-    console.log(derivedAddressAndPublicKey)
     return (
         <Dialog>
             <DialogTrigger asChild>
