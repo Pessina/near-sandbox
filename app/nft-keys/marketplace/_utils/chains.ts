@@ -41,13 +41,3 @@ export function formatTokenAmount(amount: string, chain: Chain): string {
   if (!config) throw new Error(`Unsupported chain: ${chain}`);
   return formatUnits(amount, config.decimals);
 }
-
-export function isValidChain(chain: string): chain is Chain {
-  return Object.values(Chain).includes(chain as Chain);
-}
-
-export function getChainConfig(chain: Chain) {
-  const config = CHAIN_CONFIGS[chain];
-  if (!config) throw new Error(`No config found for chain: ${chain}`);
-  return config;
-}

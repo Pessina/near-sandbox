@@ -14,6 +14,8 @@ import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
 import { NFT } from "../../_contract/NFTKeysContract"
+import { formatBalance } from "../_utils/balance"
+import { formatTokenAmount } from "../_utils/chains"
 
 interface NFTCardProps {
     nft: NFTListed
@@ -57,7 +59,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                     {nft.saleConditions?.amount && (
                         <Badge variant="secondary">
                             <Tag className="mr-1 h-3 w-3" />
-                            {nft.saleConditions.amount} {nft.saleConditions.token.toUpperCase()}
+                            {formatTokenAmount(nft.saleConditions.amount, nft.saleConditions.token as Chain)} {nft.saleConditions.token.toUpperCase()}
                         </Badge>
                     )}
                 </div>
