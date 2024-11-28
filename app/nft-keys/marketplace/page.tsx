@@ -17,12 +17,15 @@ import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { MarketplaceHeader } from "./_components/MarketplaceHeader"
 import { NFTGrid } from "./_components/NFTGrid"
+import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction"
+import { KeyDerivationPath } from "multichain-tools"
 
 export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear({
         isViewOnly: false,
     })
     const { toast } = useToast()
+    const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainTransaction()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
@@ -99,7 +102,7 @@ export default function NFTMarketplace() {
             ).then(results => results.flatMap((item) => item !== null ? [item] : []))
 
             const ownedNftsWithPrice = userNfts
-                .filter(nft => nft.owner_id === account.accountId) // Contract it's not listing owned NFTs properly, so we re-filter on FE, but it should be fixed on the contract
+                .filter(nft => nft.owner_id === account.accountId)
                 .map(nft => {
                     const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
                     return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token, path: listedNft.path } : nft
@@ -266,6 +269,57 @@ export default function NFTMarketplace() {
         )
     }
 
+    const handleTransaction = useCallback(async (nft: NFTWithPrice, derivedAddressAndPublicKey: {
+        address: string
+        publicKey: string
+    }, data: { to: string, value: string }) => {
+        if (!nft.path || !nft.token) {
+            showErrorToast("Transaction Failed", "Missing path or token information")
+            return
+        }
+
+        try {
+            setIsProcessing(true)
+            const path = nft.path as KeyDerivationPath
+
+            let txOutcome
+            const baseRequest = {
+                from: derivedAddressAndPublicKey.address,
+                to: data.to,
+                value: data.value,
+                publicKey: derivedAddressAndPublicKey.publicKey
+            }
+
+            if (nft.token.toLowerCase() === 'eth') {
+                txOutcome = await signEvmTransaction(baseRequest, path)
+            } else if (nft.token.toLowerCase() === 'btc') {
+                txOutcome = await signBtcTransaction({
+                    ...baseRequest,
+                }, path)
+            } else if (nft.token.toLowerCase() === 'osmo') {
+                txOutcome = await signCosmosTransaction({
+                    ...baseRequest,
+                    address: account?.accountId || '',
+                    messages: []
+                }, path)
+            } else {
+                throw new Error(`Unsupported token: ${nft.token}`)
+            }
+
+            if (txOutcome) {
+                showSuccessToast(
+                    "Transaction Initiated",
+                    `Transaction has been initiated on ${nft.token.toUpperCase()} chain`
+                )
+                await loadData()
+            }
+        } catch (error) {
+            showErrorToast("Transaction Failed", error)
+        } finally {
+            setIsProcessing(false)
+        }
+    }, [account, signEvmTransaction, signBtcTransaction, signCosmosTransaction, showErrorToast, showSuccessToast, loadData])
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -312,6 +366,7 @@ export default function NFTMarketplace() {
                         variant="listed"
                         isProcessing={isProcessing}
                         onOffer={handleOfferNFT}
+                        onTransaction={handleTransaction}
                     />
                 </TabsContent>
                 <TabsContent value="my-nfts">
@@ -322,6 +377,7 @@ export default function NFTMarketplace() {
                         onList={handleListNFT}
                         onRemoveListing={handleRemoveListing}
                         onMint={handleMint}
+                        onTransaction={handleTransaction}
                         showMintCard
                     />
                 </TabsContent>
