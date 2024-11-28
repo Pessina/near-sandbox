@@ -3,17 +3,18 @@ import { NFTCard } from "./NFTCard"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import type { NFTWithPrice, FormData } from "../types"
+import type { NFTListed, FormData } from "../types"
+import { NFT } from "../../_contract/NFTKeysContract"
 
 interface NFTGridProps {
-    nfts: NFTWithPrice[]
+    nfts: NFTListed[]
     variant: "listed" | "owned"
     isProcessing: boolean
     onList?: (data: FormData) => Promise<void>
-    onRemoveListing?: (nft: NFTWithPrice) => Promise<void>
+    onRemoveListing?: (nft: NFTListed) => Promise<void>
     onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
     onMint?: () => Promise<void>
-    onTransaction?: (nft: NFTWithPrice, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
+    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
     showMintCard?: boolean
 }
 

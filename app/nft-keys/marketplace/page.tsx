@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Wallet } from 'lucide-react'
-import type { NFTWithPrice } from "./types"
+import type { NFTListed } from "./types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { MarketplaceHeader } from "./_components/MarketplaceHeader"
@@ -28,7 +28,7 @@ export default function NFTMarketplace() {
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
     const [ownedNfts, setOwnedNfts] = useState<NFT[]>([])
-    const [listedNfts, setListedNfts] = useState<NFTWithPrice[]>([])
+    const [listedNfts, setListedNfts] = useState<NFTListed[]>([])
     const [isProcessing, setIsProcessing] = useState(false)
     const [isRegistered, setIsRegistered] = useState(false)
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
@@ -85,15 +85,18 @@ export default function NFTMarketplace() {
                 marketplaceContract.storage_balance_of({ account_id: account.accountId }),
             ])
 
-            const listedNftsWithPrice: NFTWithPrice[] = await Promise.all(
+            const listedNftsWithPrice: NFTListed[] = await Promise.all(
                 sales.map(async (sale) => {
                     const nft = allNfts.find((nft) => nft.token_id === sale.token_id)
-                    if (!nft) return null
+                    if (!nft || !sale) return null
                     return {
                         ...nft,
                         approved_account_ids: nft.approved_account_ids,
-                        price: sale.sale_conditions.amount.toString(),
-                        token: sale.sale_conditions.token || '',
+                        saleConditions: {
+                            amount: sale.sale_conditions.amount.toString(),
+                            token: sale.sale_conditions.token || '',
+                        },
+                        token: sale.token,
                         path: sale.path
                     }
                 })
@@ -103,7 +106,7 @@ export default function NFTMarketplace() {
                 .filter(nft => nft.owner_id === account.accountId)
                 .map(nft => {
                     const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
-                    return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token, path: listedNft.path } : nft
+                    return listedNft ? { ...nft, saleConditions: listedNft.saleConditions, token: listedNft.token, path: listedNft.path } : nft
                 })
 
             setOwnedNfts(ownedNftsWithPrice)

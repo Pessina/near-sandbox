@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FormData, NFTWithPrice } from "../types"
+import { FormData, NFTListed } from "../types"
 import { Tag, XCircle, Key, Lock, Wallet, Copy } from 'lucide-react'
 import { NFTListDialog } from "./NFTListDialog"
 import { NFTOfferDialog } from "./NFTOfferDialog"
@@ -13,14 +13,15 @@ import { useCopy } from "@/hooks/useCopy"
 import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
+import { NFT } from "../../_contract/NFTKeysContract"
 
 interface NFTCardProps {
-    nft: NFTWithPrice
+    nft: NFTListed
     isProcessing: boolean
     onList?: (data: FormData) => Promise<void>
-    onRemoveListing?: (nft: NFTWithPrice) => Promise<void>
+    onRemoveListing?: (nft: NFTListed) => Promise<void>
     onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
-    onTransaction?: (nft: NFTWithPrice, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
+    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
     variant: "listed" | "owned"
 }
 
@@ -30,7 +31,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
     const { nftKeysContract } = useEnv()
     const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(
         nftKeysContract,
-        nft.token as Chain,
+        nft.saleConditions?.token as Chain,
         getPath(nft.token_id, nft.path || "")
     )
 
@@ -47,6 +48,8 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
         return `${address.slice(0, 6)}...${address.slice(-4)}`
     }
 
+    console.log({ nft })
+
     return (
         <Card className="overflow-hidden transition-all hover:shadow-lg">
             <CardContent className="p-6">
@@ -55,10 +58,10 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                         <Key className="h-8 w-8 mr-2" />
                         <h3 className="font-semibold text-lg">NFT Key #{nft.token_id}</h3>
                     </div>
-                    {nft.price && (
+                    {nft.saleConditions?.amount && (
                         <Badge variant="secondary">
                             <Tag className="mr-1 h-3 w-3" />
-                            {nft.price} {nft.token?.toUpperCase() || 'NEAR'}
+                            {nft.saleConditions.amount} {nft.saleConditions.token.toUpperCase()}
                         </Badge>
                     )}
                 </div>
@@ -104,7 +107,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                 )}
                 {variant === "owned" && (
                     <>
-                        {nft.price ? (
+                        {nft.saleConditions?.amount ? (
                             <Button onClick={() => onRemoveListing && onRemoveListing(nft)} disabled={isProcessing} variant="destructive" className="w-full">
                                 <XCircle className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Processing...' : 'Remove Listing'}

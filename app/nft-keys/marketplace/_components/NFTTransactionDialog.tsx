@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { ArrowRightLeft } from 'lucide-react'
 import { useState } from "react"
-import { NFTWithPrice } from "../types"
+import { NFTListed } from "../types"
 
 interface NFTTransactionDialogProps {
-    nft: NFTWithPrice
+    nft: NFTListed
     derivedAddressAndPublicKey: { address: string, publicKey: string }
     isProcessing: boolean
-    onTransaction: (nft: NFTWithPrice, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
+    onTransaction: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string }) => Promise<void>
     path: string
     chain: string
 }

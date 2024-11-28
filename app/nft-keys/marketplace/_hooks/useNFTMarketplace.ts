@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { NFTKeysContract } from "../../_contract/NFTKeysContract/types";
-import { NFTWithPrice, FormData, TransactionData, DerivedKeys } from "../types";
+import { NFTListed, FormData, TransactionData, DerivedKeys } from "../types";
 import { Chain } from "@/constants/chains";
 import { parseTokenAmount } from "../_utils/chains";
 import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../../_contract/constants";
@@ -62,7 +62,7 @@ export function useNFTMarketplace({
 
       const amount = parseTokenAmount(
         data.saleConditions.amount,
-        data.saleConditions.token
+        data.saleConditions.token as Chain
       );
 
       await withErrorHandling(
@@ -118,7 +118,7 @@ export function useNFTMarketplace({
 
   const handleTransaction = useCallback(
     async (
-      nft: NFTWithPrice,
+      nft: NFTListed,
       derivedAddressAndPublicKey: { address: string; publicKey: string },
       data: { to: string; value: string }
     ) => {

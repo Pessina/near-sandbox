@@ -2,20 +2,22 @@ import { Chain } from "@/constants/chains";
 import { KeyDerivationPath } from "multichain-tools";
 import { NFT } from "../_contract/NFTKeysContract";
 
-export interface NFTWithPrice extends NFT {
-  price?: string;
+interface SaleConditions {
+  token: string;
+  amount: string;
+}
+
+export interface NFTListed extends NFT {
   token?: string;
   path?: KeyDerivationPath;
+  saleConditions?: SaleConditions;
 }
 
 export interface FormData {
   tokenId: string;
   path: string;
   token: Chain;
-  saleConditions: {
-    token: Chain;
-    amount: string;
-  };
+  saleConditions: SaleConditions;
 }
 
 export interface TransactionData {
