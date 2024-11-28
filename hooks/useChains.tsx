@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Bitcoin, EVM, Cosmos } from "multichain-tools";
 import { useEnv } from "@/hooks/useEnv";
-import { chainsConfig } from "../_constants/chains";
+import { chainsConfig } from "../app/constants/chains";
 
 interface ChainInstances {
     btc: Bitcoin;

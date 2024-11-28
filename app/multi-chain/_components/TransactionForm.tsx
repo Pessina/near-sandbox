@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Chain, chainsConfig } from '../_constants/chains';
+import { Chain, CHAIN_CONFIGS, chainsConfig } from '../../constants/chains';
 import { ethers } from "ethers";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useMultiChainTransaction } from '../_hooks/useMultiChainTransaction';
+import { useMultiChainTransaction } from '../../../hooks/useMultiChainTransaction';
 import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
-import { useDeriveAddressAndPublicKey } from '../_hooks/useDeriveAddressAndPublicKey';
+import { useDeriveAddressAndPublicKey } from '../../../hooks/useDeriveAddressAndPublicKey';
 import { useAuth } from '@/providers/AuthProvider';
+import { getPath } from '../_utils/getPath';
 
 interface TransactionFormProps {
     chain: Chain;
@@ -29,7 +30,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
     const { toast } = useToast();
     const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainTransaction();
     const { accountId } = useAuth();
-    const addressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, derivedPath);
+    const addressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, getPath(chain, derivedPath));
 
     const onSubmit = async (data: Transaction) => {
         setIsSendingTransaction(true);

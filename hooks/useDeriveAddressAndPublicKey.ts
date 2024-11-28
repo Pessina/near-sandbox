@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Chain } from "../_constants/chains";
+import { Chain } from "../app/constants/chains";
 import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
 import { useChains } from "./useChains";
 
@@ -8,17 +8,10 @@ interface DerivedAddressAndPublicKey {
   publicKey: string;
 }
 
-const CHAIN_CONFIGS = {
-  [Chain.BNB]: { chainId: 60 },
-  [Chain.ETH]: { chainId: 60 },
-  [Chain.BTC]: { chainId: 0 },
-  [Chain.OSMOSIS]: { chainId: 118 },
-} as const;
-
 export const useDeriveAddressAndPublicKey = (
   accountId: string,
   chain: Chain,
-  derivedPath: string
+  path: string
 ): DerivedAddressAndPublicKey | null => {
   const [derivedAddressAndPublicKey, setDerivedAddressAndPublicKey] =
     useState<DerivedAddressAndPublicKey | null>(null);
@@ -32,24 +25,14 @@ export const useDeriveAddressAndPublicKey = (
         return;
       }
 
-      const chainConfig = CHAIN_CONFIGS[chain];
-      const derivationPath = getCanonicalizedDerivationPath({
-        chain: chainConfig.chainId,
-        domain: "",
-        meta: { path: derivedPath },
-      });
-
       let result: DerivedAddressAndPublicKey;
 
       if (chain === Chain.BNB || chain === Chain.ETH) {
-        result = await evm.deriveAddressAndPublicKey(accountId, derivationPath);
+        result = await evm.deriveAddressAndPublicKey(accountId, path);
       } else if (chain === Chain.BTC) {
-        result = await btc.deriveAddressAndPublicKey(accountId, derivationPath);
+        result = await btc.deriveAddressAndPublicKey(accountId, path);
       } else if (chain === Chain.OSMOSIS) {
-        result = await cosmos.deriveAddressAndPublicKey(
-          accountId,
-          derivationPath
-        );
+        result = await cosmos.deriveAddressAndPublicKey(accountId, path);
       } else {
         throw new Error(`Unsupported chain: ${chain}`);
       }
@@ -57,7 +40,7 @@ export const useDeriveAddressAndPublicKey = (
     };
 
     deriveAddressAndPublicKey().catch(console.error);
-  }, [accountId, btc, chain, cosmos, derivedPath, evm]);
+  }, [accountId, btc, chain, cosmos, path, evm]);
 
   return derivedAddressAndPublicKey;
 };

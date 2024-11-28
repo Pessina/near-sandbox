@@ -15,7 +15,7 @@ import { useCallback, useEffect } from "react";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import useInitNear from "@/hooks/useInitNear";
 import { useChains } from "./useChains";
-import { chainsConfig } from "../_constants/chains";
+import { chainsConfig } from "../app/constants/chains";
 import { toast } from "@/hooks/use-toast";
 
 interface MultiChainTransactionHook {

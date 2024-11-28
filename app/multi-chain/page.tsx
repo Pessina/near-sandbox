@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { useAccountBalance } from "./_hooks/useAccountBalance";
-import { useDeriveAddressAndPublicKey } from "./_hooks/useDeriveAddressAndPublicKey";
+import { useAccountBalance } from "../../hooks/useAccountBalance";
+import { useDeriveAddressAndPublicKey } from "../../hooks/useDeriveAddressAndPublicKey";
 import { TransactionForm } from "./_components/TransactionForm";
-import { Chain } from "./_constants/chains";
+import { Chain, CHAIN_CONFIGS } from "../constants/chains";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Wallet } from 'lucide-react';
 import { useAuth } from "@/providers/AuthProvider";
-
+import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
+import { getPath } from "./_utils/getPath";
 
 export default function MultiChain() {
   const { accountId, walletSelector } = useAuth()
@@ -20,7 +21,7 @@ export default function MultiChain() {
   const [chain, setChain] = useState<Chain>(Chain.ETH);
   const { toast } = useToast();
 
-  const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, derivedPath);
+  const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, getPath(chain, derivedPath));
   const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddressAndPublicKey?.address ?? '');
 
   const handleChainChange = useCallback((value: string) => {

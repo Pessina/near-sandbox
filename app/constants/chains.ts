@@ -5,6 +5,13 @@ export enum Chain {
   OSMOSIS = "OSMOSIS",
 }
 
+export const CHAIN_CONFIGS = {
+  [Chain.BNB]: { chainId: 60 },
+  [Chain.ETH]: { chainId: 60 },
+  [Chain.BTC]: { chainId: 0 },
+  [Chain.OSMOSIS]: { chainId: 118 },
+} as const;
+
 export const chainsConfig = {
   ethereum: {
     providerUrl:
