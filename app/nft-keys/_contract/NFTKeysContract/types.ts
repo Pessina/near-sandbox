@@ -11,7 +11,7 @@ type StorageBalanceResult = {
   available: string;
 };
 
-export type NFTMetadata = {
+export interface NFTMetadata {
   title: string | null;
   description: string | null;
   media: string | null;
@@ -24,14 +24,14 @@ export type NFTMetadata = {
   extra: string | null;
   reference: string | null;
   reference_hash: string | null;
-};
+}
 
-export type NFT = {
+export interface NFT {
   token_id: string;
   owner_id: string;
   metadata: NFTMetadata;
   approved_account_ids: Record<string, number>;
-};
+}
 
 export type NFTKeysContract = Contract & {
   new: (

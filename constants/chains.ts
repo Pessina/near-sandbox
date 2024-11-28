@@ -1,12 +1,12 @@
 export enum Chain {
   ETH = "ETH",
-  BNB = "BNB",
+  // BNB = "BNB",
   BTC = "BTC",
   OSMOSIS = "OSMOSIS",
 }
 
 export const CHAIN_CONFIGS = {
-  [Chain.BNB]: { chainId: 60 },
+  // [Chain.BNB]: { chainId: 60 },
   [Chain.ETH]: { chainId: 60 },
   [Chain.BTC]: { chainId: 0 },
   [Chain.OSMOSIS]: { chainId: 118 },
@@ -19,11 +19,11 @@ export const chainsConfig = {
     explorerUrl: "https://sepolia.etherscan.io",
     name: "ETH",
   },
-  bsc: {
-    providerUrl: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
-    explorerUrl: "https://testnet.bscscan.com",
-    name: "BNB",
-  },
+  // bsc: {
+  //   providerUrl: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+  //   explorerUrl: "https://testnet.bscscan.com",
+  //   name: "BNB",
+  // },
   btc: {
     name: "BTC",
     networkType: "testnet" as const,

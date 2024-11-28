@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Chain } from "../app/constants/chains";
+import { Chain } from "../constants/chains";
 import { useChains } from "@/hooks/useChains";
 
 export const useAccountBalance = (chain: Chain, address: string) => {
@@ -24,10 +24,10 @@ export const useAccountBalance = (chain: Chain, address: string) => {
           balance = await btc.getBalance(address);
           balance = `${balance} BTC`;
           break;
-        case Chain.BNB:
-          balance = await evm.getBalance(address);
-          balance = `${parseFloat(balance).toFixed(8)} BNB`;
-          break;
+        // case Chain.BNB:
+        //   balance = await evm.getBalance(address);
+        //   balance = `${parseFloat(balance).toFixed(8)} BNB`;
+        //   break;
         case Chain.OSMOSIS:
           balance = await cosmos.getBalance(address);
           balance = `${balance} OSMO`;

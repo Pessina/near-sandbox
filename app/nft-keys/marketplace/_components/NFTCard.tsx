@@ -8,7 +8,7 @@ import { NFTOfferDialog } from "./NFTOfferDialog"
 import { NFTTransactionDialog } from "./NFTTransactionDialog"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useAccountBalance } from "@/hooks/useAccountBalance"
-import { Chain } from "@/app/constants/chains"
+import { Chain } from "@/constants/chains"
 import { useCopy } from "@/hooks/useCopy"
 import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
@@ -26,19 +26,17 @@ interface NFTCardProps {
 
 export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, onTransaction, variant }: NFTCardProps) {
     const { copyToClipboard } = useCopy()
-    const chain = nft.token?.toLowerCase() === 'btc' ? Chain.BTC :
-        nft.token?.toLowerCase() === 'eth' ? Chain.ETH :
-            nft.token?.toLowerCase() === 'bnb' ? Chain.BNB :
-                nft.token?.toLowerCase() === 'osmo' ? Chain.OSMOSIS : Chain.ETH
 
     const { nftKeysContract } = useEnv()
     const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(
         nftKeysContract,
-        chain,
+        nft.token as Chain,
         getPath(nft.token_id, nft.path || "")
     )
 
-    const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddressAndPublicKey?.address ?? "")
+    const { accountBalance, getAccountBalance } = useAccountBalance(nft.token as Chain, derivedAddressAndPublicKey?.address ?? "")
+
+    console.log({ accountBalance, derivedAddressAndPublicKey })
 
     useEffect(() => {
         getAccountBalance()

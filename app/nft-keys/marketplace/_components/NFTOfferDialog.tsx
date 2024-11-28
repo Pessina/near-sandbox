@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Wallet } from 'lucide-react'
 import { useState } from "react"
-import { SUPPORTED_TOKENS } from "../_constants/tokens"
 
 interface OfferDialogProps {
     isProcessing: boolean

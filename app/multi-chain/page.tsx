@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import { useAccountBalance } from "../../hooks/useAccountBalance";
 import { useDeriveAddressAndPublicKey } from "../../hooks/useDeriveAddressAndPublicKey";
 import { TransactionForm } from "./_components/TransactionForm";
-import { Chain, CHAIN_CONFIGS } from "../constants/chains";
+import { Chain } from "../../constants/chains";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Wallet } from 'lucide-react';
 import { useAuth } from "@/providers/AuthProvider";
-import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
 import { getPath } from "./_utils/getPath";
 
 export default function MultiChain() {
@@ -72,7 +71,7 @@ export default function MultiChain() {
             <SelectContent>
               <SelectItem value={Chain.ETH}>ETH</SelectItem>
               <SelectItem value={Chain.BTC}>BTC</SelectItem>
-              <SelectItem value={Chain.BNB}>BNB</SelectItem>
+              {/* <SelectItem value={Chain.BNB}>BNB</SelectItem> */}
               <SelectItem value={Chain.OSMOSIS}>OSMOSIS</SelectItem>
             </SelectContent>
           </Select>

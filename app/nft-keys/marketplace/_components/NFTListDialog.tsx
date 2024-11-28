@@ -5,8 +5,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { ListPlus } from "lucide-react"
 import { useState } from "react"
-import { SUPPORTED_TOKENS } from "../_constants/tokens"
 import { FormData } from "../types"
+import { Chain } from "@/constants/chains"
 
 interface NFTListDialogProps {
     isProcessing: boolean
@@ -23,9 +23,9 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
     const handleList = () => {
         onList({
             tokenId,
-            saleConditions: { token: paymentToken, amount: price },
+            saleConditions: { token: paymentToken as Chain, amount: price },
             path,
-            token: assetToken
+            token: assetToken as Chain
         })
     }
 
@@ -59,9 +59,9 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                                         <SelectValue placeholder="Asset Token Type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {SUPPORTED_TOKENS.map(token => (
-                                            <SelectItem key={token.id} value={token.id}>
-                                                {token.name}
+                                        {Object.values(Chain).map(token => (
+                                            <SelectItem key={token} value={token}>
+                                                {token}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -85,9 +85,9 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                                         <SelectValue placeholder="Payment Token" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {SUPPORTED_TOKENS.map(token => (
-                                            <SelectItem key={token.id} value={token.id}>
-                                                {token.name}
+                                        {Object.values(Chain).map(token => (
+                                            <SelectItem key={token} value={token}>
+                                                {token}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

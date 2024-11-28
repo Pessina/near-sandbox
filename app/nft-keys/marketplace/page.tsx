@@ -6,26 +6,24 @@ import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContra
 import type { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types"
 import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
 import { parseNearAmount } from "near-api-js/lib/utils/format"
-import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
+import { ONE_YOCTO_NEAR } from "../_contract/constants"
 import useInitNear from "@/hooks/useInitNear"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Wallet } from 'lucide-react'
-import type { FormData, NFTWithPrice } from "./types"
+import type { NFTWithPrice } from "./types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { MarketplaceHeader } from "./_components/MarketplaceHeader"
 import { NFTGrid } from "./_components/NFTGrid"
-import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction"
-import { KeyDerivationPath } from "multichain-tools"
+import { useNFTMarketplace } from "./_hooks/useNFTMarketplace";
 
 export default function NFTMarketplace() {
     const { account, isLoading } = useInitNear({
         isViewOnly: false,
     })
     const { toast } = useToast()
-    const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainTransaction()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
@@ -95,7 +93,7 @@ export default function NFTMarketplace() {
                         ...nft,
                         approved_account_ids: nft.approved_account_ids,
                         price: sale.sale_conditions.amount.toString(),
-                        token: sale.sale_conditions.token,
+                        token: sale.sale_conditions.token || '',
                         path: sale.path
                     }
                 })
@@ -146,55 +144,16 @@ export default function NFTMarketplace() {
         )
     }
 
-    const handleListNFT = async (data: FormData) => {
-        if (!nftContract || !marketplaceContract) return
-        if (!data.saleConditions.amount) throw new Error("Invalid price")
-
-        await withErrorHandling(
-            async () => {
-                await nftContract.nft_approve({
-                    args: {
-                        token_id: data.tokenId,
-                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
-                        msg: JSON.stringify({
-                            path: data.path,
-                            token: data.token,
-                            sale_conditions: {
-                                token: data.saleConditions.token,
-                                amount: data.saleConditions.amount,
-                            },
-                        }),
-                    },
-                    amount: ONE_YOCTO_NEAR,
-                })
-            },
-            "NFT Key Listed Successfully",
-            `Your NFT Key ${data.tokenId} has been listed for ${data.saleConditions.amount} ${data.saleConditions.token.toUpperCase()}`
-        )
-    }
-
-    const handleOfferNFT = async (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => {
-        if (!nftContract || !data.offerTokenId) return
-
-        await withErrorHandling(
-            async () => {
-                await nftContract.nft_approve({
-                    args: {
-                        token_id: data.offerTokenId,
-                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
-                        msg: JSON.stringify({
-                            token_id: data.purchaseTokenId,
-                            path: data.path
-                        }),
-                    },
-                    amount: ONE_YOCTO_NEAR,
-                    gas: NEAR_MAX_GAS,
-                })
-            },
-            "NFT Key Offer Submitted Successfully",
-            `Your NFT Key ${data.offerTokenId} offer has been submitted`
-        )
-    }
+    const {
+        isProcessing: nftProcessing,
+        handleListNFT,
+        handleOfferNFT,
+        handleTransaction
+    } = useNFTMarketplace({
+        nftContract,
+        accountId: account?.accountId || '',
+        onSuccess: loadData
+    })
 
     const handleRemoveListing = async (nft: NFT) => {
         if (!marketplaceContract) return
@@ -269,57 +228,6 @@ export default function NFTMarketplace() {
         )
     }
 
-    const handleTransaction = useCallback(async (nft: NFTWithPrice, derivedAddressAndPublicKey: {
-        address: string
-        publicKey: string
-    }, data: { to: string, value: string }) => {
-        if (!nft.path || !nft.token) {
-            showErrorToast("Transaction Failed", "Missing path or token information")
-            return
-        }
-
-        try {
-            setIsProcessing(true)
-            const path = nft.path as KeyDerivationPath
-
-            let txOutcome
-            const baseRequest = {
-                from: derivedAddressAndPublicKey.address,
-                to: data.to,
-                value: data.value,
-                publicKey: derivedAddressAndPublicKey.publicKey
-            }
-
-            if (nft.token.toLowerCase() === 'eth') {
-                txOutcome = await signEvmTransaction(baseRequest, path)
-            } else if (nft.token.toLowerCase() === 'btc') {
-                txOutcome = await signBtcTransaction({
-                    ...baseRequest,
-                }, path)
-            } else if (nft.token.toLowerCase() === 'osmo') {
-                txOutcome = await signCosmosTransaction({
-                    ...baseRequest,
-                    address: account?.accountId || '',
-                    messages: []
-                }, path)
-            } else {
-                throw new Error(`Unsupported token: ${nft.token}`)
-            }
-
-            if (txOutcome) {
-                showSuccessToast(
-                    "Transaction Initiated",
-                    `Transaction has been initiated on ${nft.token.toUpperCase()} chain`
-                )
-                await loadData()
-            }
-        } catch (error) {
-            showErrorToast("Transaction Failed", error)
-        } finally {
-            setIsProcessing(false)
-        }
-    }, [account, signEvmTransaction, signBtcTransaction, signCosmosTransaction, showErrorToast, showSuccessToast, loadData])
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -364,8 +272,10 @@ export default function NFTMarketplace() {
                     <NFTGrid
                         nfts={listedNfts}
                         variant="listed"
-                        isProcessing={isProcessing}
-                        onOffer={handleOfferNFT}
+                        isProcessing={nftProcessing}
+                        onOffer={({ purchaseTokenId, offerTokenId, path }) =>
+                            handleOfferNFT(purchaseTokenId, offerTokenId, path)
+                        }
                         onTransaction={handleTransaction}
                     />
                 </TabsContent>
@@ -373,7 +283,7 @@ export default function NFTMarketplace() {
                     <NFTGrid
                         nfts={ownedNfts}
                         variant="owned"
-                        isProcessing={isProcessing}
+                        isProcessing={nftProcessing}
                         onList={handleListNFT}
                         onRemoveListing={handleRemoveListing}
                         onMint={handleMint}

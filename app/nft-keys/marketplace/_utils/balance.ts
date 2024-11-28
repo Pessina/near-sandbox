@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { Chain } from "@/app/constants/chains";
+import { Chain } from "@/constants/chains";
 import { Bitcoin } from "multichain-tools";
 
 export function formatBalance(amount: string | number, chain: Chain): string {
@@ -8,7 +8,7 @@ export function formatBalance(amount: string | number, chain: Chain): string {
   try {
     switch (chain) {
       case Chain.ETH:
-      case Chain.BNB:
+        //   case Chain.BNB:
         return ethers.formatEther(amount.toString());
       case Chain.BTC:
         return Bitcoin.toBTC(Number(amount)).toString();
@@ -30,7 +30,7 @@ export function parseToMinimalUnits(amount: string, chain: Chain): string {
   try {
     switch (chain) {
       case Chain.ETH:
-      case Chain.BNB:
+        //   case Chain.BNB:
         return ethers.parseEther(amount).toString();
       case Chain.BTC:
         return Bitcoin.toSatoshi(Number(amount)).toString();

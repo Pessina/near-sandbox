@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Chain } from "../app/constants/chains";
-import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
+import { Chain } from "../constants/chains";
 import { useChains } from "./useChains";
 
 interface DerivedAddressAndPublicKey {
@@ -27,7 +26,8 @@ export const useDeriveAddressAndPublicKey = (
 
       let result: DerivedAddressAndPublicKey;
 
-      if (chain === Chain.BNB || chain === Chain.ETH) {
+      if (chain === Chain.ETH) {
+        // || chain === Chain.BNB
         result = await evm.deriveAddressAndPublicKey(accountId, path);
       } else if (chain === Chain.BTC) {
         result = await btc.deriveAddressAndPublicKey(accountId, path);

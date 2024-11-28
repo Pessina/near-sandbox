@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Chain, CHAIN_CONFIGS, chainsConfig } from '../../constants/chains';
+import { Chain } from '../../../constants/chains';
 import { ethers } from "ethers";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
@@ -38,7 +38,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
         try {
             let res: any;
             switch (chain) {
-                case Chain.BNB:
+                // case Chain.BNB:
                 case Chain.ETH:
                     res = await signEvmTransaction(
                         {

@@ -1,25 +1,29 @@
-import type { NFT } from "@/app/nft-keys/_contract/NFTKeysContract/types";
+import { Chain } from "@/constants/chains";
+import { KeyDerivationPath } from "multichain-tools";
+import { NFT } from "../_contract/NFTKeysContract";
 
-export type NFTWithPrice = NFT & {
+export interface NFTWithPrice extends NFT {
   price?: string;
   token?: string;
-  path?: string;
-};
+  path?: KeyDerivationPath;
+}
 
-export type FormData = {
+export interface FormData {
   tokenId: string;
   path: string;
-  token: string;
+  token: Chain;
   saleConditions: {
-    token: string;
+    token: Chain;
     amount: string;
   };
-};
+}
 
-export const SUPPORTED_TOKENS = [
-  { id: "near", name: "NEAR" },
-  { id: "btc", name: "Bitcoin" },
-  { id: "eth", name: "Ethereum" },
-  { id: "usdt", name: "USDT" },
-  { id: "usdc", name: "USDC" },
-];
+export interface TransactionData {
+  to: string;
+  value: string;
+}
+
+export interface DerivedKeys {
+  address: string;
+  publicKey: string;
+}
