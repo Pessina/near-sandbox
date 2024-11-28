@@ -27,6 +27,7 @@ interface MultiChainTransactionHook {
     sendCosmosTransaction: (transaction: CosmosUnsignedTransaction, txOutcome: FinalExecutionOutcome) => Promise<string>;
 }
 
+// TODO: It should accept the contract type to be used as args
 export const useMultiChainTransaction = (): MultiChainTransactionHook => {
     const { walletSelector, accountId } = useAuth();
     const { nearNetworkId, chainSignatureContract, nftKeysContract } = useEnv();
