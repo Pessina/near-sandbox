@@ -14,6 +14,7 @@ import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
 import { formatTokenAmount } from "../_utils/chains"
+import { NFT } from "../../_contract/NFTKeysContract"
 
 interface NFTCardProps {
     nft: NFTListed
@@ -23,9 +24,10 @@ interface NFTCardProps {
     onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
     onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     variant: "listed" | "owned"
+    ownedNfts?: NFT[]
 }
 
-export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, onTransaction, variant }: NFTCardProps) {
+export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, onTransaction, variant, ownedNfts = [] }: NFTCardProps) {
     const { copyToClipboard } = useCopy()
 
     const { nftKeysContract } = useEnv()
@@ -97,6 +99,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                                 isProcessing={isProcessing}
                                 onOffer={onOffer}
                                 nftId={nft.token_id}
+                                ownedNfts={ownedNfts}
                             />
                         )}
                     </>

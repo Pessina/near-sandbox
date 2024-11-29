@@ -16,15 +16,14 @@ interface NFTListDialogProps {
 
 export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onList, tokenId }) => {
     const [price, setPrice] = useState("")
-    const [paymentToken, setPaymentToken] = useState("near")
-    const [assetToken, setAssetToken] = useState("near")
-    const [path, setPath] = useState("")
+    const [paymentToken, setPaymentToken] = useState(Chain.ETH)
+    const [assetToken, setAssetToken] = useState(Chain.ETH)
 
     const handleList = () => {
         onList({
             tokenId,
             saleConditions: { token: paymentToken as Chain, amount: price },
-            path,
+            path: "",
             token: assetToken as Chain
         })
     }
@@ -48,15 +47,13 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <h4 className="text-sm font-medium">Asset Details</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    placeholder="Asset Path"
-                                    value={path}
-                                    onChange={(e) => setPath(e.target.value)}
-                                />
-                                <Select value={assetToken} onValueChange={setAssetToken}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Asset Token Type" />
+                            <div className="space-y-2">
+                                <label htmlFor="assetToken" className="text-sm text-muted-foreground">
+                                    Select the blockchain network for your NFT Key
+                                </label>
+                                <Select value={assetToken} onValueChange={(value) => setAssetToken(value as Chain)}>
+                                    <SelectTrigger id="assetToken">
+                                        <SelectValue placeholder="Select blockchain network" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {Object.values(Chain).map(token => (
@@ -72,26 +69,36 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                         <div className="space-y-2">
                             <h4 className="text-sm font-medium">Payment Details</h4>
                             <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                    id="price"
-                                    placeholder="Price Amount"
-                                    type="number"
-                                    step="0.1"
-                                    value={price}
-                                    onChange={(e) => setPrice(e.target.value)}
-                                />
-                                <Select value={paymentToken} onValueChange={setPaymentToken}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Payment Token" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Object.values(Chain).map(token => (
-                                            <SelectItem key={token} value={token}>
-                                                {token}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="space-y-2">
+                                    <label htmlFor="price" className="text-sm text-muted-foreground">
+                                        Set your listing price
+                                    </label>
+                                    <Input
+                                        id="price"
+                                        placeholder="Enter amount"
+                                        type="number"
+                                        step="0.1"
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label htmlFor="paymentToken" className="text-sm text-muted-foreground">
+                                        Select payment token
+                                    </label>
+                                    <Select value={paymentToken} onValueChange={(value) => setPaymentToken(value as Chain)}>
+                                        <SelectTrigger id="paymentToken">
+                                            <SelectValue placeholder="Select payment token" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.values(Chain).map(token => (
+                                                <SelectItem key={token} value={token}>
+                                                    {token}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                     </div>

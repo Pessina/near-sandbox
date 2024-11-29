@@ -120,14 +120,42 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
         }
     };
 
+    const getPlaceholderByChain = (chain: Chain) => {
+        switch (chain) {
+            case Chain.ETH:
+                return "0x... Ethereum Address";
+            case Chain.BTC:
+                return "bc1... Bitcoin Address";
+            case Chain.OSMOSIS:
+                return "osmo... Osmosis Address";
+            default:
+                return "Recipient Address";
+        }
+    };
+
+    const getValueLabel = (chain: Chain) => {
+        switch (chain) {
+            case Chain.ETH:
+                return "Value (ETH)";
+            case Chain.BTC:
+                return "Value (BTC)";
+            case Chain.OSMOSIS:
+                return "Value (OSMO)";
+            default:
+                return "Value";
+        }
+    };
+
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-                <label htmlFor="to" className="text-sm font-medium text-gray-200">To Address</label>
+                <label htmlFor="to" className="text-sm font-medium text-gray-200">
+                    Recipient Address ({chain} Network)
+                </label>
                 <Input
                     id="to"
                     {...register("to", { required: "To address is required" })}
-                    placeholder="Recipient Address"
+                    placeholder={getPlaceholderByChain(chain)}
                 />
                 {errors.to && (
                     <Alert variant="destructive">
@@ -139,11 +167,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
             </div>
 
             <div className="space-y-2">
-                <label htmlFor="value" className="text-sm font-medium text-gray-200">Value</label>
+                <label htmlFor="value" className="text-sm font-medium text-gray-200">{getValueLabel(chain)}</label>
                 <Input
                     id="value"
                     {...register("value", { required: "Value is required" })}
-                    placeholder="Amount to send"
+                    placeholder={`Enter amount in ${chain}`}
                 />
                 {errors.value && (
                     <Alert variant="destructive">
@@ -155,16 +183,18 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
             </div>
 
             <div className="space-y-2">
-                <label htmlFor="data" className="text-sm font-medium text-gray-200">Data (Optional)</label>
+                <label htmlFor="data" className="text-sm font-medium text-gray-200">
+                    {chain === Chain.OSMOSIS ? "Memo (Optional)" : "Transaction Data (Optional)"}
+                </label>
                 <Input
                     id="data"
                     {...register("data")}
-                    placeholder="Transaction data (0x...)"
+                    placeholder={chain === Chain.OSMOSIS ? "Enter memo" : "Transaction data (0x...)"}
                 />
             </div>
 
             <Button type="submit" className="w-full" disabled={isSendingTransaction}>
-                {isSendingTransaction ? "Sending..." : "Send Transaction"}
+                {isSendingTransaction ? "Sending..." : `Send ${chain} Transaction`}
             </Button>
         </form>
     );

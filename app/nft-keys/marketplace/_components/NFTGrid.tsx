@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import type { NFTListed, FormData } from "../types"
 import { Chain } from "@/constants/chains"
+import { NFT } from "../../_contract/NFTKeysContract"
 
 
 interface NFTGridProps {
@@ -17,6 +18,7 @@ interface NFTGridProps {
     onMint?: () => Promise<void>
     onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     showMintCard?: boolean
+    ownedNfts?: NFT[]
 }
 
 export function NFTGrid({
@@ -28,7 +30,8 @@ export function NFTGrid({
     onOffer,
     onMint,
     onTransaction,
-    showMintCard = false
+    showMintCard = false,
+    ownedNfts = []
 }: NFTGridProps) {
     return (
         <ScrollArea className="h-[calc(100vh-300px)]">
@@ -55,6 +58,7 @@ export function NFTGrid({
                         onOffer={onOffer}
                         onTransaction={onTransaction}
                         variant={variant}
+                        ownedNfts={ownedNfts}
                     />
                 ))}
             </div>

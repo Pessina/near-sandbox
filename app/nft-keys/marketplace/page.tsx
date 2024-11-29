@@ -280,6 +280,7 @@ export default function NFTMarketplace() {
                             handleOfferNFT(purchaseTokenId, offerTokenId, path)
                         }
                         onTransaction={handleTransaction}
+                        ownedNfts={ownedNfts}
                     />
                 </TabsContent>
                 <TabsContent value="my-nfts">
