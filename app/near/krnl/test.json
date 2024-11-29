@@ -1,0 +1,25 @@
+curl --request POST \
+  --url https://demo-rpc.node.lat \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "jsonrpc": "2.0",
+  "id": "krnl",
+  "method": "krnl_executeKernels",
+  "params": [
+    "0xb375bcd042115e2bbc2d43c364a22394fe6bdba5220cfbba7439808a78a3c32f", "0x3045022100f59add3c40113f66be3e5172e343e33a95b019173170ef46d6f4fe5c92cf13b802205cc6d86b6ba3b10460d514f5911a62162f93e9a96895c537eb754e8853b06b32",
+    {
+      "senderAddress": "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+      "kernelPayload": {
+        "261": {
+          "parameters": {
+        "header": {},
+        "body": {},
+        "query": {},
+        "path": {}
+      }
+        }
+      }
+    },
+    "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001"
+  ]
+}'
