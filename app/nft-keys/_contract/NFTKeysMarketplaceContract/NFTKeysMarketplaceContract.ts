@@ -15,6 +15,7 @@ const createMarketplaceContract = (args: {
       "get_supply_by_nft_contract_id",
       "get_sales_by_nft_contract_id",
       "get_sale",
+      "is_krnl_authorized",
     ],
     changeMethods: [
       "new",

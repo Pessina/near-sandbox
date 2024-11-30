@@ -84,4 +84,14 @@ export type NFTKeysMarketplaceContract = Contract & {
       offer_price: SaleCondition;
     }>
   ) => Promise<void>;
+
+  is_krnl_authorized: (args: {
+    function_params: string;
+    payload: {
+      auth: string;
+      kernel_responses: string;
+      kernel_param_objects: string;
+    };
+    sender: string;
+  }) => Promise<boolean>;
 };

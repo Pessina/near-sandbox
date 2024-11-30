@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ethers } from 'ethers'
+import { createMarketplaceContract, NFTKeysMarketplaceContract } from '@/app/nft-keys/_contract/NFTKeysMarketplaceContract'
+import useInitNear from '@/hooks/useInitNear'
 
 // Contract address on Sepolia testnet
 const contractAddress = "0x836656390dDcf97cd65713ef4be638DA93e2A71f"
@@ -18,13 +20,23 @@ const krnlPayload = {
 export default function KrnlPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [events, setEvents] = useState<any[]>([])
+    const { account } = useInitNear({ isViewOnly: false })
+    const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
 
-    const handleTransaction = async () => {
+    useEffect(() => {
+        if (!account) return
+
+        const contract = createMarketplaceContract({
+            account,
+            contractId: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!
+        })
+        setMarketplaceContract(contract)
+    }, [account])
+
+    const handleEthTransaction = async () => {
         try {
             setIsLoading(true)
             setError(null)
-            setEvents([])
 
             if (!window.ethereum) {
                 throw new Error("Please install MetaMask")
@@ -42,7 +54,6 @@ export default function KrnlPage() {
                 "function _isAuthorized(tuple(bytes auth, bytes kernelResponses, bytes kernelParams) memory payload, bytes memory functionParams) public returns (bool)",
             ]
             const contract = new ethers.Contract(contractAddress, abi, signer)
-            // Add other event listeners as needed
 
             // Try to simulate the transaction first
             try {
@@ -54,10 +65,10 @@ export default function KrnlPage() {
                     },
                     params
                 )
-                console.log("Transaction simulation result:", willSucceed)
+                console.log("ETH Transaction simulation result:", willSucceed)
             } catch (simError: any) {
-                console.error("Simulation failed:", simError)
-                throw new Error(`Simulation failed: ${simError.reason || simError.message}`)
+                console.error("ETH Simulation failed:", simError)
+                throw new Error(`ETH Simulation failed: ${simError.reason || simError.message}`)
             }
 
             // Proceed with actual transaction
@@ -70,30 +81,77 @@ export default function KrnlPage() {
                 params
             )
 
-            console.log("Transaction sent:", tx.hash)
+            console.log("ETH Transaction sent:", tx.hash)
             const receipt = await tx.wait()
-            console.log("Transaction receipt:", receipt)
+            console.log("ETH Transaction receipt:", receipt)
 
         } catch (error: any) {
-            console.error("Transaction failed:", error)
-            setError(`Transaction failed: ${error.reason || error.message}`)
+            console.error("ETH Transaction failed:", error)
+            setError(`ETH Transaction failed: ${error.reason || error.message}`)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleNearTransaction = async () => {
+        try {
+            setIsLoading(true)
+            setError(null)
+
+            if (!marketplaceContract) {
+                throw new Error("NEAR Marketplace contract not initialized")
+            }
+
+            const result = await marketplaceContract.is_krnl_authorized({
+                function_params: params,
+                payload: {
+                    auth: krnlPayload.auth,
+                    kernel_responses: krnlPayload.kernelResponses,
+                    kernel_param_objects: krnlPayload.kernelParams
+                },
+                // Hardcoded sender address because it must be ETH
+                sender: "0x4174678c78fEaFd778c1ff319D5D326701449b25"
+            })
+
+            console.log("NEAR Transaction result:", result)
+
+        } catch (error: any) {
+            console.error("NEAR Transaction failed:", error)
+            setError(`NEAR Transaction failed: ${error.message}`)
         } finally {
             setIsLoading(false)
         }
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4">
-            <button
-                onClick={handleTransaction}
-                disabled={isLoading}
-                className="px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-                {isLoading ? 'Processing...' : 'Call isAuthorized'}
-            </button>
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 space-y-4">
+            <div className="flex space-x-4">
+                <button
+                    onClick={handleEthTransaction}
+                    disabled={isLoading}
+                    className="px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                    {isLoading ? 'Processing...' : 'Call ETH isAuthorized'}
+                </button>
+
+                <button
+                    onClick={handleNearTransaction}
+                    disabled={isLoading || !account || !marketplaceContract}
+                    className="px-4 py-2 font-bold text-white bg-green-500 rounded hover:bg-green-700 disabled:opacity-50"
+                >
+                    {isLoading ? 'Processing...' : 'Call NEAR isAuthorized'}
+                </button>
+            </div>
+
             {error && (
                 <div className="mt-4 text-red-500">
                     {error}
+                </div>
+            )}
+
+            {!account && (
+                <div className="mt-4 text-yellow-500">
+                    Please connect your NEAR wallet to use NEAR features
                 </div>
             )}
         </div>
