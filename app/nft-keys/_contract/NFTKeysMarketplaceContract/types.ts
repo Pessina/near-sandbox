@@ -94,4 +94,9 @@ export type NFTKeysMarketplaceContract = Contract & {
     };
     sender: string;
   }) => Promise<boolean>;
+
+  decode_kernel_responses: (args: { kernel_responses: string }) => Promise<{
+    balance: string;
+    wallet: string;
+  }>;
 };

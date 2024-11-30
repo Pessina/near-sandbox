@@ -20,6 +20,7 @@ const krnlPayload = {
 export default function KrnlPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [decodedResponse, setDecodedResponse] = useState<{ balance: string, wallet: string } | null>(null)
     const { account } = useInitNear({ isViewOnly: false })
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
 
@@ -123,6 +124,31 @@ export default function KrnlPage() {
         }
     }
 
+    const handleDecodeKernelResponses = async () => {
+        try {
+            setIsLoading(true)
+            setError(null)
+            setDecodedResponse(null)
+
+            if (!marketplaceContract) {
+                throw new Error("NEAR Marketplace contract not initialized")
+            }
+
+            const result = await marketplaceContract.decode_kernel_responses({
+                kernel_responses: krnlPayload.kernelResponses
+            })
+
+            console.log("Decoded kernel responses:", result)
+            setDecodedResponse(result)
+
+        } catch (error: any) {
+            console.error("Decode kernel responses failed:", error)
+            setError(`Decode kernel responses failed: ${error.message}`)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4 space-y-4">
             <div className="flex space-x-4">
@@ -141,11 +167,27 @@ export default function KrnlPage() {
                 >
                     {isLoading ? 'Processing...' : 'Call NEAR isAuthorized'}
                 </button>
+
+                <button
+                    onClick={handleDecodeKernelResponses}
+                    disabled={isLoading || !account || !marketplaceContract}
+                    className="px-4 py-2 font-bold text-white bg-purple-500 rounded hover:bg-purple-700 disabled:opacity-50"
+                >
+                    {isLoading ? 'Processing...' : 'Decode Kernel Responses'}
+                </button>
             </div>
 
             {error && (
                 <div className="mt-4 text-red-500">
                     {error}
+                </div>
+            )}
+
+            {decodedResponse && (
+                <div className="mt-4 p-4 bg-gray-700 rounded">
+                    <h3 className="font-bold mb-2">Decoded Response:</h3>
+                    <p>Balance: {decodedResponse.balance}</p>
+                    <p>Wallet: {decodedResponse.wallet}</p>
                 </div>
             )}
 
