@@ -12,6 +12,7 @@ import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
 import { useDeriveAddressAndPublicKey } from '../../../hooks/useDeriveAddressAndPublicKey';
 import { useAuth } from '@/providers/AuthProvider';
 import { getPath } from '../_utils/getPath';
+import { Bitcoin } from 'multichain-tools';
 
 interface TransactionFormProps {
     chain: Chain;
@@ -62,7 +63,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                             from: addressAndPublicKey?.address ?? '',
                             publicKey: addressAndPublicKey?.publicKey ?? '',
                             to: data.to,
-                            value: data.value
+                            value: Bitcoin.toSatoshi(Number(data.value)).toString()
                         },
                         getCanonicalizedDerivationPath({
                             chain: 0,
@@ -83,7 +84,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                                     typeUrl: "/cosmos.bank.v1beta1.MsgSend",
                                     value: {
                                         toAddress: data.to,
-                                        amount: [{ denom: "uosmo", amount: data.value }],
+                                        amount: [{ denom: "uosmo", amount: (Number(data.value) * 1_000_000).toString() }],
                                     },
                                 },
                             ],
