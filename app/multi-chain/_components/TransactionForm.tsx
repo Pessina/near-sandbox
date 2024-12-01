@@ -36,6 +36,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
     const onSubmit = async (data: Transaction) => {
         setIsSendingTransaction(true);
 
+        if (!addressAndPublicKey) {
+            throw new Error("Address and public key not found");
+        }
+
         try {
             let res: any;
             switch (chain) {
@@ -43,7 +47,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                 case Chain.ETH:
                     res = await signEvmTransaction(
                         {
-                            from: addressAndPublicKey?.address ?? '',
+                            from: addressAndPublicKey.address,
                             to: data.to,
                             value: ethers.parseEther(data.value).toString(),
                             ...(data.data && { data: data.data })
@@ -60,8 +64,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                 case Chain.BTC:
                     res = await signBtcTransaction(
                         {
-                            from: addressAndPublicKey?.address ?? '',
-                            publicKey: addressAndPublicKey?.publicKey ?? '',
+                            from: addressAndPublicKey.address,
+                            publicKey: addressAndPublicKey.publicKey,
                             to: data.to,
                             value: Bitcoin.toSatoshi(Number(data.value)).toString()
                         },
@@ -77,12 +81,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                 case Chain.OSMOSIS:
                     res = await signCosmosTransaction(
                         {
-                            address: addressAndPublicKey?.address ?? '',
-                            publicKey: addressAndPublicKey?.publicKey ?? '',
+                            address: addressAndPublicKey.address,
+                            publicKey: addressAndPublicKey.publicKey,
                             messages: [
                                 {
                                     typeUrl: "/cosmos.bank.v1beta1.MsgSend",
                                     value: {
+                                        fromAddress: addressAndPublicKey.address,
                                         toAddress: data.to,
                                         amount: [{ denom: "uosmo", amount: (Number(data.value) * 1_000_000).toString() }],
                                     },
