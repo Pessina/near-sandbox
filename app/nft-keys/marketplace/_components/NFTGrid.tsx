@@ -14,7 +14,7 @@ interface NFTGridProps {
     isProcessing: boolean
     onList?: (data: FormData) => Promise<void>
     onRemoveListing?: (nft: NFTListed) => Promise<void>
-    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
+    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string }) => Promise<void>
     onMint?: () => Promise<void>
     onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     showMintCard?: boolean

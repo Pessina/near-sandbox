@@ -27,6 +27,23 @@ type Sale = {
   sale_conditions: SaleCondition;
 };
 
+type KrnlAuth = {
+  auth: string;
+  kernel_responses: string;
+  kernel_param_objects: string;
+};
+
+type KrnlPayload = {
+  function_params: string;
+  sender: string;
+  auth: KrnlAuth;
+};
+
+type KernelResponse = {
+  balance: string;
+  wallet: string;
+};
+
 export type NFTKeysMarketplaceContract = Contract & {
   new: (
     args: ContractChangeMethodArgs<{
@@ -77,26 +94,20 @@ export type NFTKeysMarketplaceContract = Contract & {
     }>
   ) => Promise<void>;
 
-  offer: (
-    args: ContractChangeMethodArgs<{
-      nft_contract_id: string;
-      token_id: string;
-      offer_price: SaleCondition;
-    }>
-  ) => Promise<void>;
+  is_krnl_authorized: (args: KrnlPayload) => Promise<boolean>;
 
-  is_krnl_authorized: (args: {
-    function_params: string;
-    payload: {
-      auth: string;
-      kernel_responses: string;
-      kernel_param_objects: string;
-    };
-    sender: string;
-  }) => Promise<boolean>;
+  decode_kernel_responses: (args: {
+    kernel_responses: string;
+  }) => Promise<KernelResponse>;
 
-  decode_kernel_responses: (args: { kernel_responses: string }) => Promise<{
-    balance: string;
-    wallet: string;
-  }>;
+  get_address: (args: {
+    path: string;
+    chain: string;
+    signer_id: string;
+  }) => Promise<string>;
+
+  derived_public_key: (args: {
+    path: string;
+    signer_id: string;
+  }) => Promise<string>;
 };

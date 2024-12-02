@@ -4,7 +4,11 @@ import { NFTKeysContract } from "../../_contract/NFTKeysContract/types";
 import { NFTListed, FormData } from "../types";
 import { Chain } from "@/constants/chains";
 import { parseTokenAmount } from "../_utils/chains";
-import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../../_contract/constants";
+import {
+  ONE_YOCTO_NEAR,
+  NEAR_MAX_GAS,
+  MOCK_KRNL,
+} from "../../_contract/constants";
 import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
@@ -91,7 +95,7 @@ export function useNFTMarketplace({
   );
 
   const handleOfferNFT = useCallback(
-    async (purchaseTokenId: string, offerTokenId: string, path: string) => {
+    async (purchaseTokenId: string, offerTokenId: string) => {
       if (!nftContract) return;
 
       await withErrorHandling(
@@ -102,7 +106,7 @@ export function useNFTMarketplace({
               account_id: nftKeysMarketplaceContract,
               msg: JSON.stringify({
                 token_id: purchaseTokenId,
-                path,
+                krnl_payload: MOCK_KRNL,
               }),
             },
             amount: ONE_YOCTO_NEAR,

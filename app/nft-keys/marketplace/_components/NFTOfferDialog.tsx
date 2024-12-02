@@ -5,23 +5,22 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Wallet } from 'lucide-react'
 import { useState } from "react"
 import { NFTListed } from "../types"
-import { Input } from "@/components/ui/input"
+import { Chain } from "@/constants/chains"
+
 interface OfferDialogProps {
     isProcessing: boolean
-    onOffer: (data: { purchaseTokenId: string, offerTokenId: string, path: string }) => Promise<void>
+    onOffer: (data: { purchaseTokenId: string, offerTokenId: string }) => Promise<void>
     nftId: string
     ownedNfts?: NFTListed[]
 }
 
 export const NFTOfferDialog: React.FC<OfferDialogProps> = ({ isProcessing, onOffer, nftId, ownedNfts = [] }) => {
     const [offerTokenId, setOfferTokenId] = useState("")
-    const [path, setPath] = useState("")
 
     const handleOffer = () => {
         onOffer({
             purchaseTokenId: nftId,
             offerTokenId,
-            path
         })
     }
 
@@ -61,17 +60,6 @@ export const NFTOfferDialog: React.FC<OfferDialogProps> = ({ isProcessing, onOff
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label htmlFor="assetPath" className="text-sm text-muted-foreground">
-                                        Asset Path - Specify the path to the asset you&apos;re offering
-                                    </label>
-                                    <Input
-                                        id="assetPath"
-                                        placeholder="e.g eth,2"
-                                        value={path}
-                                        onChange={(e) => setPath(e.target.value)}
-                                    />
                                 </div>
                             </div>
                         </div>
