@@ -107,6 +107,7 @@ export function useNFTMarketplace({
               msg: JSON.stringify({
                 token_id: purchaseTokenId,
                 krnl_payload: MOCK_KRNL,
+                debug_disable_check: true,
               }),
             },
             amount: ONE_YOCTO_NEAR,
