@@ -98,6 +98,8 @@ export function useNFTMarketplace({
     async (purchaseTokenId: string, offerTokenId: string) => {
       if (!nftContract) return;
 
+      // TODO: add KRNL call
+
       await withErrorHandling(
         async () => {
           await nftContract.nft_approve({
