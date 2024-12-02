@@ -14,7 +14,7 @@ interface KrnlResponse {
   };
 }
 
-export async function getBalance(address: string): Promise<KrnlResponse> {
+export async function getBalanceBTC(address: string): Promise<KrnlResponse> {
   try {
     const response = await axios.post<KrnlResponse>(
       "https://devnet.node.lat:8545/",
@@ -29,6 +29,49 @@ export async function getBalance(address: string): Promise<KrnlResponse> {
             senderAddress: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
             kernelPayload: {
               "268": {
+                parameters: {
+                  header: {},
+                  body: {},
+                  query: {},
+                  path: { addr: address },
+                },
+              },
+            },
+          },
+          "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001",
+        ],
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(`Failed to get balance: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+export async function getBalanceETH(address: string): Promise<KrnlResponse> {
+  try {
+    const response = await axios.post<KrnlResponse>(
+      "https://devnet.node.lat:8545/",
+      {
+        jsonrpc: "2.0",
+        id: "krnl",
+        method: "krnl_executeKernels",
+        params: [
+          "0xaa5c890cea8863a932f36f1147502b3da726958163dcacc12eae5a5a4e716fe9",
+          "0x3044022016c353d8f767b5470d4a6625c1cee5369643d4afff03699b147a89c2b404148c02207aecb3c00af39fffa99c61f7a31cab4d7749607c92aa7cd10f137d82bfe49920",
+          {
+            senderAddress: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+            kernelPayload: {
+              "269": {
                 parameters: {
                   header: {},
                   body: {},

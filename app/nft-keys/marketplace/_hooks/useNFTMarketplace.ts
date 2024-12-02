@@ -13,7 +13,7 @@ import {
 import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
-import { getBalance } from "../_krnl/getBalance";
+import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
 
 interface UseNFTMarketplaceProps {
   nftContract: NFTKeysContract | null;
@@ -98,9 +98,12 @@ export function useNFTMarketplace({
     async (purchaseTokenId: string, offerTokenId: string, address: string) => {
       if (!nftContract) return;
 
-      console.log(address);
-
-      const res = await getBalance(address);
+      let res: any;
+      if (address.startsWith("0x")) {
+        res = await getBalanceETH(address);
+      } else {
+        res = await getBalanceBTC(address);
+      }
 
       if (!res.result) {
         throw new Error("Failed to get balance");
