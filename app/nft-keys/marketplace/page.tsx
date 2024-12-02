@@ -3,29 +3,32 @@
 import { useState, useEffect, useCallback } from "react"
 import { createNFTContract } from "../_contract/NFTKeysContract"
 import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
-import type { NFTKeysContract } from "../_contract/NFTKeysContract/types"
+import type { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types"
 import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
 import { parseNearAmount } from "near-api-js/lib/utils/format"
-import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "../_contract/constants"
+import { ONE_YOCTO_NEAR } from "../_contract/constants"
 import useInitNear from "@/hooks/useInitNear"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Wallet } from 'lucide-react'
-import type { NFT, FormData } from "./types"
+import type { NFTListed } from "./types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { MarketplaceHeader } from "./_components/MarketplaceHeader"
 import { NFTGrid } from "./_components/NFTGrid"
+import { useNFTMarketplace } from "./_hooks/useNFTMarketplace";
 
 export default function NFTMarketplace() {
-    const { account, isLoading } = useInitNear()
+    const { account, isLoading } = useInitNear({
+        isViewOnly: false,
+    })
     const { toast } = useToast()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
     const [ownedNfts, setOwnedNfts] = useState<NFT[]>([])
-    const [listedNfts, setListedNfts] = useState<NFT[]>([])
+    const [listedNfts, setListedNfts] = useState<NFTListed[]>([])
     const [isProcessing, setIsProcessing] = useState(false)
     const [isRegistered, setIsRegistered] = useState(false)
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
@@ -82,21 +85,29 @@ export default function NFTMarketplace() {
                 marketplaceContract.storage_balance_of({ account_id: account.accountId }),
             ])
 
-            const listedNftsWithPrice = await Promise.all(
+            const listedNftsWithPrice: NFTListed[] = await Promise.all(
                 sales.map(async (sale) => {
                     const nft = allNfts.find((nft) => nft.token_id === sale.token_id)
+                    if (!nft || !sale) return null
                     return {
                         ...nft,
-                        price: sale.sale_conditions.amount.toString(),
-                        token: sale.sale_conditions.token
+                        approved_account_ids: nft.approved_account_ids,
+                        saleConditions: {
+                            amount: sale.sale_conditions.amount.toString(),
+                            token: sale.sale_conditions.token || '',
+                        },
+                        token: sale.token,
+                        path: sale.path
                     }
                 })
-            )
+            ).then(results => results.flatMap((item) => item !== null ? [item] : []))
 
-            const ownedNftsWithPrice = userNfts.map(nft => {
-                const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
-                return listedNft ? { ...nft, price: listedNft.price, token: listedNft.token } : nft
-            })
+            const ownedNftsWithPrice = userNfts
+                .filter(nft => nft.owner_id === account.accountId)
+                .map(nft => {
+                    const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
+                    return listedNft ? { ...nft, saleConditions: listedNft.saleConditions, token: listedNft.token, path: listedNft.path } : nft
+                })
 
             setOwnedNfts(ownedNftsWithPrice)
             setListedNfts(listedNftsWithPrice)
@@ -136,53 +147,15 @@ export default function NFTMarketplace() {
         )
     }
 
-    const handleListNFT = async (data: FormData) => {
-        if (!nftContract || !marketplaceContract) return
-        if (!data.price) throw new Error("Invalid price")
-
-        await withErrorHandling(
-            async () => {
-                await nftContract.nft_approve({
-                    args: {
-                        token_id: data.tokenId,
-                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
-                        msg: JSON.stringify({
-                            sale_conditions: {
-                                token: data.token,
-                                amount: data.price,
-                            },
-                        }),
-                    },
-                    amount: ONE_YOCTO_NEAR,
-                })
-            },
-            "NFT Key Listed Successfully",
-            `Your NFT Key ${data.tokenId} has been listed for ${data.price} ${data.token.toUpperCase()}`
-        )
-    }
-
-    const handleBuyNFT = async (nft: NFT) => {
-        if (!marketplaceContract || !nft.price) return
-
-        await withErrorHandling(
-            async () => {
-                await marketplaceContract.offer({
-                    args: {
-                        nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
-                        token_id: nft.token_id,
-                        offer_price: {
-                            token: nft.token || "near",
-                            amount: Number(parseNearAmount(nft.price)),
-                        },
-                    },
-                    amount: parseNearAmount(nft.price)!,
-                    gas: NEAR_MAX_GAS,
-                })
-            },
-            "NFT Key Purchased Successfully",
-            `You have bought NFT Key ${nft.token_id} for ${nft.price} ${nft.token?.toUpperCase() || 'NEAR'}`
-        )
-    }
+    const {
+        isProcessing: nftProcessing,
+        handleListNFT,
+        handleOfferNFT,
+        handleTransaction
+    } = useNFTMarketplace({
+        nftContract,
+        onSuccess: loadData
+    })
 
     const handleRemoveListing = async (nft: NFT) => {
         if (!marketplaceContract) return
@@ -301,18 +274,23 @@ export default function NFTMarketplace() {
                     <NFTGrid
                         nfts={listedNfts}
                         variant="listed"
-                        isProcessing={isProcessing}
-                        onBuy={handleBuyNFT}
+                        isProcessing={nftProcessing}
+                        onOffer={({ purchaseTokenId, offerTokenId }) =>
+                            handleOfferNFT(purchaseTokenId, offerTokenId)
+                        }
+                        onTransaction={handleTransaction}
+                        ownedNfts={ownedNfts}
                     />
                 </TabsContent>
                 <TabsContent value="my-nfts">
                     <NFTGrid
                         nfts={ownedNfts}
                         variant="owned"
-                        isProcessing={isProcessing}
+                        isProcessing={nftProcessing}
                         onList={handleListNFT}
                         onRemoveListing={handleRemoveListing}
                         onMint={handleMint}
+                        onTransaction={handleTransaction}
                         showMintCard
                     />
                 </TabsContent>

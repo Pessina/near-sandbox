@@ -11,6 +11,28 @@ type StorageBalanceResult = {
   available: string;
 };
 
+export interface NFTMetadata {
+  title: string | null;
+  description: string | null;
+  media: string | null;
+  media_hash: string | null;
+  copies: number | null;
+  issued_at: string | null;
+  expires_at: string | null;
+  starts_at: string | null;
+  updated_at: string | null;
+  extra: string | null;
+  reference: string | null;
+  reference_hash: string | null;
+}
+
+export interface NFT {
+  token_id: string;
+  owner_id: string;
+  metadata: NFTMetadata;
+  approved_account_ids: Record<string, number>;
+}
+
 export type NFTKeysContract = Contract & {
   new: (
     args: ContractChangeMethodArgs<{
@@ -20,17 +42,17 @@ export type NFTKeysContract = Contract & {
 
   mint: () => Promise<number>;
 
-  nft_metadata: (args: { token_id?: string }) => Promise<any>;
+  nft_metadata: (args: { token_id?: string }) => Promise<NFTMetadata>;
 
-  nft_token: (args: { token_id: string }) => Promise<any>;
+  nft_token: (args: { token_id: string }) => Promise<NFT>;
 
-  nft_tokens: (args: { from_index?: string; limit?: number }) => Promise<any[]>;
+  nft_tokens: (args: { from_index?: string; limit?: number }) => Promise<NFT[]>;
 
   nft_tokens_for_owner: (args: {
     account_id: string;
     from_index: string;
     limit: number;
-  }) => Promise<any[]>;
+  }) => Promise<NFT[]>;
 
   nft_transfer: (
     args: ContractChangeMethodArgs<{

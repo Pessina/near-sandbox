@@ -1,30 +1,51 @@
-import { useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { NFT, FormData } from "../types"
-import { Tag, ShoppingCart, ListPlus, XCircle, Key, Lock } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FormData, NFTListed } from "../types"
+import { Tag, XCircle, Key, Lock, Wallet, Copy } from 'lucide-react'
+import { NFTListDialog } from "./NFTListDialog"
+import { NFTOfferDialog } from "./NFTOfferDialog"
+import { NFTTransactionDialog } from "./NFTTransactionDialog"
+import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
+import { useAccountBalance } from "@/hooks/useAccountBalance"
+import { Chain } from "@/constants/chains"
+import { useCopy } from "@/hooks/useCopy"
+import { useEffect } from "react"
+import { useEnv } from "@/hooks/useEnv"
+import { getPath } from "../_utils/getPath"
+import { formatTokenAmount } from "../_utils/chains"
+import { NFT } from "../../_contract/NFTKeysContract"
 
 interface NFTCardProps {
-    nft: NFT
+    nft: NFTListed
     isProcessing: boolean
-    onBuy?: (nft: NFT) => Promise<void>
     onList?: (data: FormData) => Promise<void>
-    onRemoveListing?: (nft: NFT) => Promise<void>
+    onRemoveListing?: (nft: NFTListed) => Promise<void>
+    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string }) => Promise<void>
+    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     variant: "listed" | "owned"
+    ownedNfts?: NFT[]
 }
 
-export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, variant }: NFTCardProps) {
-    const [price, setPrice] = useState("")
-    const [token, setToken] = useState("near")
+export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, onTransaction, variant, ownedNfts = [] }: NFTCardProps) {
+    const { copyToClipboard } = useCopy()
 
-    const handleList = () => {
-        if (onList) {
-            onList({ tokenId: nft.token_id, price, token })
-        }
+    const { nftKeysContract } = useEnv()
+    const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(
+        nftKeysContract,
+        nft.token as Chain,
+        getPath(nft.token_id, nft.path || "")
+    )
+
+    const { accountBalance, getAccountBalance } = useAccountBalance(nft.token as Chain, derivedAddressAndPublicKey?.address ?? "")
+
+    useEffect(() => {
+        getAccountBalance()
+    }, [getAccountBalance])
+
+    const truncateAddress = (address: string) => {
+        if (address.length <= 13) return address
+        return `${address.slice(0, 6)}...${address.slice(-4)}`
     }
 
     return (
@@ -35,75 +56,76 @@ export function NFTCard({ nft, isProcessing, onBuy, onList, onRemoveListing, var
                         <Key className="h-8 w-8 mr-2" />
                         <h3 className="font-semibold text-lg">NFT Key #{nft.token_id}</h3>
                     </div>
-                    {nft.price && (
+                    {nft.saleConditions?.amount && (
                         <Badge variant="secondary">
                             <Tag className="mr-1 h-3 w-3" />
-                            {nft.price} {nft.token?.toUpperCase() || 'NEAR'}
+                            {formatTokenAmount(nft.saleConditions.amount, nft.saleConditions.token as Chain)} {nft.saleConditions.token.toUpperCase()}
                         </Badge>
                     )}
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">{nft.metadata.description || "This NFT Key holds funds on other chains"}</p>
-                <div className="flex items-center text-muted-foreground text-sm">
-                    <Lock className="h-4 w-4 mr-1" />
-                    <span>Secure Multi-Chain Asset</span>
+                <div className="flex flex-col gap-2">
+                    {derivedAddressAndPublicKey && (
+                        <div className="flex items-center justify-between text-muted-foreground text-sm bg-secondary/50 p-2 rounded-md">
+                            <div className="flex items-center">
+                                <Wallet className="h-4 w-4 mr-1" />
+                                <span className="truncate" title={derivedAddressAndPublicKey.address}>
+                                    Address: {truncateAddress(derivedAddressAndPublicKey.address)}
+                                </span>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2"
+                                onClick={() => copyToClipboard(derivedAddressAndPublicKey.address)}
+                            >
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
+                    {accountBalance && (
+                        <div className="flex items-center text-muted-foreground text-sm">
+                            <Tag className="h-4 w-4 mr-1" />
+                            <span>Balance: {accountBalance}</span>
+                        </div>
+                    )}
                 </div>
             </CardContent>
-            <CardFooter className="p-4">
-                {variant === "listed" && onBuy && (
-                    <Button onClick={() => onBuy(nft)} disabled={isProcessing} className="w-full">
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        {isProcessing ? 'Processing...' : 'Buy Now'}
-                    </Button>
+            <CardFooter className="p-4 flex flex-col gap-2">
+                {variant === "listed" && (
+                    <>
+                        {onOffer && (
+                            <NFTOfferDialog
+                                isProcessing={isProcessing}
+                                onOffer={onOffer}
+                                nftId={nft.token_id}
+                                ownedNfts={ownedNfts}
+                            />
+                        )}
+                    </>
                 )}
                 {variant === "owned" && (
                     <>
-                        {nft.price ? (
+                        {nft.saleConditions?.amount ? (
                             <Button onClick={() => onRemoveListing && onRemoveListing(nft)} disabled={isProcessing} variant="destructive" className="w-full">
                                 <XCircle className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Processing...' : 'Remove Listing'}
                             </Button>
                         ) : (
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full">
-                                        <ListPlus className="mr-2 h-4 w-4" />
-                                        List for Sale
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>List NFT Key for Sale</DialogTitle>
-                                        <DialogDescription>Set the price and token for your NFT Key listing.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-4 items-center gap-4">
-                                            <Input
-                                                id="price"
-                                                placeholder="Price"
-                                                type="number"
-                                                step="0.1"
-                                                value={price}
-                                                onChange={(e) => setPrice(e.target.value)}
-                                                className="col-span-3"
-                                            />
-                                            <Select value={token} onValueChange={setToken}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Token" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="near">NEAR</SelectItem>
-                                                    <SelectItem value="usdc">USDC</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <Button onClick={handleList} disabled={isProcessing}>
-                                            {isProcessing ? 'Processing...' : 'List NFT Key'}
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                            <>
+                                {onList && <NFTListDialog
+                                    isProcessing={isProcessing}
+                                    onList={onList}
+                                    tokenId={nft.token_id}
+                                />}
+                                {onTransaction && <NFTTransactionDialog
+                                    nft={nft}
+                                    isProcessing={isProcessing}
+                                    onTransaction={onTransaction}
+                                    path={nft.path || ""}
+                                    chain={nft.token || ""}
+                                />}
+                            </>
                         )}
                     </>
                 )}

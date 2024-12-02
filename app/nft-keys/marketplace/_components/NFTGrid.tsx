@@ -3,28 +3,35 @@ import { NFTCard } from "./NFTCard"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import type { NFT, FormData } from "../types"
+import type { NFTListed, FormData } from "../types"
+import { Chain } from "@/constants/chains"
+import { NFT } from "../../_contract/NFTKeysContract"
+
 
 interface NFTGridProps {
-    nfts: NFT[]
+    nfts: NFTListed[]
     variant: "listed" | "owned"
     isProcessing: boolean
-    onBuy?: (nft: NFT) => Promise<void>
     onList?: (data: FormData) => Promise<void>
-    onRemoveListing?: (nft: NFT) => Promise<void>
+    onRemoveListing?: (nft: NFTListed) => Promise<void>
+    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string }) => Promise<void>
     onMint?: () => Promise<void>
+    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     showMintCard?: boolean
+    ownedNfts?: NFT[]
 }
 
 export function NFTGrid({
     nfts,
     variant,
     isProcessing,
-    onBuy,
     onList,
     onRemoveListing,
+    onOffer,
     onMint,
-    showMintCard = false
+    onTransaction,
+    showMintCard = false,
+    ownedNfts = []
 }: NFTGridProps) {
     return (
         <ScrollArea className="h-[calc(100vh-300px)]">
@@ -46,13 +53,15 @@ export function NFTGrid({
                         key={nft.token_id}
                         nft={nft}
                         isProcessing={isProcessing}
-                        onBuy={onBuy}
                         onList={onList}
                         onRemoveListing={onRemoveListing}
+                        onOffer={onOffer}
+                        onTransaction={onTransaction}
                         variant={variant}
+                        ownedNfts={ownedNfts}
                     />
                 ))}
             </div>
         </ScrollArea>
     )
-} 
+}

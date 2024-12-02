@@ -15,14 +15,16 @@ const createMarketplaceContract = (args: {
       "get_supply_by_nft_contract_id",
       "get_sales_by_nft_contract_id",
       "get_sale",
+      "is_krnl_authorized",
+      "decode_kernel_responses",
+      "get_address",
+      "derived_public_key",
     ],
     changeMethods: [
       "new",
       "storage_deposit",
       "storage_withdraw",
-      "list_nft_for_sale",
       "remove_sale",
-      "offer",
     ],
     useLocalViewExecution: false,
   }) as unknown as NFTKeysMarketplaceContract;

@@ -14,7 +14,7 @@ type StorageBalanceResult = {
 
 type SaleCondition = {
   token: string;
-  amount: number;
+  amount: string;
 };
 
 type Sale = {
@@ -22,11 +22,26 @@ type Sale = {
   approval_id: number;
   nft_contract_id: string;
   token_id: string;
+  path: string;
+  token: string;
   sale_conditions: SaleCondition;
 };
 
-type Payout = {
-  payout: Record<string, string>;
+type KrnlAuth = {
+  auth: string;
+  kernel_responses: string;
+  kernel_param_objects: string;
+};
+
+type KrnlPayload = {
+  function_params: string;
+  sender: string;
+  auth: KrnlAuth;
+};
+
+type KernelResponse = {
+  balance: string;
+  wallet: string;
 };
 
 export type NFTKeysMarketplaceContract = Contract & {
@@ -72,15 +87,6 @@ export type NFTKeysMarketplaceContract = Contract & {
 
   get_sale: (args: { nft_contract_token: string }) => Promise<Sale | null>;
 
-  list_nft_for_sale: (
-    args: ContractChangeMethodArgs<{
-      nft_contract_id: string;
-      token_id: string;
-      approval_id: number;
-      sale_conditions: SaleCondition;
-    }>
-  ) => Promise<void>;
-
   remove_sale: (
     args: ContractChangeMethodArgs<{
       nft_contract_id: string;
@@ -88,11 +94,20 @@ export type NFTKeysMarketplaceContract = Contract & {
     }>
   ) => Promise<void>;
 
-  offer: (
-    args: ContractChangeMethodArgs<{
-      nft_contract_id: string;
-      token_id: string;
-      offer_price: SaleCondition;
-    }>
-  ) => Promise<void>;
+  is_krnl_authorized: (args: { krnl_payload: KrnlPayload }) => Promise<boolean>;
+
+  decode_kernel_responses: (args: {
+    kernel_responses: string;
+  }) => Promise<KernelResponse>;
+
+  get_address: (args: {
+    path: string;
+    chain: string;
+    signer_id: string;
+  }) => Promise<string>;
+
+  derived_public_key: (args: {
+    path: string;
+    signer_id: string;
+  }) => Promise<string>;
 };
