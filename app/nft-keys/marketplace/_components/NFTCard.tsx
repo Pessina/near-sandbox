@@ -21,7 +21,7 @@ interface NFTCardProps {
     isProcessing: boolean
     onList?: (data: FormData) => Promise<void>
     onRemoveListing?: (nft: NFTListed) => Promise<void>
-    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string }) => Promise<void>
+    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, address: string }) => Promise<void>
     onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
     variant: "listed" | "owned"
     ownedNfts?: NFT[]
@@ -35,7 +35,6 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
         nftKeysContract,
         nft.token as Chain,
         getPath(nft.token_id, nft.path || "")
-
     )
 
     const { accountBalance, getAccountBalance } = useAccountBalance(nft.token as Chain, derivedAddressAndPublicKey?.address ?? "")
@@ -101,6 +100,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                                 onOffer={onOffer}
                                 nftId={nft.token_id}
                                 ownedNfts={ownedNfts}
+                                chain={nft.saleConditions?.token as Chain}
                             />
                         )}
                     </>

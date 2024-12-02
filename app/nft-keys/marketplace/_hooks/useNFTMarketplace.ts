@@ -95,12 +95,12 @@ export function useNFTMarketplace({
   );
 
   const handleOfferNFT = useCallback(
-    async (purchaseTokenId: string, offerTokenId: string) => {
+    async (purchaseTokenId: string, offerTokenId: string, address: string) => {
       if (!nftContract) return;
 
-      const res = await getBalance(
-        "tb1qpshvmczx8dmn4wrptmfdwrp09vpnjc9u6k2g0h"
-      );
+      console.log(address);
+
+      const res = await getBalance(address);
 
       if (!res.result) {
         throw new Error("Failed to get balance");

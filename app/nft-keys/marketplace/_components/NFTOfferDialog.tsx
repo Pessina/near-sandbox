@@ -6,21 +6,33 @@ import { Wallet } from 'lucide-react'
 import { useState } from "react"
 import { NFTListed } from "../types"
 import { Chain } from "@/constants/chains"
+import { getPath } from "../_utils/getPath"
+import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
+import { useEnv } from "@/hooks/useEnv"
 
 interface OfferDialogProps {
     isProcessing: boolean
-    onOffer: (data: { purchaseTokenId: string, offerTokenId: string }) => Promise<void>
+    onOffer: (data: { purchaseTokenId: string, offerTokenId: string, address: string }) => Promise<void>
     nftId: string
     ownedNfts?: NFTListed[]
+    chain: Chain
 }
 
-export const NFTOfferDialog: React.FC<OfferDialogProps> = ({ isProcessing, onOffer, nftId, ownedNfts = [] }) => {
+export const NFTOfferDialog: React.FC<OfferDialogProps> = ({ isProcessing, onOffer, nftId, ownedNfts = [], chain }) => {
     const [offerTokenId, setOfferTokenId] = useState("")
+    const { nftKeysContract } = useEnv()
+
+    const derivedAddressAndPublicKeyListing = useDeriveAddressAndPublicKey(
+        nftKeysContract,
+        chain,
+        getPath(offerTokenId, "")
+    )
 
     const handleOffer = () => {
         onOffer({
             purchaseTokenId: nftId,
             offerTokenId,
+            address: derivedAddressAndPublicKeyListing?.address ?? ""
         })
     }
 

@@ -275,8 +275,8 @@ export default function NFTMarketplace() {
                         nfts={listedNfts}
                         variant="listed"
                         isProcessing={nftProcessing}
-                        onOffer={({ purchaseTokenId, offerTokenId }) =>
-                            handleOfferNFT(purchaseTokenId, offerTokenId)
+                        onOffer={({ purchaseTokenId, offerTokenId, address }) =>
+                            handleOfferNFT(purchaseTokenId, offerTokenId, address)
                         }
                         onTransaction={handleTransaction}
                         ownedNfts={ownedNfts}
