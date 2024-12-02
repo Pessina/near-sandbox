@@ -35,6 +35,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
         nftKeysContract,
         nft.token as Chain,
         getPath(nft.token_id, nft.path || "")
+
     )
 
     const { accountBalance, getAccountBalance } = useAccountBalance(nft.token as Chain, derivedAddressAndPublicKey?.address ?? "")

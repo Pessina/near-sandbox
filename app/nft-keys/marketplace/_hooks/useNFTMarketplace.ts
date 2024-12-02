@@ -8,10 +8,12 @@ import {
   ONE_YOCTO_NEAR,
   NEAR_MAX_GAS,
   MOCK_KRNL,
+  KrnlPayload,
 } from "../../_contract/constants";
 import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
+import { getBalance } from "../_krnl/getBalance";
 
 interface UseNFTMarketplaceProps {
   nftContract: NFTKeysContract | null;
@@ -96,7 +98,24 @@ export function useNFTMarketplace({
     async (purchaseTokenId: string, offerTokenId: string) => {
       if (!nftContract) return;
 
-      // TODO: add KRNL call
+      const res = await getBalance(
+        "tb1qpshvmczx8dmn4wrptmfdwrp09vpnjc9u6k2g0h"
+      );
+
+      if (!res.result) {
+        throw new Error("Failed to get balance");
+      }
+
+      const krnlPayload: KrnlPayload = {
+        auth: {
+          auth: res.result.auth,
+          kernel_responses: res.result.kernel_responses,
+          kernel_param_objects: res.result.kernel_params,
+        },
+        sender: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+        function_params:
+          "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001",
+      };
 
       await withErrorHandling(
         async () => {
@@ -106,8 +125,8 @@ export function useNFTMarketplace({
               account_id: nftKeysMarketplaceContract,
               msg: JSON.stringify({
                 token_id: purchaseTokenId,
-                krnl_payload: MOCK_KRNL,
-                debug_disable_check: true,
+                krnl_payload: krnlPayload,
+                debug_disable_check: false,
               }),
             },
             amount: ONE_YOCTO_NEAR,
