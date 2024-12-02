@@ -94,7 +94,7 @@ export type NFTKeysMarketplaceContract = Contract & {
     }>
   ) => Promise<void>;
 
-  is_krnl_authorized: (args: KrnlPayload) => Promise<boolean>;
+  is_krnl_authorized: (args: { krnl_payload: KrnlPayload }) => Promise<boolean>;
 
   decode_kernel_responses: (args: {
     kernel_responses: string;
