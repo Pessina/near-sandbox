@@ -3,10 +3,14 @@ import { DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { ListPlus } from "lucide-react"
-import { useState } from "react"
+import { ListPlus, Wallet } from "lucide-react"
+import { useState, useEffect } from "react"
 import { FormData } from "../types"
 import { Chain } from "@/constants/chains"
+import { useAccountBalance } from "@/hooks/useAccountBalance"
+import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
+import { useEnv } from "@/hooks/useEnv"
+import { getPath } from "../_utils/getPath"
 
 interface NFTListDialogProps {
     isProcessing: boolean
@@ -18,6 +22,24 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
     const [price, setPrice] = useState("")
     const [paymentToken, setPaymentToken] = useState(Chain.ETH)
     const [assetToken, setAssetToken] = useState(Chain.ETH)
+
+    const { nftKeysContract } = useEnv()
+    const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(
+        nftKeysContract,
+        assetToken,
+        getPath(tokenId, "")
+    )
+
+    const { accountBalance, getAccountBalance } = useAccountBalance(
+        assetToken,
+        derivedAddressAndPublicKey?.address ?? ''
+    )
+
+    useEffect(() => {
+        if (derivedAddressAndPublicKey?.address) {
+            getAccountBalance()
+        }
+    }, [derivedAddressAndPublicKey?.address, assetToken, getAccountBalance])
 
     const handleList = () => {
         onList({
@@ -45,7 +67,7 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-4">
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             <h4 className="text-sm font-medium">Asset Details</h4>
                             <div className="space-y-2">
                                 <label htmlFor="assetToken" className="text-sm text-muted-foreground">
@@ -63,6 +85,21 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-sm font-medium">Balance</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Button onClick={getAccountBalance} className="w-full">
+                                        <Wallet className="mr-2 h-4 w-4" />
+                                        Check Balance
+                                    </Button>
+                                    <Input
+                                        value={accountBalance || ""}
+                                        readOnly
+                                        className="text-right"
+                                        placeholder="Balance"
+                                    />
+                                </div>
                             </div>
                         </div>
 
