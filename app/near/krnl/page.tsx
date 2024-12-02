@@ -105,7 +105,7 @@ export default function KrnlPage() {
 
             const result = await marketplaceContract.is_krnl_authorized({
                 function_params: params,
-                payload: {
+                auth: {
                     auth: krnlPayload.auth,
                     kernel_responses: krnlPayload.kernelResponses,
                     kernel_param_objects: krnlPayload.kernelParams

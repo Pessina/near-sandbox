@@ -15,13 +15,11 @@ import { ethers } from "ethers";
 
 interface UseNFTMarketplaceProps {
   nftContract: NFTKeysContract | null;
-  accountId: string;
   onSuccess?: () => Promise<void>;
 }
 
 export function useNFTMarketplace({
   nftContract,
-  accountId,
   onSuccess,
 }: UseNFTMarketplaceProps) {
   const [isProcessing, setIsProcessing] = useState(false);

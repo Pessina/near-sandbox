@@ -154,7 +154,6 @@ export default function NFTMarketplace() {
         handleTransaction
     } = useNFTMarketplace({
         nftContract,
-        accountId: account?.accountId || '',
         onSuccess: loadData
     })
 
