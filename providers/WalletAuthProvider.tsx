@@ -4,11 +4,12 @@ import { useEnv } from '@/hooks/useEnv';
 import { NetworkId, setupWalletSelector, WalletSelector } from '@near-wallet-selector/core';
 // import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 interface WalletAuthContextType {
     walletSelector: WalletSelector | null;
     accountId: string | null;
+    fetchAccountId: () => Promise<void>;
 }
 
 const WalletAuthContext = createContext<WalletAuthContextType | undefined>(undefined);
@@ -36,23 +37,26 @@ export const WalletAuthProvider: React.FC<{ children: React.ReactNode }> = ({
         init();
     }, [nearNetworkId]);
 
+    const fetchAccountId = useCallback(async () => {
+        const wallet = await walletSelector?.wallet();
+        wallet?.getAccounts().then((accounts) => {
+            setAccountId(accounts[0]?.accountId || null)
+        })
+    }, [walletSelector])
+
     useEffect(() => {
         // TODO: cache the accountId (maybe React Query)
-        const fetchAccountId = async () => {
-            const wallet = await walletSelector?.wallet();
-            wallet?.getAccounts().then((accounts) => {
-                setAccountId(accounts[0]?.accountId || null)
-            })
+        if (walletSelector) {
+            fetchAccountId();
         }
-
-        fetchAccountId();
-    }, [walletSelector])
+    }, [walletSelector, fetchAccountId])
 
     return (
         <WalletAuthContext.Provider
             value={{
                 walletSelector,
                 accountId,
+                fetchAccountId,
             }}
         >
             {children}

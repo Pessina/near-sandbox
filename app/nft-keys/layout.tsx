@@ -2,9 +2,13 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
-import { Key, ShoppingBag, Wallet } from 'lucide-react'
+import { useWalletAuth } from "@/providers/WalletAuthProvider"
+import { Key, LogOut, ShoppingBag, Wallet } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useState } from "react"
 
 type PageConfig = {
   title: string
@@ -31,15 +35,32 @@ export default function NFTKeysLayout({
   children: React.ReactNode
 }) {
   const { selectedAccount, setSelectedAccount, accounts } = useKeyPairAuth()
+  const { walletSelector, accountId, fetchAccountId } = useWalletAuth()
   const pathname = usePathname()
+  const [authType, setAuthType] = useState<"keypair" | "wallet">("keypair")
 
   const getPageConfig = (): PageConfig => {
     const pathSegments = pathname?.split('/') || []
-    const pageType = pathSegments[2] // Gets the segment after /nft-keys/
+    const pageType = pathSegments[2]
     return PAGE_CONFIGS[pageType] || PAGE_CONFIGS.default
   }
 
   const pageConfig = getPageConfig()
+
+  const handleSignIn = async () => {
+    const wallet = await walletSelector?.wallet('my-near-wallet')
+    await wallet?.signIn({
+      contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
+      accounts: []
+    })
+    await fetchAccountId()
+  }
+
+  const handleSignOut = async () => {
+    const wallet = await walletSelector?.wallet('my-near-wallet')
+    await wallet?.signOut()
+    await fetchAccountId()
+  }
 
   return (
     <div className="min-h-screen">
@@ -54,43 +75,78 @@ export default function NFTKeysLayout({
               )}
             </div>
           </div>
-          <Select
-            onValueChange={(accountId) => {
-              const account = accounts.find(acc => acc.accountId === accountId)
-              if (account) {
-                setSelectedAccount(account)
-              }
-            }}
-            value={selectedAccount?.accountId}
-          >
-            <SelectTrigger className="w-[250px]">
-              <SelectValue>
-                {selectedAccount ? (
-                  <div className="flex items-center">
-                    <Wallet className="mr-2 h-4 w-4" />
-                    <span className="truncate">{selectedAccount.accountId}</span>
-                  </div>
-                ) : (
-                  "Select account"
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <ScrollArea>
-                {accounts.map((acc) => (
-                  <SelectItem key={acc.accountId} value={acc.accountId}>
-                    <div className="flex items-center">
+
+          <div className="flex items-center gap-4">
+            <Tabs value={authType} onValueChange={(value) => setAuthType(value as "keypair" | "wallet")}>
+              <TabsList>
+                <TabsTrigger value="keypair">Keypair</TabsTrigger>
+                <TabsTrigger value="wallet">Wallet</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {authType === "keypair" ? (
+              <Select
+                onValueChange={(accountId) => {
+                  const account = accounts.find(acc => acc.accountId === accountId)
+                  if (account) {
+                    setSelectedAccount(account)
+                  }
+                }}
+                value={selectedAccount?.accountId}
+              >
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue>
+                    {selectedAccount ? (
+                      <div className="flex items-center">
+                        <Wallet className="mr-2 h-4 w-4" />
+                        <span className="truncate">{selectedAccount.accountId}</span>
+                      </div>
+                    ) : (
+                      "Select account"
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <ScrollArea>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.accountId} value={acc.accountId}>
+                        <div className="flex items-center">
+                          <Wallet className="mr-2 h-4 w-4" />
+                          <span className="truncate">{acc.accountId}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center gap-2 text-sm">
+                {walletSelector?.isSignedIn() ? (
+                  <>
+                    <div className="flex items-center px-2 py-2 border rounded-md">
                       <Wallet className="mr-2 h-4 w-4" />
-                      <span className="truncate">{acc.accountId}</span>
+                      <span className="truncate">{accountId}</span>
                     </div>
-                  </SelectItem>
-                ))}
-              </ScrollArea>
-            </SelectContent>
-          </Select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={handleSignIn}>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Connect Wallet
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </header>
-      <main className="container mx-auto p-4 space-y-6" >
+      <main className="container mx-auto p-4 space-y-6">
         {children}
       </main>
     </div>
