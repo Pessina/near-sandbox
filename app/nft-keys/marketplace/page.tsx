@@ -13,7 +13,7 @@ import { ShoppingBag, Wallet } from 'lucide-react'
 import type { NFTListed } from "./types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
-import { MarketplaceHeader } from "./_components/MarketplaceHeader"
+import { ContractManagement } from "../_components/ContractManagement/ContractManagement"
 import { NFTGrid } from "./_components/NFTGrid"
 import { RemoveListingArgs, useNFTMarketplace } from "./_hooks/useNFTMarketplace"
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
@@ -29,7 +29,6 @@ export default function NFTMarketplace() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [isRegistered, setIsRegistered] = useState(false)
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
-    const [depositAmount, setDepositAmount] = useState("")
 
     useEffect(() => {
         if (!selectedAccount) return
@@ -196,23 +195,22 @@ export default function NFTMarketplace() {
         )
     }
 
-    const handleAddStorage = async () => {
+    const handleStorageDeposit = async (amount: string) => {
         if (!marketplaceContract) return
 
         await withErrorHandling(
             async () => {
                 await marketplaceContract.storage_deposit({
                     args: {},
-                    amount: parseNearAmount(depositAmount)!,
+                    amount: parseNearAmount(amount)!,
                 })
-                setDepositAmount("")
             },
             "Storage Added Successfully",
-            `You have added ${depositAmount} NEAR to your storage balance`
+            `You have added ${amount} NEAR to your storage balance`
         )
     }
 
-    const handleWithdrawStorage = async () => {
+    const handleStorageWithdraw = async () => {
         if (!marketplaceContract) return
 
         await withErrorHandling(
@@ -239,14 +237,16 @@ export default function NFTMarketplace() {
     }
 
     return (
-        <div>
-            <MarketplaceHeader
-                storageBalance={storageBalance}
-                depositAmount={depositAmount}
+        <div className="space-y-6">
+            <ContractManagement
+                onMint={handleMint}
+                onStorageDeposit={handleStorageDeposit}
+                onStorageWithdraw={handleStorageWithdraw}
                 isProcessing={isProcessing}
-                onDepositAmountChange={setDepositAmount}
-                onAddStorage={handleAddStorage}
-                onWithdrawStorage={handleWithdrawStorage}
+                storageBalance={storageBalance ? {
+                    total: storageBalance,
+                    available: storageBalance
+                } : null}
             />
 
             <Tabs defaultValue="browse">

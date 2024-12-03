@@ -1,6 +1,5 @@
 "use client"
 
-
 import { useState, useEffect, useCallback } from "react"
 import { createNFTContract } from "./_contract/NFTKeysContract"
 import { parseNearAmount } from "near-api-js/lib/utils/format"
@@ -9,14 +8,13 @@ import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "./_contract/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { MintNFTCard } from "./_components/MintNFTCard"
 import { NFTKeysGrid } from "./_components/NFTKeysGrid"
-import { ManageNFTForm } from "./_components/ManageNFTForm"
+import { ContractManagement } from "./_components/ContractManagement/ContractManagement"
 import { useForm } from "react-hook-form"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { CheckCircle2, Key } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
-import { StorageBalanceCard } from "./_components/StorageBalanceCard"
+import { ManageNFTForm } from "./_components/ContractManagement/_components/ManageNFTForm"
 
 interface NFTToken {
   token_id: string
@@ -266,10 +264,10 @@ export default function NFTKeysPage() {
     )
   }
 
-  const handleStorageDeposit = async (data: FormData) => {
-    if (!nftContract || !data.amount || !selectedAccount) return
-    const amount = parseNearAmount(data.amount)
-    if (!amount) return
+  const handleStorageDeposit = async (amount: string) => {
+    if (!nftContract || !amount || !selectedAccount) return
+    const amountNumber = parseNearAmount(amount)
+    if (!amountNumber) return
 
     await handleContractAction(
       async () => {
@@ -286,10 +284,10 @@ export default function NFTKeysPage() {
     )
   }
 
-  const handleStorageWithdraw = async (data: FormData) => {
-    if (!nftContract || !data.amount) return
-    const amount = parseNearAmount(data.amount)
-    if (!amount) return
+  const handleStorageWithdraw = async (amount: string) => {
+    if (!nftContract || !amount) return
+    const amountNumber = parseNearAmount(amount)
+    if (!amountNumber) return
 
     await handleContractAction(
       async () => {
@@ -325,12 +323,6 @@ export default function NFTKeysPage() {
       case 'transfer':
         handleTransfer(data)
         break
-      case 'storageDeposit':
-        handleStorageDeposit(data)
-        break
-      case 'storageWithdraw':
-        handleStorageWithdraw(data)
-        break
     }
   }
 
@@ -352,10 +344,13 @@ export default function NFTKeysPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <MintNFTCard onMint={handleMint} isProcessing={isProcessing} />
-        <StorageBalanceCard storageBalance={storageBalance} />
-      </div>
+      <ContractManagement
+        storageBalance={storageBalance || null}
+        onMint={handleMint}
+        onStorageDeposit={handleStorageDeposit}
+        onStorageWithdraw={handleStorageWithdraw}
+        isProcessing={isProcessing}
+      />
 
       <Card>
         <CardHeader>

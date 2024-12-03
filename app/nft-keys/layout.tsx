@@ -1,12 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
-import { Key, ShoppingBag, Wallet, ChevronDown } from 'lucide-react'
+import { Key, ShoppingBag, Wallet } from 'lucide-react'
 import { usePathname } from 'next/navigation'
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 type PageConfig = {
@@ -64,10 +61,19 @@ export default function NFTKeysLayout({
                 setSelectedAccount(account)
               }
             }}
-            defaultValue={selectedAccount?.accountId}
+            value={selectedAccount?.accountId}
           >
             <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Select account" />
+              <SelectValue>
+                {selectedAccount ? (
+                  <div className="flex items-center">
+                    <Wallet className="mr-2 h-4 w-4" />
+                    <span className="truncate">{selectedAccount.accountId}</span>
+                  </div>
+                ) : (
+                  "Select account"
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <ScrollArea>
