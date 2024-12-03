@@ -5,16 +5,16 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { ListPlus, Wallet } from "lucide-react"
 import { useState, useEffect } from "react"
-import { FormData } from "../types"
 import { Chain } from "@/constants/chains"
 import { useAccountBalance } from "@/hooks/useAccountBalance"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
+import { ListNFTArgs } from "../_hooks/useNFTMarketplace"
 
 interface NFTListDialogProps {
     isProcessing: boolean
-    onList: (data: FormData) => Promise<void>
+    onList: (args: ListNFTArgs) => Promise<void>
     tokenId: string
 }
 
@@ -43,10 +43,12 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
 
     const handleList = () => {
         onList({
-            tokenId,
-            saleConditions: { token: paymentToken as Chain, amount: price },
-            path: "",
-            token: assetToken as Chain
+            data: {
+                tokenId,
+                saleConditions: { token: paymentToken as Chain, amount: price },
+                path: "",
+                token: assetToken as Chain
+            }
         })
     }
 

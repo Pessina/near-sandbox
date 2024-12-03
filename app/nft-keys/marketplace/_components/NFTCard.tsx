@@ -15,14 +15,15 @@ import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
 import { formatTokenAmount } from "../_utils/chains"
 import { NFT } from "../../_contract/NFTKeysContract"
+import { ListNFTArgs, OfferNFTArgs, TransactionArgs, RemoveListingArgs } from "../_hooks/useNFTMarketplace"
 
 interface NFTCardProps {
     nft: NFTListed
     isProcessing: boolean
-    onList?: (data: FormData) => Promise<void>
-    onRemoveListing?: (nft: NFTListed) => Promise<void>
-    onOffer?: (data: { purchaseTokenId: string, offerTokenId: string, address: string }) => Promise<void>
-    onTransaction?: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
+    onList?: (args: ListNFTArgs) => Promise<void>
+    onRemoveListing?: (args: RemoveListingArgs) => Promise<void>
+    onOffer?: (args: OfferNFTArgs) => Promise<void>
+    onTransaction?: (args: TransactionArgs) => Promise<void>
     variant: "listed" | "owned"
     ownedNfts?: NFT[]
 }
@@ -94,7 +95,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
             <CardFooter className="p-4 flex flex-col gap-2">
                 {variant === "listed" && (
                     <>
-                        {onOffer && (
+                        {onOffer && derivedAddressAndPublicKey && (
                             <NFTOfferDialog
                                 isProcessing={isProcessing}
                                 onOffer={onOffer}
@@ -108,7 +109,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                 {variant === "owned" && (
                     <>
                         {nft.saleConditions?.amount ? (
-                            <Button onClick={() => onRemoveListing && onRemoveListing(nft)} disabled={isProcessing} variant="destructive" className="w-full">
+                            <Button onClick={() => onRemoveListing && onRemoveListing({ nft })} disabled={isProcessing} variant="destructive" className="w-full">
                                 <XCircle className="mr-2 h-4 w-4" />
                                 {isProcessing ? 'Processing...' : 'Remove Listing'}
                             </Button>
@@ -119,7 +120,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                                     onList={onList}
                                     tokenId={nft.token_id}
                                 />}
-                                {onTransaction && <NFTTransactionDialog
+                                {onTransaction && derivedAddressAndPublicKey && <NFTTransactionDialog
                                     nft={nft}
                                     isProcessing={isProcessing}
                                     onTransaction={onTransaction}

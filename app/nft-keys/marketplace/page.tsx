@@ -7,8 +7,6 @@ import type { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types"
 import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
 import { parseNearAmount } from "near-api-js/lib/utils/format"
 import { ONE_YOCTO_NEAR } from "../_contract/constants"
-import useInitNear from "@/hooks/useInitNear"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Wallet } from 'lucide-react'
@@ -17,12 +15,11 @@ import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { MarketplaceHeader } from "./_components/MarketplaceHeader"
 import { NFTGrid } from "./_components/NFTGrid"
-import { useNFTMarketplace } from "./_hooks/useNFTMarketplace";
+import { RemoveListingArgs, useNFTMarketplace } from "./_hooks/useNFTMarketplace"
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
 
 export default function NFTMarketplace() {
-    const { account, isLoading } = useInitNear({
-        isViewOnly: false,
-    })
+    const { selectedAccount } = useKeyPairAuth()
     const { toast } = useToast()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
@@ -35,20 +32,20 @@ export default function NFTMarketplace() {
     const [depositAmount, setDepositAmount] = useState("")
 
     useEffect(() => {
-        if (!account) return
+        if (!selectedAccount) return
 
         const nftContract = createNFTContract({
-            account,
+            account: selectedAccount,
             contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
         })
         setNftContract(nftContract)
 
         const marketplaceContract = createMarketplaceContract({
-            account,
+            account: selectedAccount,
             contractId: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!
         })
         setMarketplaceContract(marketplaceContract)
-    }, [account])
+    }, [selectedAccount])
 
     const showErrorToast = useCallback((title: string, error: unknown) => {
         toast({
@@ -67,13 +64,13 @@ export default function NFTMarketplace() {
     }, [toast])
 
     const loadData = useCallback(async () => {
-        if (!nftContract || !marketplaceContract || !account) return
+        if (!nftContract || !marketplaceContract || !selectedAccount) return
 
         try {
             const [allNfts, userNfts, sales, storageBalance] = await Promise.all([
                 nftContract.nft_tokens({ from_index: "0", limit: 100 }),
                 nftContract.nft_tokens_for_owner({
-                    account_id: account.accountId,
+                    account_id: selectedAccount.accountId,
                     from_index: "0",
                     limit: 100,
                 }),
@@ -82,7 +79,7 @@ export default function NFTMarketplace() {
                     from_index: "0",
                     limit: 100,
                 }),
-                marketplaceContract.storage_balance_of({ account_id: account.accountId }),
+                marketplaceContract.storage_balance_of({ account_id: selectedAccount.accountId }),
             ])
 
             const listedNftsWithPrice: NFTListed[] = await Promise.all(
@@ -103,7 +100,7 @@ export default function NFTMarketplace() {
             ).then(results => results.flatMap((item) => item !== null ? [item] : []))
 
             const ownedNftsWithPrice = userNfts
-                .filter(nft => nft.owner_id === account.accountId)
+                .filter(nft => nft.owner_id === selectedAccount.accountId)
                 .map(nft => {
                     const listedNft = listedNftsWithPrice.find(listed => listed.token_id === nft.token_id)
                     return listedNft ? { ...nft, saleConditions: listedNft.saleConditions, token: listedNft.token, path: listedNft.path } : nft
@@ -116,7 +113,7 @@ export default function NFTMarketplace() {
         } catch (error) {
             showErrorToast("Failed to load marketplace data", error)
         }
-    }, [nftContract, marketplaceContract, account, showErrorToast])
+    }, [nftContract, marketplaceContract, selectedAccount, showErrorToast])
 
     useEffect(() => {
         loadData()
@@ -157,7 +154,7 @@ export default function NFTMarketplace() {
         onSuccess: loadData
     })
 
-    const handleRemoveListing = async (nft: NFT) => {
+    const handleRemoveListing = async ({ nft }: RemoveListingArgs) => {
         if (!marketplaceContract) return
 
         await withErrorHandling(
@@ -230,15 +227,7 @@ export default function NFTMarketplace() {
         )
     }
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <Skeleton className="h-32 w-32 rounded-full" />
-            </div>
-        )
-    }
-
-    if (!account) {
+    if (!selectedAccount) {
         return <ConnectWalletCard />
     }
 
@@ -250,9 +239,8 @@ export default function NFTMarketplace() {
     }
 
     return (
-        <div className="container mx-auto p-4 space-y-6">
+        <div>
             <MarketplaceHeader
-                accountId={account.accountId}
                 storageBalance={storageBalance}
                 depositAmount={depositAmount}
                 isProcessing={isProcessing}
@@ -275,9 +263,7 @@ export default function NFTMarketplace() {
                         nfts={listedNfts}
                         variant="listed"
                         isProcessing={nftProcessing}
-                        onOffer={({ purchaseTokenId, offerTokenId, address }) =>
-                            handleOfferNFT(purchaseTokenId, offerTokenId, address)
-                        }
+                        onOffer={handleOfferNFT}
                         onTransaction={handleTransaction}
                         ownedNfts={ownedNfts}
                     />

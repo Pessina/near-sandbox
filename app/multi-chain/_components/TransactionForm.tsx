@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMultiChainTransaction } from '../../../hooks/useMultiChainTransaction';
 import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
 import { useDeriveAddressAndPublicKey } from '../../../hooks/useDeriveAddressAndPublicKey';
-import { useAuth } from '@/providers/AuthProvider';
+import { useWalletAuth } from '@/providers/WalletAuthProvider';
 import { getPath } from '../_utils/getPath';
 import { Bitcoin } from 'multichain-tools';
 
@@ -30,7 +30,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
     const [isSendingTransaction, setIsSendingTransaction] = useState(false);
     const { toast } = useToast();
     const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainTransaction();
-    const { accountId } = useAuth();
+    const { accountId } = useWalletAuth();
     const addressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, getPath(chain, derivedPath));
 
     const onSubmit = async (data: Transaction) => {

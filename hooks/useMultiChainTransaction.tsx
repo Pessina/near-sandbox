@@ -1,5 +1,5 @@
 import { useEnv } from "@/hooks/useEnv";
-import { useAuth } from "@/providers/AuthProvider";
+import { useWalletAuth } from "@/providers/WalletAuthProvider";
 import {
     KeyDerivationPath,
     transactionBuilder,
@@ -29,7 +29,7 @@ interface MultiChainTransactionHook {
 
 // TODO: It should accept the contract type to be used as args
 export const useMultiChainTransaction = (): MultiChainTransactionHook => {
-    const { walletSelector, accountId } = useAuth();
+    const { walletSelector, accountId } = useWalletAuth();
     const { nearNetworkId, chainSignatureContract, nftKeysContract } = useEnv();
     const { account } = useInitNear();
     const { evm, btc, cosmos } = useChains();

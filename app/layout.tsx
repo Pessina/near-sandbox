@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "@/providers/AuthProvider";
+import { WalletAuthProvider } from "@/providers/WalletAuthProvider";
 import "./globals.css";
+import { KeyPairAuthProvider } from "@/providers/KeyPairAuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,12 +21,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </AuthProvider>
+        <KeyPairAuthProvider>
+          <WalletAuthProvider>
+            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </WalletAuthProvider>
+        </KeyPairAuthProvider>
       </body>
     </html>
   );

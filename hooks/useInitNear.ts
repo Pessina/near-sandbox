@@ -16,25 +16,40 @@ const useInitNear = (
   }
 ) => {
   const [state, setState] = useState<
-    { account: Account; connection: Near } | undefined
+    | {
+        accounts: Account[];
+        connection: Near;
+      }
+    | undefined
   >(undefined);
   const [isLoading, setIsLoading] = useState(true);
-  const { nearPrivateKey, nearAccountId, nearNetworkId } = useEnv(options);
+  const { nearAccounts, nearNetworkId } = useEnv(options);
 
   useEffect(() => {
     const initialize = async () => {
       try {
-        let keyPair: KeyPair;
-        let accountId: string;
-        if (options?.isViewOnly) {
-          keyPair = KeyPair.fromRandom("ED25519");
-          accountId = `${keyPair.getPublicKey().toString()}.${nearNetworkId}`;
-        } else {
-          keyPair = KeyPair.fromString(nearPrivateKey as KeyPairString);
-          accountId = nearAccountId as string;
-        }
         const keyStore = new keyStores.InMemoryKeyStore();
-        keyStore.setKey(nearNetworkId, accountId, keyPair);
+        let accounts: Account[] = [];
+
+        if (options?.isViewOnly) {
+          // For view-only, create a single random account
+          const keyPair = KeyPair.fromRandom("ED25519");
+          const accountId = `${keyPair
+            .getPublicKey()
+            .toString()}.${nearNetworkId}`;
+          await keyStore.setKey(nearNetworkId, accountId, keyPair);
+        } else {
+          // Initialize all accounts from nearAccounts array
+          if (nearAccounts.length === 0) {
+            throw new Error("No NEAR accounts found in environment");
+          }
+
+          // Store all account keys in keyStore
+          for (const { accountId, privateKey } of nearAccounts) {
+            const keyPair = KeyPair.fromString(privateKey as KeyPairString);
+            await keyStore.setKey(nearNetworkId, accountId, keyPair);
+          }
+        }
 
         const config: ConnectConfig = {
           networkId: nearNetworkId,
@@ -49,16 +64,20 @@ const useInitNear = (
               : "https://helper.testnet.near.org",
         };
 
-        if (!process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID) {
-          throw new Error("No account found in environment");
+        const connection = await connect(config);
+
+        if (options?.isViewOnly) {
+          // For view-only, get the single random account
+          const keys = await keyStore.getAccounts(nearNetworkId);
+          accounts = [await connection.account(keys[0])];
+        } else {
+          // Get all accounts from nearAccounts
+          accounts = await Promise.all(
+            nearAccounts.map(({ accountId }) => connection.account(accountId))
+          );
         }
 
-        const connection = await connect(config);
-        const account = await connection.account(
-          process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID
-        );
-
-        setState({ connection, account });
+        setState({ connection, accounts });
       } catch (error) {
         console.error("Failed to initialize NEAR:", error);
       } finally {
@@ -67,7 +86,7 @@ const useInitNear = (
     };
 
     initialize();
-  }, [nearAccountId, nearPrivateKey, nearNetworkId, options?.isViewOnly]);
+  }, [nearAccounts, nearNetworkId, options?.isViewOnly]);
 
   return { ...state, isLoading };
 };

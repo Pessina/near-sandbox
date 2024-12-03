@@ -1,7 +1,7 @@
 "use client"
 
+
 import { useState, useEffect, useCallback } from "react"
-import useInitNear from "@/hooks/useInitNear"
 import { createNFTContract } from "./_contract/NFTKeysContract"
 import { parseNearAmount } from "near-api-js/lib/utils/format"
 import { NFTKeysContract } from "./_contract/NFTKeysContract/types"
@@ -9,14 +9,14 @@ import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "./_contract/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { StorageBalanceCard } from "./_components/StorageBalanceCard"
 import { MintNFTCard } from "./_components/MintNFTCard"
 import { NFTKeysGrid } from "./_components/NFTKeysGrid"
 import { ManageNFTForm } from "./_components/ManageNFTForm"
 import { useForm } from "react-hook-form"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2, Key } from 'lucide-react'
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
+import { StorageBalanceCard } from "./_components/StorageBalanceCard"
 
 interface NFTToken {
   token_id: string
@@ -40,45 +40,63 @@ type FormData = {
 }
 
 export default function NFTKeysPage() {
-  const { account, isLoading } = useInitNear({
-    isViewOnly: false,
-  })
+  const { selectedAccount } = useKeyPairAuth()
   const { toast } = useToast()
   const [nftContract, setNftContract] = useState<NFTKeysContract>()
   const [isProcessing, setIsProcessing] = useState(false)
   const [nfts, setNfts] = useState<NFTToken[]>([])
   const [ownedNfts, setOwnedNfts] = useState<NFTToken[]>([])
-  const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(null)
   const [publicKey, setPublicKey] = useState<string>('')
   const { register, handleSubmit, watch, reset } = useForm<FormData>()
 
+  const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(null)
+
+  const loadStorageBalance = useCallback(async () => {
+    if (!nftContract || !selectedAccount) return
+
+    try {
+      const balance = await nftContract.storage_balance_of({
+        account_id: selectedAccount.accountId
+      })
+      setStorageBalance(balance)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error loading storage balance",
+        description: String(error)
+      })
+    }
+  }, [nftContract, selectedAccount, toast])
+
   useEffect(() => {
-    if (!account) return
+    loadStorageBalance()
+  }, [loadStorageBalance])
+
+  useEffect(() => {
+    if (!selectedAccount) return
 
     const contract = createNFTContract({
-      account,
+      account: selectedAccount,
       contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
     })
     setNftContract(contract)
-  }, [account])
+  }, [selectedAccount])
 
   const loadNFTData = useCallback(async () => {
-    if (!nftContract || !account) return
+    if (!nftContract || !selectedAccount) return
 
     try {
-      const [allNfts, userNfts, balance] = await Promise.all([
+      const [allNfts, userNfts] = await Promise.all([
         nftContract.nft_tokens({}),
         nftContract.nft_tokens_for_owner({
-          account_id: account.accountId,
+          account_id: selectedAccount.accountId,
           from_index: "0",
           limit: 100,
-        }),
-        nftContract.storage_balance_of({ account_id: account.accountId }),
+        })
       ])
 
       setNfts(allNfts)
       setOwnedNfts(userNfts)
-      setStorageBalance(balance)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -86,7 +104,7 @@ export default function NFTKeysPage() {
         description: String(error)
       })
     }
-  }, [nftContract, account, toast])
+  }, [nftContract, selectedAccount, toast])
 
   useEffect(() => {
     loadNFTData()
@@ -249,7 +267,7 @@ export default function NFTKeysPage() {
   }
 
   const handleStorageDeposit = async (data: FormData) => {
-    if (!nftContract || !data.amount || !account) return
+    if (!nftContract || !data.amount || !selectedAccount) return
     const amount = parseNearAmount(data.amount)
     if (!amount) return
 
@@ -257,7 +275,7 @@ export default function NFTKeysPage() {
       async () => {
         await nftContract.storage_deposit({
           args: {
-            account_id: account.accountId,
+            account_id: selectedAccount.accountId,
             registration_only: false
           },
           amount
@@ -316,15 +334,7 @@ export default function NFTKeysPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="h-32 w-32 rounded-full" />
-      </div>
-    )
-  }
-
-  if (!account) {
+  if (!selectedAccount) {
     return (
       <Card className="max-w-md mx-auto mt-20">
         <CardHeader>
@@ -341,15 +351,10 @@ export default function NFTKeysPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold mb-6 flex items-center space-x-2">
-        <Key className="h-8 w-8" />
-        <span>NFT Keys Management</span>
-      </h1>
-
+    <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StorageBalanceCard storageBalance={storageBalance} />
         <MintNFTCard onMint={handleMint} isProcessing={isProcessing} />
+        <StorageBalanceCard storageBalance={storageBalance} />
       </div>
 
       <Card>

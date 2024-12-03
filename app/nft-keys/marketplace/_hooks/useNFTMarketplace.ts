@@ -7,7 +7,6 @@ import { parseTokenAmount } from "../_utils/chains";
 import {
   ONE_YOCTO_NEAR,
   NEAR_MAX_GAS,
-  MOCK_KRNL,
   KrnlPayload,
 } from "../../_contract/constants";
 import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
@@ -15,15 +14,59 @@ import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
 import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
 
-interface UseNFTMarketplaceProps {
+// Function argument types
+export interface ListNFTArgs {
+  data: FormData;
+}
+
+export interface OfferNFTArgs {
+  purchaseTokenId: string;
+  offerTokenId: string;
+  address: string;
+}
+
+export interface TransactionArgs {
+  nft: NFTListed;
+  derivedAddressAndPublicKey: {
+    address: string;
+    publicKey: string;
+  };
+  data: {
+    to: string;
+    value: string;
+    chain: Chain;
+  };
+}
+
+export interface RemoveListingArgs {
+  nft: NFTListed;
+}
+
+export interface StorageDepositArgs {
+  amount: string;
+}
+
+export interface UseNFTMarketplaceProps {
   nftContract: NFTKeysContract | null;
   onSuccess?: () => Promise<void>;
+}
+
+export interface NFTMarketplaceActions {
+  isProcessing: boolean;
+  handleListNFT: (args: ListNFTArgs) => Promise<void>;
+  handleOfferNFT: (args: OfferNFTArgs) => Promise<void>;
+  handleTransaction: (args: TransactionArgs) => Promise<void>;
+  handleRemoveListing: (args: RemoveListingArgs) => Promise<void>;
+  handleRegisterMarketplace: () => Promise<void>;
+  handleAddStorage: (args: StorageDepositArgs) => Promise<void>;
+  handleWithdrawStorage: () => Promise<void>;
+  handleMint: () => Promise<void>;
 }
 
 export function useNFTMarketplace({
   nftContract,
   onSuccess,
-}: UseNFTMarketplaceProps) {
+}: UseNFTMarketplaceProps): NFTMarketplaceActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } =
@@ -61,7 +104,7 @@ export function useNFTMarketplace({
   );
 
   const handleListNFT = useCallback(
-    async (data: FormData) => {
+    async ({ data }: ListNFTArgs) => {
       if (!nftContract || !data.saleConditions.amount) return;
 
       const amount = parseTokenAmount(
@@ -95,7 +138,7 @@ export function useNFTMarketplace({
   );
 
   const handleOfferNFT = useCallback(
-    async (purchaseTokenId: string, offerTokenId: string, address: string) => {
+    async ({ purchaseTokenId, offerTokenId, address }: OfferNFTArgs) => {
       if (!nftContract) return;
 
       let res: any;
@@ -143,13 +186,8 @@ export function useNFTMarketplace({
     [nftContract, nftKeysMarketplaceContract, withErrorHandling]
   );
 
-  // TODO: The path should not be hardcoded
   const handleTransaction = useCallback(
-    async (
-      nft: NFTListed,
-      derivedAddressAndPublicKey: { address: string; publicKey: string },
-      data: { to: string; value: string; chain: Chain }
-    ) => {
+    async ({ nft, derivedAddressAndPublicKey, data }: TransactionArgs) => {
       try {
         let res: any;
         switch (data.chain) {
@@ -223,5 +261,10 @@ export function useNFTMarketplace({
     handleListNFT,
     handleOfferNFT,
     handleTransaction,
+    handleRemoveListing: async () => {}, // Implement in page.tsx
+    handleRegisterMarketplace: async () => {}, // Implement in page.tsx
+    handleAddStorage: async () => {}, // Implement in page.tsx
+    handleWithdrawStorage: async () => {}, // Implement in page.tsx
+    handleMint: async () => {}, // Implement in page.tsx
   };
 }

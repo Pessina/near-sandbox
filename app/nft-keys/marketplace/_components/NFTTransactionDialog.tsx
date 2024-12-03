@@ -12,11 +12,12 @@ import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicK
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
 import { useCopy } from "@/hooks/useCopy"
+import { TransactionArgs } from "../_hooks/useNFTMarketplace"
 
 interface NFTTransactionDialogProps {
     nft: NFTListed
     isProcessing: boolean
-    onTransaction: (nft: NFTListed, derivedAddressAndPublicKey: { address: string, publicKey: string }, data: { to: string, value: string, chain: Chain }) => Promise<void>
+    onTransaction: (args: TransactionArgs) => Promise<void>
     path: string
     chain: string
 }
@@ -54,10 +55,14 @@ export const NFTTransactionDialog: React.FC<NFTTransactionDialogProps> = ({
     const handleTransaction = () => {
         if (!derivedAddressAndPublicKey) return
 
-        onTransaction(nft, derivedAddressAndPublicKey, {
-            to,
-            value,
-            chain: selectedChain
+        onTransaction({
+            nft,
+            derivedAddressAndPublicKey,
+            data: {
+                to,
+                value,
+                chain: selectedChain
+            }
         })
     }
 
