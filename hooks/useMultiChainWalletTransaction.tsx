@@ -28,7 +28,7 @@ interface MultiChainTransactionHook {
 }
 
 // TODO: It should accept the contract type to be used as args
-export const useMultiChainTransaction = (): MultiChainTransactionHook => {
+export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
     const { walletSelector, accountId } = useWalletAuth();
     const { nearNetworkId, chainSignatureContract, nftKeysContract } = useEnv();
     // The account is used as view only so it doesn't matter the account we use here

@@ -8,8 +8,9 @@ import {
   ONE_YOCTO_NEAR,
   NEAR_MAX_GAS,
   KrnlPayload,
+  MOCK_KRNL,
 } from "../../_contract/constants";
-import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
+import { useMultiChainWalletTransaction } from "@/hooks/useMultiChainWalletTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
 import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
@@ -82,7 +83,7 @@ export function useNFTMarketplace({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } =
-    useMultiChainTransaction();
+    useMultiChainWalletTransaction();
   const { nftKeysMarketplaceContract } = useEnv();
   const queryClient = useQueryClient();
 
@@ -202,6 +203,22 @@ export function useNFTMarketplace({
 
       await withErrorHandling(
         async () => {
+          // Not ideal but temporary solution - check if approved, revoke and approve again
+          const isApproved = await nftContract.nft_is_approved({
+            token_id: data.tokenId,
+            approved_account_id: nftKeysMarketplaceContract,
+          });
+
+          if (isApproved) {
+            await nftContract.nft_revoke({
+              args: {
+                token_id: data.tokenId,
+                account_id: nftKeysMarketplaceContract,
+              },
+              amount: ONE_YOCTO_NEAR,
+            });
+          }
+
           await nftContract.nft_approve({
             args: {
               token_id: data.tokenId,
@@ -229,38 +246,55 @@ export function useNFTMarketplace({
     async ({ purchaseTokenId, offerTokenId, address }: OfferNFTArgs) => {
       if (!nftContract) return;
 
-      let res: any;
-      if (address.startsWith("0x")) {
-        res = await getBalanceETH(address);
-      } else {
-        res = await getBalanceBTC(address);
-      }
+      // let res: any;
+      // if (address.startsWith("0x")) {
+      //   res = await getBalanceETH(address);
+      // } else {
+      //   res = await getBalanceBTC(address);
+      // }
 
-      if (!res.result) {
-        throw new Error("Failed to get balance");
-      }
+      // if (!res.result) {
+      //   throw new Error("Failed to get balance");
+      // }
 
-      const krnlPayload: KrnlPayload = {
-        auth: {
-          auth: res.result.auth,
-          kernel_responses: res.result.kernel_responses,
-          kernel_param_objects: res.result.kernel_params,
-        },
-        sender: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-        function_params:
-          "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001",
-      };
+      // const krnlPayload: KrnlPayload = {
+      //   auth: {
+      //     auth: res.result.auth,
+      //     kernel_responses: res.result.kernel_responses,
+      //     kernel_param_objects: res.result.kernel_params,
+      //   },
+      //   sender: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+      //   function_params:
+      //     "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001",
+      // };
 
       await withErrorHandling(
         async () => {
+          // Not ideal but temporary solution - check if approved, revoke and approve again
+          const isApproved = await nftContract.nft_is_approved({
+            token_id: offerTokenId,
+            approved_account_id: nftKeysMarketplaceContract,
+          });
+
+          if (isApproved) {
+            await nftContract.nft_revoke({
+              args: {
+                token_id: offerTokenId,
+                account_id: nftKeysMarketplaceContract,
+              },
+              amount: ONE_YOCTO_NEAR,
+            });
+          }
+
           await nftContract.nft_approve({
             args: {
               token_id: offerTokenId,
               account_id: nftKeysMarketplaceContract,
               msg: JSON.stringify({
                 token_id: purchaseTokenId,
-                krnl_payload: krnlPayload,
-                debug_disable_check: false,
+                // krnl_payload: krnlPayload,
+                krnl_payload: MOCK_KRNL,
+                debug_disable_check: true,
               }),
             },
             amount: ONE_YOCTO_NEAR,
