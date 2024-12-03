@@ -2,31 +2,27 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { createNFTContract } from "../_contract/NFTKeysContract"
-import { createMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
+import { createMarketplaceContract, NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
 import type { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types"
-import type { NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract/types"
-import { parseNearAmount } from "near-api-js/lib/utils/format"
-import { ONE_YOCTO_NEAR } from "../_contract/constants"
-import { useToast } from "@/hooks/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ShoppingBag, Wallet } from 'lucide-react'
 import type { NFTListed } from "./types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { ContractManagement } from "../_components/ContractManagement/ContractManagement"
 import { NFTGrid } from "./_components/NFTGrid"
-import { RemoveListingArgs, useNFTMarketplace } from "./_hooks/useNFTMarketplace"
+import { useNFTMarketplace } from "./_hooks/useNFTMarketplace"
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
+import { useEnv } from "@/hooks/useEnv"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ShoppingBag, Wallet } from 'lucide-react'
 
 export default function NFTMarketplace() {
     const { selectedAccount } = useKeyPairAuth()
-    const { toast } = useToast()
+    const { nftKeysContract, nftKeysMarketplaceContract } = useEnv()
 
     const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
     const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
     const [ownedNfts, setOwnedNfts] = useState<NFT[]>([])
     const [listedNfts, setListedNfts] = useState<NFTListed[]>([])
-    const [isProcessing, setIsProcessing] = useState(false)
     const [isRegistered, setIsRegistered] = useState(false)
     const [storageBalance, setStorageBalance] = useState<string | null>(null)
 
@@ -35,32 +31,16 @@ export default function NFTMarketplace() {
 
         const nftContract = createNFTContract({
             account: selectedAccount,
-            contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
+            contractId: nftKeysContract
         })
         setNftContract(nftContract)
 
         const marketplaceContract = createMarketplaceContract({
             account: selectedAccount,
-            contractId: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!
+            contractId: nftKeysMarketplaceContract
         })
         setMarketplaceContract(marketplaceContract)
-    }, [selectedAccount])
-
-    const showErrorToast = useCallback((title: string, error: unknown) => {
-        toast({
-            title,
-            description: `${title}: ${error}`,
-            variant: "destructive",
-        })
-    }, [toast])
-
-    const showSuccessToast = useCallback((title: string, description: string) => {
-        toast({
-            title,
-            description,
-            variant: "default",
-        })
-    }, [toast])
+    }, [nftKeysContract, nftKeysMarketplaceContract, selectedAccount])
 
     const loadData = useCallback(async () => {
         if (!nftContract || !marketplaceContract || !selectedAccount) return
@@ -110,120 +90,29 @@ export default function NFTMarketplace() {
             setStorageBalance(storageBalance)
             setIsRegistered(storageBalance !== null && storageBalance !== "0")
         } catch (error) {
-            showErrorToast("Failed to load marketplace data", error)
+            console.error("Failed to load marketplace data:", error)
         }
-    }, [nftContract, marketplaceContract, selectedAccount, showErrorToast])
+    }, [marketplaceContract, nftContract, selectedAccount])
 
     useEffect(() => {
         loadData()
     }, [loadData])
 
-    const withErrorHandling = useCallback(async (operation: () => Promise<void>, processingMessage: string, successMessage: string) => {
-        if (isProcessing) return
-        setIsProcessing(true)
-        try {
-            await operation()
-            showSuccessToast(processingMessage, successMessage)
-            await loadData()
-        } catch (error) {
-            showErrorToast(processingMessage, error)
-        } finally {
-            setIsProcessing(false)
-        }
-    }, [isProcessing, loadData, showSuccessToast, showErrorToast])
-
-    const handleMint = async () => {
-        if (!nftContract) return
-        await withErrorHandling(
-            async () => {
-                await nftContract.mint()
-            },
-            "NFT Key Minted Successfully",
-            "Your new NFT Key has been minted"
-        )
-    }
-
     const {
-        isProcessing: nftProcessing,
+        isProcessing,
         handleListNFT,
         handleOfferNFT,
-        handleTransaction
+        handleTransaction,
+        handleRemoveListing,
+        handleRegisterMarketplace,
+        handleAddStorage,
+        handleWithdrawStorage,
+        handleMint,
     } = useNFTMarketplace({
         nftContract,
-        onSuccess: loadData
+        marketplaceContract,
+        onSuccess: loadData,
     })
-
-    const handleRemoveListing = async ({ nft }: RemoveListingArgs) => {
-        if (!marketplaceContract) return
-
-        await withErrorHandling(
-            async () => {
-                await marketplaceContract.remove_sale({
-                    args: {
-                        nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
-                        token_id: nft.token_id,
-                    },
-                    amount: ONE_YOCTO_NEAR,
-                })
-                await nftContract?.nft_revoke({
-                    args: {
-                        token_id: nft.token_id,
-                        account_id: process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
-                    },
-                    amount: ONE_YOCTO_NEAR
-                })
-            },
-            "Listing Removed Successfully",
-            `Your NFT Key ${nft.token_id} has been removed from the marketplace`
-        )
-    }
-
-    const handleRegisterMarketplace = async () => {
-        if (!marketplaceContract) return
-
-        await withErrorHandling(
-            async () => {
-                const storageMinimum = await marketplaceContract.storage_minimum_balance()
-                await marketplaceContract.storage_deposit({
-                    args: {},
-                    amount: storageMinimum,
-                })
-                setIsRegistered(true)
-            },
-            "Marketplace Registration Successful",
-            "You have successfully registered to the NFT Keys marketplace"
-        )
-    }
-
-    const handleStorageDeposit = async (amount: string) => {
-        if (!marketplaceContract) return
-
-        await withErrorHandling(
-            async () => {
-                await marketplaceContract.storage_deposit({
-                    args: {},
-                    amount: parseNearAmount(amount)!,
-                })
-            },
-            "Storage Added Successfully",
-            `You have added ${amount} NEAR to your storage balance`
-        )
-    }
-
-    const handleStorageWithdraw = async () => {
-        if (!marketplaceContract) return
-
-        await withErrorHandling(
-            async () => {
-                await marketplaceContract.storage_withdraw({
-                    args: {},
-                    amount: ONE_YOCTO_NEAR,
-                })
-            },
-            "Storage Withdrawn Successfully",
-            `You have withdrawn from your storage balance`
-        )
-    }
 
     if (!selectedAccount) {
         return <ConnectWalletCard />
@@ -240,8 +129,8 @@ export default function NFTMarketplace() {
         <div className="space-y-6">
             <ContractManagement
                 onMint={handleMint}
-                onStorageDeposit={handleStorageDeposit}
-                onStorageWithdraw={handleStorageWithdraw}
+                onStorageDeposit={(amount) => handleAddStorage({ amount })}
+                onStorageWithdraw={handleWithdrawStorage}
                 isProcessing={isProcessing}
                 storageBalance={storageBalance ? {
                     total: storageBalance,
@@ -262,9 +151,8 @@ export default function NFTMarketplace() {
                     <NFTGrid
                         nfts={listedNfts}
                         variant="listed"
-                        isProcessing={nftProcessing}
+                        isProcessing={isProcessing}
                         onOffer={handleOfferNFT}
-                        onTransaction={handleTransaction}
                         ownedNfts={ownedNfts}
                     />
                 </TabsContent>
@@ -272,10 +160,10 @@ export default function NFTMarketplace() {
                     <NFTGrid
                         nfts={ownedNfts}
                         variant="owned"
-                        isProcessing={nftProcessing}
+                        isProcessing={isProcessing}
                         onList={handleListNFT}
                         onRemoveListing={handleRemoveListing}
-                        onMint={handleMint}
+                        onOffer={handleOfferNFT}
                         onTransaction={handleTransaction}
                         showMintCard
                     />

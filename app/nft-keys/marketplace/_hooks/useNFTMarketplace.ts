@@ -13,6 +13,8 @@ import { useMultiChainTransaction } from "@/hooks/useMultiChainTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
 import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
+import { parseNearAmount } from "near-api-js/lib/utils/format";
+import { NFTKeysMarketplaceContract } from "../../_contract/NFTKeysMarketplaceContract";
 
 // Function argument types
 export interface ListNFTArgs {
@@ -48,6 +50,7 @@ export interface StorageDepositArgs {
 
 export interface UseNFTMarketplaceProps {
   nftContract: NFTKeysContract | null;
+  marketplaceContract: NFTKeysMarketplaceContract | null;
   onSuccess?: () => Promise<void>;
 }
 
@@ -65,6 +68,7 @@ export interface NFTMarketplaceActions {
 
 export function useNFTMarketplace({
   nftContract,
+  marketplaceContract,
   onSuccess,
 }: UseNFTMarketplaceProps): NFTMarketplaceActions {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -256,15 +260,106 @@ export function useNFTMarketplace({
     [signEvmTransaction, signBtcTransaction, signCosmosTransaction, toast]
   );
 
+  const handleRemoveListing = useCallback(
+    async ({ nft }: RemoveListingArgs) => {
+      if (!marketplaceContract || !nftContract) return;
+
+      await withErrorHandling(
+        async () => {
+          await marketplaceContract.remove_sale({
+            args: {
+              nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
+              token_id: nft.token_id,
+            },
+            amount: ONE_YOCTO_NEAR,
+          });
+          await nftContract.nft_revoke({
+            args: {
+              token_id: nft.token_id,
+              account_id:
+                process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT!,
+            },
+            amount: ONE_YOCTO_NEAR,
+          });
+        },
+        `NFT Key ${nft.token_id} removed from marketplace`,
+        "Failed to remove listing"
+      );
+    },
+    [marketplaceContract, nftContract, withErrorHandling]
+  );
+
+  const handleRegisterMarketplace = useCallback(async () => {
+    if (!marketplaceContract) return;
+
+    await withErrorHandling(
+      async () => {
+        const storageMinimum =
+          await marketplaceContract.storage_minimum_balance();
+        await marketplaceContract.storage_deposit({
+          args: {},
+          amount: storageMinimum,
+        });
+      },
+      "Successfully registered with marketplace",
+      "Failed to register with marketplace"
+    );
+  }, [marketplaceContract, withErrorHandling]);
+
+  const handleAddStorage = useCallback(
+    async ({ amount }: StorageDepositArgs) => {
+      if (!marketplaceContract) return;
+
+      await withErrorHandling(
+        async () => {
+          await marketplaceContract.storage_deposit({
+            args: {},
+            amount: parseNearAmount(amount)!,
+          });
+        },
+        `Added ${amount} NEAR to storage`,
+        "Failed to add storage"
+      );
+    },
+    [marketplaceContract, withErrorHandling]
+  );
+
+  const handleWithdrawStorage = useCallback(async () => {
+    if (!marketplaceContract) return;
+
+    await withErrorHandling(
+      async () => {
+        await marketplaceContract.storage_withdraw({
+          args: {},
+          amount: ONE_YOCTO_NEAR,
+        });
+      },
+      "Storage withdrawn successfully",
+      "Failed to withdraw storage"
+    );
+  }, [marketplaceContract, withErrorHandling]);
+
+  const handleMint = useCallback(async () => {
+    if (!nftContract) return;
+
+    await withErrorHandling(
+      async () => {
+        await nftContract.mint();
+      },
+      "NFT minted successfully",
+      "Failed to mint NFT"
+    );
+  }, [nftContract, withErrorHandling]);
+
   return {
     isProcessing,
     handleListNFT,
     handleOfferNFT,
     handleTransaction,
-    handleRemoveListing: async () => {}, // Implement in page.tsx
-    handleRegisterMarketplace: async () => {}, // Implement in page.tsx
-    handleAddStorage: async () => {}, // Implement in page.tsx
-    handleWithdrawStorage: async () => {}, // Implement in page.tsx
-    handleMint: async () => {}, // Implement in page.tsx
+    handleRemoveListing,
+    handleRegisterMarketplace,
+    handleAddStorage,
+    handleWithdrawStorage,
+    handleMint,
   };
 }

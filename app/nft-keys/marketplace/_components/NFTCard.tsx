@@ -120,7 +120,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                                     onList={onList}
                                     tokenId={nft.token_id}
                                 />}
-                                {onTransaction && derivedAddressAndPublicKey && <NFTTransactionDialog
+                                {onTransaction && <NFTTransactionDialog
                                     nft={nft}
                                     isProcessing={isProcessing}
                                     onTransaction={onTransaction}
