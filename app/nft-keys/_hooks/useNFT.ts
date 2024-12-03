@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types";
 import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../_contract/constants";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface FormData {
   tokenId: string;
@@ -36,6 +37,8 @@ export interface NFTActions {
   handleStorageWithdraw: (amount: string) => Promise<void>;
   nfts: NFT[];
   ownedNfts: NFT[];
+  isLoading: boolean;
+  error: Error | null;
 }
 
 export function useNFT({
@@ -45,8 +48,7 @@ export function useNFT({
 }: UseNFTProps): NFTActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const [nfts, setNfts] = useState<NFT[]>([]);
-  const [ownedNfts, setOwnedNfts] = useState<NFT[]>([]);
+  const queryClient = useQueryClient();
 
   const withErrorHandling = useCallback(
     async (
@@ -80,44 +82,55 @@ export function useNFT({
     [isProcessing, onSuccess, toast]
   );
 
-  useEffect(() => {
-    const loadNFTData = async () => {
-      if (!nftContract || !accountId) return;
+  const {
+    data: nftData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["nfts", accountId],
+    queryFn: async () => {
+      if (!nftContract || !accountId) return { allNfts: [], userNfts: [] };
 
-      try {
-        const [allNfts, userNfts] = await Promise.all([
-          nftContract.nft_tokens({}),
-          nftContract.nft_tokens_for_owner({
-            account_id: accountId,
-            from_index: "0",
-            limit: 100,
-          }),
-        ]);
+      const [allNfts, userNfts] = await Promise.all([
+        nftContract.nft_tokens({}),
+        nftContract.nft_tokens_for_owner({
+          account_id: accountId,
+          from_index: "0",
+          limit: 100,
+        }),
+      ]);
 
-        setNfts(allNfts);
-        setOwnedNfts(userNfts);
+      return { allNfts, userNfts };
+    },
+    enabled: !!nftContract && !!accountId,
+  });
 
-        return { allNfts, userNfts };
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error loading data",
-          description: String(error),
-        });
-      }
-    };
-
-    loadNFTData();
-  }, [accountId, nftContract, toast]);
+  const mintMutation = useMutation({
+    mutationFn: async () => {
+      if (!nftContract) return;
+      return await nftContract.mint();
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Success",
+        description: "NFT minted successfully",
+      });
+      await onSuccess?.();
+      queryClient.invalidateQueries({ queryKey: ["nfts"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to mint NFT: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleMint = useCallback(async () => {
     if (!nftContract) return;
-    await withErrorHandling(
-      async () => await nftContract.mint(),
-      "NFT minted successfully",
-      "Failed to mint NFT"
-    );
-  }, [nftContract, withErrorHandling]);
+    await mintMutation.mutateAsync();
+  }, [nftContract, mintMutation]);
 
   const handleGetPublicKey = useCallback(
     async (data: FormData): Promise<string | undefined> => {
@@ -317,7 +330,9 @@ export function useNFT({
     handleTransfer,
     handleStorageDeposit,
     handleStorageWithdraw,
-    nfts,
-    ownedNfts,
+    nfts: nftData?.allNfts ?? [],
+    ownedNfts: nftData?.userNfts ?? [],
+    isLoading,
+    error,
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { NFT, NFTKeysContract } from "../../_contract/NFTKeysContract/types";
 import { NFTListed, FormData } from "../types";
@@ -15,6 +15,7 @@ import { ethers } from "ethers";
 import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 import { NFTKeysMarketplaceContract } from "../../_contract/NFTKeysMarketplaceContract";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface ListNFTArgs {
   data: FormData;
@@ -68,6 +69,8 @@ export interface NFTMarketplaceActions {
   listedNfts: NFTListed[];
   isRegistered: boolean;
   storageBalance: string | null;
+  isLoading: boolean;
+  error: Error | null;
 }
 
 export function useNFTMarketplace({
@@ -77,85 +80,83 @@ export function useNFTMarketplace({
   accountId,
 }: UseNFTMarketplaceProps): NFTMarketplaceActions {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [ownedNfts, setOwnedNfts] = useState<NFT[]>([]);
-  const [listedNfts, setListedNfts] = useState<NFTListed[]>([]);
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [storageBalance, setStorageBalance] = useState<string | null>(null);
   const { toast } = useToast();
   const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } =
     useMultiChainTransaction();
   const { nftKeysMarketplaceContract } = useEnv();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const loadMarketplaceData = async () => {
-      if (!nftContract || !marketplaceContract || !accountId) return;
-
-      try {
-        const [allNfts, userNfts, sales, storageBalance] = await Promise.all([
-          nftContract.nft_tokens({ from_index: "0", limit: 100 }),
-          nftContract.nft_tokens_for_owner({
-            account_id: accountId,
-            from_index: "0",
-            limit: 100,
-          }),
-          marketplaceContract.get_sales_by_nft_contract_id({
-            nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
-            from_index: "0",
-            limit: 100,
-          }),
-          marketplaceContract.storage_balance_of({ account_id: accountId }),
-        ]);
-
-        const listedNftsWithPrice: NFTListed[] = await Promise.all(
-          sales.map(async (sale) => {
-            const nft = allNfts.find((nft) => nft.token_id === sale.token_id);
-            if (!nft || !sale) return null;
-            return {
-              ...nft,
-              approved_account_ids: nft.approved_account_ids,
-              saleConditions: {
-                amount: sale.sale_conditions.amount.toString(),
-                token: sale.sale_conditions.token || "",
-              },
-              token: sale.token,
-              path: sale.path,
-            };
-          })
-        ).then((results) =>
-          results.flatMap((item) => (item !== null ? [item] : []))
-        );
-
-        const ownedNftsWithPrice = userNfts
-          .filter((nft) => nft.owner_id === accountId)
-          .map((nft) => {
-            const listedNft = listedNftsWithPrice.find(
-              (listed) => listed.token_id === nft.token_id
-            );
-            return listedNft
-              ? {
-                  ...nft,
-                  saleConditions: listedNft.saleConditions,
-                  token: listedNft.token,
-                  path: listedNft.path,
-                }
-              : nft;
-          });
-
-        setOwnedNfts(ownedNftsWithPrice);
-        setListedNfts(listedNftsWithPrice);
-        setStorageBalance(storageBalance);
-        setIsRegistered(storageBalance !== null && storageBalance !== "0");
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error loading marketplace data",
-          description: String(error),
-        });
+  const {
+    data: marketplaceData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["marketplaceData", accountId],
+    queryFn: async () => {
+      if (!nftContract || !marketplaceContract || !accountId) {
+        throw new Error("Required contracts or account not available");
       }
-    };
 
-    loadMarketplaceData();
-  }, [accountId, marketplaceContract, nftContract, toast]);
+      const [allNfts, userNfts, sales, storageBalance] = await Promise.all([
+        nftContract.nft_tokens({ from_index: "0", limit: 100 }),
+        nftContract.nft_tokens_for_owner({
+          account_id: accountId,
+          from_index: "0",
+          limit: 100,
+        }),
+        marketplaceContract.get_sales_by_nft_contract_id({
+          nft_contract_id: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!,
+          from_index: "0",
+          limit: 100,
+        }),
+        marketplaceContract.storage_balance_of({ account_id: accountId }),
+      ]);
+
+      const listedNftsWithPrice: NFTListed[] = await Promise.all(
+        sales.map(async (sale) => {
+          const nft = allNfts.find((nft) => nft.token_id === sale.token_id);
+          if (!nft || !sale) return null;
+          return {
+            ...nft,
+            approved_account_ids: nft.approved_account_ids,
+            saleConditions: {
+              amount: sale.sale_conditions.amount.toString(),
+              token: sale.sale_conditions.token || "",
+            },
+            token: sale.token,
+            path: sale.path,
+          };
+        })
+      ).then((results) =>
+        results.flatMap((item) => (item !== null ? [item] : []))
+      );
+
+      const ownedNftsWithPrice = userNfts
+        .filter((nft) => nft.owner_id === accountId)
+        .map((nft) => {
+          const listedNft = listedNftsWithPrice.find(
+            (listed) => listed.token_id === nft.token_id
+          );
+          return listedNft
+            ? {
+                ...nft,
+                saleConditions: listedNft.saleConditions,
+                token: listedNft.token,
+                path: listedNft.path,
+              }
+            : nft;
+        });
+
+      return {
+        ownedNfts: ownedNftsWithPrice,
+        listedNfts: listedNftsWithPrice,
+        isRegistered: storageBalance !== null && storageBalance !== "0",
+        storageBalance,
+      };
+    },
+    enabled: !!nftContract && !!marketplaceContract && !!accountId,
+    refetchOnWindowFocus: false,
+  });
 
   const withErrorHandling = useCallback(
     async (
@@ -172,6 +173,9 @@ export function useNFTMarketplace({
           description: successMessage,
         });
         await onSuccess?.();
+        await queryClient.invalidateQueries({
+          queryKey: ["marketplaceData", accountId],
+        });
       } catch (error) {
         toast({
           title: "Error",
@@ -184,7 +188,7 @@ export function useNFTMarketplace({
         setIsProcessing(false);
       }
     },
-    [isProcessing, onSuccess, toast]
+    [isProcessing, onSuccess, toast, queryClient, accountId]
   );
 
   const handleListNFT = useCallback(
@@ -441,9 +445,11 @@ export function useNFTMarketplace({
     handleAddStorage,
     handleWithdrawStorage,
     handleMint,
-    ownedNfts,
-    listedNfts,
-    isRegistered,
-    storageBalance,
+    ownedNfts: marketplaceData?.ownedNfts ?? [],
+    listedNfts: marketplaceData?.listedNfts ?? [],
+    isRegistered: marketplaceData?.isRegistered ?? false,
+    storageBalance: marketplaceData?.storageBalance ?? null,
+    isLoading,
+    error,
   };
 }

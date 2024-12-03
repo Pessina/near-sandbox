@@ -5,6 +5,8 @@ import { ThemeProvider } from "next-themes";
 import { WalletAuthProvider } from "@/providers/WalletAuthProvider";
 import "./globals.css";
 import { KeyPairAuthProvider } from "@/providers/KeyPairAuthProvider";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,14 +23,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <KeyPairAuthProvider>
-          <WalletAuthProvider>
-            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-              {children}
-              <Toaster />
-            </ThemeProvider>
-          </WalletAuthProvider>
-        </KeyPairAuthProvider>
+        <ReactQueryProvider>
+          <KeyPairAuthProvider>
+            <WalletAuthProvider>
+              <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+                {children}
+                <Toaster />
+              </ThemeProvider>
+            </WalletAuthProvider>
+          </KeyPairAuthProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );
