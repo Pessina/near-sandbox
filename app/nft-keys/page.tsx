@@ -40,35 +40,9 @@ export default function NFTKeysPage() {
   const { selectedAccount } = useKeyPairAuth()
   const { toast } = useToast()
   const [nftContract, setNftContract] = useState<NFTKeysContract>()
-  const [nfts, setNfts] = useState<NFTToken[]>([])
-  const [ownedNfts, setOwnedNfts] = useState<NFTToken[]>([])
   const [publicKey, setPublicKey] = useState<string>('')
   const { register, handleSubmit, watch, reset } = useForm<FormData>()
   const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(null)
-
-  const loadNFTData = useCallback(async () => {
-    if (!nftContract || !selectedAccount) return
-
-    try {
-      const [allNfts, userNfts] = await Promise.all([
-        nftContract.nft_tokens({}),
-        nftContract.nft_tokens_for_owner({
-          account_id: selectedAccount.accountId,
-          from_index: "0",
-          limit: 100,
-        })
-      ])
-
-      setNfts(allNfts)
-      setOwnedNfts(userNfts)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error loading data",
-        description: String(error)
-      })
-    }
-  }, [nftContract, selectedAccount, toast])
 
   const loadStorageBalance = useCallback(async () => {
     if (!nftContract || !selectedAccount) return
@@ -101,10 +75,6 @@ export default function NFTKeysPage() {
     setNftContract(contract)
   }, [selectedAccount])
 
-  useEffect(() => {
-    loadNFTData()
-  }, [loadNFTData])
-
   const {
     isProcessing,
     handleMint,
@@ -116,10 +86,11 @@ export default function NFTKeysPage() {
     handleRevokeAll,
     handleTransfer,
     handleStorageDeposit,
-    handleStorageWithdraw
+    handleStorageWithdraw,
+    nfts,
+    ownedNfts
   } = useNFT({
     nftContract: nftContract ?? null,
-    onSuccess: loadNFTData,
     accountId: selectedAccount?.accountId
   })
 

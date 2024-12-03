@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { NFTKeysContract } from "../_contract/NFTKeysContract/types";
+import { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types";
 import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../_contract/constants";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 
@@ -34,6 +34,8 @@ export interface NFTActions {
   handleTransfer: (data: FormData) => Promise<void>;
   handleStorageDeposit: (amount: string) => Promise<void>;
   handleStorageWithdraw: (amount: string) => Promise<void>;
+  nfts: NFT[];
+  ownedNfts: NFT[];
 }
 
 export function useNFT({
@@ -43,6 +45,8 @@ export function useNFT({
 }: UseNFTProps): NFTActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const [nfts, setNfts] = useState<NFT[]>([]);
+  const [ownedNfts, setOwnedNfts] = useState<NFT[]>([]);
 
   const withErrorHandling = useCallback(
     async (
@@ -75,6 +79,36 @@ export function useNFT({
     },
     [isProcessing, onSuccess, toast]
   );
+
+  useEffect(() => {
+    const loadNFTData = async () => {
+      if (!nftContract || !accountId) return;
+
+      try {
+        const [allNfts, userNfts] = await Promise.all([
+          nftContract.nft_tokens({}),
+          nftContract.nft_tokens_for_owner({
+            account_id: accountId,
+            from_index: "0",
+            limit: 100,
+          }),
+        ]);
+
+        setNfts(allNfts);
+        setOwnedNfts(userNfts);
+
+        return { allNfts, userNfts };
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error loading data",
+          description: String(error),
+        });
+      }
+    };
+
+    loadNFTData();
+  }, [accountId, nftContract, toast]);
 
   const handleMint = useCallback(async () => {
     if (!nftContract) return;
@@ -283,5 +317,7 @@ export function useNFT({
     handleTransfer,
     handleStorageDeposit,
     handleStorageWithdraw,
+    nfts,
+    ownedNfts,
   };
 }
