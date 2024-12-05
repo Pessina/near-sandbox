@@ -246,27 +246,27 @@ export function useNFTMarketplace({
     async ({ purchaseTokenId, offerTokenId, address }: OfferNFTArgs) => {
       if (!nftContract) return;
 
-      // let res: any;
-      // if (address.startsWith("0x")) {
-      //   res = await getBalanceETH(address);
-      // } else {
-      //   res = await getBalanceBTC(address);
-      // }
+      let res: any;
+      if (address.startsWith("0x")) {
+        res = await getBalanceETH(address);
+      } else {
+        res = await getBalanceBTC(address);
+      }
 
-      // if (!res.result) {
-      //   throw new Error("Failed to get balance");
-      // }
+      if (!res.result) {
+        throw new Error("Failed to get balance");
+      }
 
-      // const krnlPayload: KrnlPayload = {
-      //   auth: {
-      //     auth: res.result.auth,
-      //     kernel_responses: res.result.kernel_responses,
-      //     kernel_param_objects: res.result.kernel_params,
-      //   },
-      //   sender: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-      //   function_params:
-      //     "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001",
-      // };
+      const krnlPayload: KrnlPayload = {
+        auth: {
+          auth: res.result.auth,
+          kernel_responses: res.result.kernel_responses,
+          kernel_param_objects: res.result.kernel_params,
+        },
+        sender: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+        function_params:
+          "0x00000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000001",
+      };
 
       await withErrorHandling(
         async () => {
@@ -292,9 +292,9 @@ export function useNFTMarketplace({
               account_id: nftKeysMarketplaceContract,
               msg: JSON.stringify({
                 token_id: purchaseTokenId,
-                // krnl_payload: krnlPayload,
-                krnl_payload: MOCK_KRNL,
-                debug_disable_check: true,
+                krnl_payload: krnlPayload,
+                // krnl_payload: MOCK_KRNL,
+                debug_disable_check: false,
               }),
             },
             amount: ONE_YOCTO_NEAR,
