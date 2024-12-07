@@ -7,6 +7,7 @@ import "./globals.css";
 import { KeyPairAuthProvider } from "@/providers/KeyPairAuthProvider";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import Header from "@/components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,7 +28,10 @@ export default function RootLayout({
           <KeyPairAuthProvider>
             <WalletAuthProvider>
               <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-                {children}
+                <Header />
+                <main className="container mx-auto p-4 space-y-6">
+                  {children}
+                </main>
                 <Toaster />
               </ThemeProvider>
             </WalletAuthProvider>
