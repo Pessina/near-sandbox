@@ -38,7 +38,10 @@ export const WalletAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }, [nearNetworkId]);
 
     const fetchAccountId = useCallback(async () => {
-        const wallet = await walletSelector?.wallet();
+        const wallet = await walletSelector?.wallet('my-near-wallet');
+
+        if (!wallet) return
+
         wallet?.getAccounts().then((accounts) => {
             setAccountId(accounts[0]?.accountId || null)
         })
