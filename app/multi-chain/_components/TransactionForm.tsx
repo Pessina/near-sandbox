@@ -7,10 +7,10 @@ import { ethers } from "ethers";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useMultiChainTransaction } from '../../../hooks/useMultiChainTransaction';
+import { useMultiChainWalletTransaction } from '../../../hooks/useMultiChainWalletTransaction';
 import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
 import { useDeriveAddressAndPublicKey } from '../../../hooks/useDeriveAddressAndPublicKey';
-import { useAuth } from '@/providers/AuthProvider';
+import { useWalletAuth } from '@/providers/WalletAuthProvider';
 import { getPath } from '../_utils/getPath';
 import { Bitcoin } from 'multichain-tools';
 
@@ -29,8 +29,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
     const { register, handleSubmit, formState: { errors } } = useForm<Transaction>();
     const [isSendingTransaction, setIsSendingTransaction] = useState(false);
     const { toast } = useToast();
-    const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainTransaction();
-    const { accountId } = useAuth();
+    const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } = useMultiChainWalletTransaction();
+    const { accountId } = useWalletAuth();
     const addressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, getPath(chain, derivedPath));
 
     const onSubmit = async (data: Transaction) => {

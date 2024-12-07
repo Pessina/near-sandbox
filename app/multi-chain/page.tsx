@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Wallet } from 'lucide-react';
-import { useAuth } from "@/providers/AuthProvider";
+import { useWalletAuth } from "@/providers/WalletAuthProvider";
 import { getPath } from "./_utils/getPath";
 
 export default function MultiChain() {
-  const { accountId, walletSelector } = useAuth()
+  const { accountId, walletSelector } = useWalletAuth()
   const [derivedPath, setDerivedPath] = useState("");
   const [chain, setChain] = useState<Chain>(Chain.ETH);
   const { toast } = useToast();
@@ -58,7 +58,7 @@ export default function MultiChain() {
   }
 
   return (
-    <div className="min-h-screen w-full flex justify-center items-center p-4">
+    <div className="grow flex flex-col items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">MultiChain Signatures</CardTitle>

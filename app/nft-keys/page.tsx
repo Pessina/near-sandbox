@@ -1,22 +1,19 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import useInitNear from "@/hooks/useInitNear"
 import { createNFTContract } from "./_contract/NFTKeysContract"
-import { parseNearAmount } from "near-api-js/lib/utils/format"
 import { NFTKeysContract } from "./_contract/NFTKeysContract/types"
-import { NEAR_MAX_GAS, ONE_YOCTO_NEAR } from "./_contract/constants"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { StorageBalanceCard } from "./_components/StorageBalanceCard"
-import { MintNFTCard } from "./_components/MintNFTCard"
 import { NFTKeysGrid } from "./_components/NFTKeysGrid"
-import { ManageNFTForm } from "./_components/ManageNFTForm"
+import { ContractManagement } from "./_components/ContractManagement/ContractManagement"
 import { useForm } from "react-hook-form"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { CheckCircle2, Key } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
+import { ManageNFTForm } from "./_components/ContractManagement/_components/ManageNFTForm"
+import { useNFT } from "./_hooks/useNFT"
 
 interface NFTToken {
   token_id: string
@@ -40,248 +37,68 @@ type FormData = {
 }
 
 export default function NFTKeysPage() {
-  const { account, isLoading } = useInitNear({
-    isViewOnly: false,
-  })
+  const { selectedAccount } = useKeyPairAuth()
   const { toast } = useToast()
   const [nftContract, setNftContract] = useState<NFTKeysContract>()
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [nfts, setNfts] = useState<NFTToken[]>([])
-  const [ownedNfts, setOwnedNfts] = useState<NFTToken[]>([])
-  const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(null)
   const [publicKey, setPublicKey] = useState<string>('')
   const { register, handleSubmit, watch, reset } = useForm<FormData>()
+  const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(null)
 
-  useEffect(() => {
-    if (!account) return
-
-    const contract = createNFTContract({
-      account,
-      contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
-    })
-    setNftContract(contract)
-  }, [account])
-
-  const loadNFTData = useCallback(async () => {
-    if (!nftContract || !account) return
+  const loadStorageBalance = useCallback(async () => {
+    if (!nftContract || !selectedAccount) return
 
     try {
-      const [allNfts, userNfts, balance] = await Promise.all([
-        nftContract.nft_tokens({}),
-        nftContract.nft_tokens_for_owner({
-          account_id: account.accountId,
-          from_index: "0",
-          limit: 100,
-        }),
-        nftContract.storage_balance_of({ account_id: account.accountId }),
-      ])
-
-      setNfts(allNfts)
-      setOwnedNfts(userNfts)
+      const balance = await nftContract.storage_balance_of({
+        account_id: selectedAccount.accountId
+      })
       setStorageBalance(balance)
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error loading data",
+        title: "Error loading storage balance",
         description: String(error)
       })
     }
-  }, [nftContract, account, toast])
+  }, [nftContract, selectedAccount, toast])
 
   useEffect(() => {
-    loadNFTData()
-  }, [loadNFTData])
+    loadStorageBalance()
+  }, [loadStorageBalance])
 
-  const handleContractAction = async (action: () => Promise<any>, successMessage: string) => {
-    if (!nftContract) return
-    setIsProcessing(true)
-    try {
-      const result = await action()
-      toast({
-        title: "Success",
-        description: successMessage + (result ? `: ${JSON.stringify(result)}` : ''),
-        duration: 5000,
-      })
-      await loadNFTData()
-      return result
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: String(error),
-        duration: 5000,
-      })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
+  useEffect(() => {
+    if (!selectedAccount) return
 
-  const handleMint = async () => {
-    await handleContractAction(
-      async () => {
-        const tokenId = await nftContract!.mint()
-        return tokenId
-      },
-      "NFT minted successfully"
-    )
-  }
+    const contract = createNFTContract({
+      account: selectedAccount,
+      contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
+    })
+    setNftContract(contract)
+  }, [selectedAccount])
+
+  const {
+    isProcessing,
+    handleMint,
+    handleGetPublicKey: getPublicKey,
+    handleSignHash,
+    handleApprove,
+    handleCheckApproval,
+    handleRevoke,
+    handleRevokeAll,
+    handleTransfer,
+    handleStorageDeposit,
+    handleStorageWithdraw,
+    nfts,
+    ownedNfts
+  } = useNFT({
+    nftContract: nftContract ?? null,
+    accountId: selectedAccount?.accountId
+  })
 
   const handleGetPublicKey = async (data: FormData) => {
-    if (!nftContract || !data.tokenId) return
-    await handleContractAction(
-      async () => {
-        const key = await nftContract.ckt_public_key_for({
-          args: {
-            token_id: data.tokenId,
-            path: data.path
-          }
-        })
-        setPublicKey(key)
-        return key
-      },
-      "Public key retrieved"
-    )
-  }
-
-  const handleSignHash = async (data: FormData) => {
-    if (!nftContract || !data.tokenId || !data.payload) return
-    await handleContractAction(
-      async () => {
-        if (!data.payload) return
-
-        const payloadArray = data.payload.split(',').map(num => parseInt(num))
-        const signature = await nftContract.ckt_sign_hash({
-          args: {
-            token_id: data.tokenId,
-            path: data.path,
-            payload: payloadArray,
-            approval_id: data.approvalId ? parseInt(data.approvalId) : undefined
-          },
-          gas: NEAR_MAX_GAS,
-          amount: parseNearAmount("0.005") ?? '0'
-        })
-        return signature
-      },
-      "Hash signed successfully"
-    )
-  }
-
-  const handleApprove = async (data: FormData) => {
-    if (!nftContract || !data.tokenId || !data.accountId) return
-    await handleContractAction(
-      async () => {
-        const approvalId = await nftContract.nft_approve({
-          args: {
-            token_id: data.tokenId,
-            account_id: data.accountId,
-            msg: data.msg
-          },
-          amount: ONE_YOCTO_NEAR
-        })
-        return approvalId
-      },
-      "Approval successful"
-    )
-  }
-
-  const handleCheckApproval = async (data: FormData) => {
-    if (!nftContract || !data.tokenId || !data.accountId) return
-    await handleContractAction(
-      async () => {
-        const isApproved = await nftContract.nft_is_approved({
-          token_id: data.tokenId,
-          approved_account_id: data.accountId,
-          approval_id: data.approvalId ? parseInt(data.approvalId) : undefined
-        })
-        return isApproved
-      },
-      "Approval check completed"
-    )
-  }
-
-  const handleRevoke = async (data: FormData) => {
-    if (!nftContract || !data.tokenId || !data.accountId) return
-    await handleContractAction(
-      async () => {
-        await nftContract.nft_revoke({
-          args: {
-            token_id: data.tokenId,
-            account_id: data.accountId
-          },
-          amount: ONE_YOCTO_NEAR
-        })
-      },
-      "Approval revoked successfully"
-    )
-  }
-
-  const handleRevokeAll = async (data: FormData) => {
-    if (!nftContract || !data.tokenId) return
-    await handleContractAction(
-      async () => {
-        await nftContract.nft_revoke_all({
-          args: {
-            token_id: data.tokenId
-          },
-          amount: ONE_YOCTO_NEAR
-        })
-      },
-      "All approvals revoked successfully"
-    )
-  }
-
-  const handleTransfer = async (data: FormData) => {
-    if (!nftContract || !data.tokenId || !data.accountId) return
-    await handleContractAction(
-      async () => {
-        await nftContract.nft_transfer({
-          args: {
-            receiver_id: data.accountId,
-            token_id: data.tokenId,
-            approval_id: data.approvalId ? parseInt(data.approvalId) : undefined,
-            memo: data.memo
-          },
-          amount: ONE_YOCTO_NEAR
-        })
-      },
-      "Transfer successful"
-    )
-  }
-
-  const handleStorageDeposit = async (data: FormData) => {
-    if (!nftContract || !data.amount || !account) return
-    const amount = parseNearAmount(data.amount)
-    if (!amount) return
-
-    await handleContractAction(
-      async () => {
-        await nftContract.storage_deposit({
-          args: {
-            account_id: account.accountId,
-            registration_only: false
-          },
-          amount
-        })
-        reset()
-      },
-      "Storage deposit successful"
-    )
-  }
-
-  const handleStorageWithdraw = async (data: FormData) => {
-    if (!nftContract || !data.amount) return
-    const amount = parseNearAmount(data.amount)
-    if (!amount) return
-
-    await handleContractAction(
-      async () => {
-        await nftContract.storage_withdraw({
-          args: { amount },
-          amount: ONE_YOCTO_NEAR
-        })
-      },
-      "Storage withdrawal successful"
-    )
+    const key = await getPublicKey(data)
+    if (key) {
+      setPublicKey(key)
+    }
   }
 
   const onSubmit = (data: FormData) => {
@@ -307,24 +124,10 @@ export default function NFTKeysPage() {
       case 'transfer':
         handleTransfer(data)
         break
-      case 'storageDeposit':
-        handleStorageDeposit(data)
-        break
-      case 'storageWithdraw':
-        handleStorageWithdraw(data)
-        break
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="h-32 w-32 rounded-full" />
-      </div>
-    )
-  }
-
-  if (!account) {
+  if (!selectedAccount) {
     return (
       <Card className="max-w-md mx-auto mt-20">
         <CardHeader>
@@ -341,16 +144,14 @@ export default function NFTKeysPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold mb-6 flex items-center space-x-2">
-        <Key className="h-8 w-8" />
-        <span>NFT Keys Management</span>
-      </h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StorageBalanceCard storageBalance={storageBalance} />
-        <MintNFTCard onMint={handleMint} isProcessing={isProcessing} />
-      </div>
+    <div className="space-y-6">
+      <ContractManagement
+        storageBalance={storageBalance || null}
+        onMint={handleMint}
+        onStorageDeposit={handleStorageDeposit}
+        onStorageWithdraw={handleStorageWithdraw}
+        isProcessing={isProcessing}
+      />
 
       <Card>
         <CardHeader>

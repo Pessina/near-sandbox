@@ -4,16 +4,17 @@ import { useEnv } from '@/hooks/useEnv';
 import { NetworkId, setupWalletSelector, WalletSelector } from '@near-wallet-selector/core';
 // import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
-interface AuthContextType {
+interface WalletAuthContextType {
     walletSelector: WalletSelector | null;
     accountId: string | null;
+    fetchAccountId: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const WalletAuthContext = createContext<WalletAuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+export const WalletAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     children,
 }) => {
     const [walletSelector, setWalletSelector] =
@@ -36,34 +37,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         init();
     }, [nearNetworkId]);
 
-    useEffect(() => {
-        // TODO: cache the accountId (maybe React Query)
-        const fetchAccountId = async () => {
-            const wallet = await walletSelector?.wallet();
-            wallet?.getAccounts().then((accounts) => {
-                setAccountId(accounts[0]?.accountId || null)
-            })
-        }
+    const fetchAccountId = useCallback(async () => {
+        const wallet = await walletSelector?.wallet('my-near-wallet');
 
-        fetchAccountId();
+        if (!wallet) return
+
+        wallet?.getAccounts().then((accounts) => {
+            setAccountId(accounts[0]?.accountId || null)
+        })
     }, [walletSelector])
 
+    useEffect(() => {
+        // TODO: cache the accountId (maybe React Query)
+        if (walletSelector) {
+            fetchAccountId();
+        }
+    }, [walletSelector, fetchAccountId])
+
     return (
-        <AuthContext.Provider
+        <WalletAuthContext.Provider
             value={{
                 walletSelector,
                 accountId,
+                fetchAccountId,
             }}
         >
             {children}
-        </AuthContext.Provider>
+        </WalletAuthContext.Provider>
     );
 };
 
-export const useAuth = (): AuthContextType => {
-    const context = useContext(AuthContext);
+export const useWalletAuth = (): WalletAuthContextType => {
+    const context = useContext(WalletAuthContext);
     if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
+        throw new Error('useWalletAuth must be used within an WalletAuthProvider');
     }
 
     return context;

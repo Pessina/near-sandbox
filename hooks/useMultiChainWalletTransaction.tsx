@@ -1,5 +1,5 @@
 import { useEnv } from "@/hooks/useEnv";
-import { useAuth } from "@/providers/AuthProvider";
+import { useWalletAuth } from "@/providers/WalletAuthProvider";
 import {
     KeyDerivationPath,
     transactionBuilder,
@@ -13,10 +13,10 @@ import {
 } from "multichain-tools";
 import { useCallback, useEffect } from "react";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
-import useInitNear from "@/hooks/useInitNear";
 import { useChains } from "./useChains";
 import { chainsConfig } from "../constants/chains";
 import { toast } from "@/hooks/use-toast";
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
 
 interface MultiChainTransactionHook {
     signEvmTransaction: (transactionRequest: EVMTransactionRequest, path: KeyDerivationPath, tokenId?: string) => Promise<FinalExecutionOutcome | void>;
@@ -28,10 +28,11 @@ interface MultiChainTransactionHook {
 }
 
 // TODO: It should accept the contract type to be used as args
-export const useMultiChainTransaction = (): MultiChainTransactionHook => {
-    const { walletSelector, accountId } = useAuth();
+export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
+    const { walletSelector, accountId } = useWalletAuth();
     const { nearNetworkId, chainSignatureContract, nftKeysContract } = useEnv();
-    const { account } = useInitNear();
+    // The account is used as view only so it doesn't matter the account we use here
+    const { accounts } = useKeyPairAuth();
     const { evm, btc, cosmos } = useChains();
 
     const signTransaction = useCallback(async <TRequest, TUnsigned>(
@@ -138,7 +139,7 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
         [cosmos, sendTransaction]);
 
     useEffect(() => {
-        if (typeof window === 'undefined' || !account) return;
+        if (typeof window === 'undefined' || !accounts.length) return;
 
         const urlParams = new URLSearchParams(window.location.search);
         const nearTxHash = urlParams.get('transactionHashes');
@@ -146,9 +147,9 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
 
         const resumeTransaction = async () => {
             try {
-                const txOutcome = await account.connection.provider.txStatus(
+                const txOutcome = await accounts[0].connection.provider.txStatus(
                     nearTxHash,
-                    account.accountId,
+                    accounts[0].accountId,
                     'FINAL'
                 );
 
@@ -196,7 +197,7 @@ export const useMultiChainTransaction = (): MultiChainTransactionHook => {
 
         void resumeTransaction();
     }, [
-        account,
+        accounts,
         btc,
         cosmos,
         evm,

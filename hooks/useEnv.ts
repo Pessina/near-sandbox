@@ -1,8 +1,12 @@
 import { useMemo } from "react";
 
+interface NearAccount {
+  accountId: string;
+  privateKey: string;
+}
+
 interface EnvVariables {
-  nearAccountId: string | undefined;
-  nearPrivateKey: string | undefined;
+  nearAccounts: NearAccount[];
   chainSignatureContract: string;
   nftKeysContract: string;
   nftKeysMarketplaceContract: string;
@@ -15,8 +19,46 @@ export const useEnv = (
   }
 ): EnvVariables => {
   return useMemo(() => {
-    const nearAccountId = process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID;
-    const nearPrivateKey = process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY;
+    const envVars =
+      typeof window !== "undefined"
+        ? {
+            NEXT_PUBLIC_NEAR_ACCOUNT_ID:
+              process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID,
+            NEXT_PUBLIC_NEAR_PRIVATE_KEY:
+              process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY,
+            NEXT_PUBLIC_NEAR_ACCOUNT_ID2:
+              process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID2,
+            NEXT_PUBLIC_NEAR_PRIVATE_KEY2:
+              process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY2,
+            NEXT_PUBLIC_NEAR_ACCOUNT_ID3:
+              process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID3,
+            NEXT_PUBLIC_NEAR_PRIVATE_KEY3:
+              process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY3,
+          }
+        : {};
+
+    const accounts: NearAccount[] = [];
+
+    if (
+      envVars.NEXT_PUBLIC_NEAR_ACCOUNT_ID &&
+      envVars.NEXT_PUBLIC_NEAR_PRIVATE_KEY
+    ) {
+      accounts.push({
+        accountId: envVars.NEXT_PUBLIC_NEAR_ACCOUNT_ID,
+        privateKey: envVars.NEXT_PUBLIC_NEAR_PRIVATE_KEY,
+      });
+    }
+
+    [2, 3].forEach((num) => {
+      const accountId =
+        envVars[`NEXT_PUBLIC_NEAR_ACCOUNT_ID${num}` as keyof typeof envVars];
+      const privateKey =
+        envVars[`NEXT_PUBLIC_NEAR_PRIVATE_KEY${num}` as keyof typeof envVars];
+      if (accountId && privateKey) {
+        accounts.push({ accountId, privateKey });
+      }
+    });
+
     const chainSignatureContract =
       process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT;
     const nftKeysContract = process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT;
@@ -24,11 +66,8 @@ export const useEnv = (
       process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT;
     const nearNetworkId = process.env.NEXT_PUBLIC_NEAR_NETWORK_ID;
 
-    if (!nearAccountId && !options?.isViewOnly) {
-      throw new Error("NEXT_PUBLIC_NEAR_ACCOUNT_ID is not defined");
-    }
-    if (!nearPrivateKey && !options?.isViewOnly) {
-      throw new Error("NEXT_PUBLIC_NEAR_PRIVATE_KEY is not defined");
+    if (accounts.length === 0 && !options?.isViewOnly) {
+      throw new Error("No valid NEAR account ID and private key pairs found");
     }
     if (!chainSignatureContract) {
       throw new Error("NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT is not defined");
@@ -51,8 +90,7 @@ export const useEnv = (
     }
 
     return {
-      nearAccountId,
-      nearPrivateKey,
+      nearAccounts: accounts,
       chainSignatureContract,
       nftKeysContract,
       nftKeysMarketplaceContract,

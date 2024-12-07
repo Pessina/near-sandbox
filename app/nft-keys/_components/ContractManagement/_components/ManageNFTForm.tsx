@@ -57,8 +57,6 @@ export function ManageNFTForm({ onSubmit, isProcessing, register, handleSubmit, 
                                 <SelectItem value="revoke">Revoke Approval</SelectItem>
                                 <SelectItem value="revokeAll">Revoke All Approvals</SelectItem>
                                 <SelectItem value="transfer">Transfer NFT</SelectItem>
-                                <SelectItem value="storageDeposit">Storage Deposit</SelectItem>
-                                <SelectItem value="storageWithdraw">Storage Withdraw</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

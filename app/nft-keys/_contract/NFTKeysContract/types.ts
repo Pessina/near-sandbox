@@ -6,7 +6,7 @@ type ContractChangeMethodArgs<T = void> = {
   amount?: string;
 };
 
-type StorageBalanceResult = {
+export type StorageBalanceResult = {
   total: string;
   available: string;
 };

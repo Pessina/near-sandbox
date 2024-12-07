@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "@/providers/AuthProvider";
+import { WalletAuthProvider } from "@/providers/WalletAuthProvider";
 import "./globals.css";
+import { KeyPairAuthProvider } from "@/providers/KeyPairAuthProvider";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import Header from "@/components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,14 +22,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <AuthProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </AuthProvider>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full`}>
+        <ReactQueryProvider>
+          <KeyPairAuthProvider>
+            <WalletAuthProvider>
+              <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+                <main className="container mx-auto p-4 space-y-6 h-full flex flex-col">
+                  <Header />
+                  <div className="grow flex flex-col">
+                    {children}
+                  </div>
+                </main>
+                <Toaster />
+              </ThemeProvider>
+            </WalletAuthProvider>
+          </KeyPairAuthProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );
