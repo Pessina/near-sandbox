@@ -22,15 +22,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full`}>
         <ReactQueryProvider>
           <KeyPairAuthProvider>
             <WalletAuthProvider>
               <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-                <Header />
-                <main className="container mx-auto p-4 space-y-6">
-                  {children}
+                <main className="container mx-auto p-4 space-y-6 h-full flex flex-col">
+                  <Header />
+                  <div className="grow flex flex-col">
+                    {children}
+                  </div>
                 </main>
                 <Toaster />
               </ThemeProvider>
