@@ -31,6 +31,11 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
         title: "MultiChain Signatures",
         icon: <Layers className="h-6 w-6" />,
         description: "Manage signatures across multiple chains"
+    },
+    "near": {
+        title: "NEAR Sign Delegate",
+        icon: <Layers className="h-6 w-6" />,
+        description: "Sign a delegate transaction with your NEAR account"
     }
 }
 

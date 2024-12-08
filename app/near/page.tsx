@@ -11,6 +11,8 @@ import {
     Action,
     FunctionCall,
 } from "@near-js/transactions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
 
 type FormsData = {
     message: string;
@@ -19,13 +21,14 @@ type FormsData = {
 const NearPage = () => {
     const { register, handleSubmit } = useForm<FormsData>();
 
-    const { account } = useInitNear();
+    const { accounts } = useKeyPairAuth();
+    const account = accounts?.[0];
 
     const showNonce = async () => {
         if (!account) return;
 
         const keys = await account.findAccessKey("", []);
-        console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
+        console.log("Access key nonce: ", keys.accessKey.nonce);
     };
 
     const onSubmit = async (data: FormsData) => {
@@ -33,7 +36,7 @@ const NearPage = () => {
 
         try {
             const keys = await account.findAccessKey("", []);
-            console.log("Access key nonce: ", keys.accessKey.nonce.toNumber());
+            console.log("Access key nonce: ", keys.accessKey.nonce);
 
             const signedDelegate = await account.signedDelegate({
                 receiverId: process.env.NEXT_PUBLIC_CHAIN_SIGNATURE_CONTRACT!,
@@ -41,17 +44,19 @@ const NearPage = () => {
                     new Action({
                         functionCall: new FunctionCall({
                             methodName: "sign",
-                            args: Array.from(
-                                JSON.stringify({
-                                    payload: [
-                                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2,
-                                    ],
-                                    path: "test",
-                                })
-                            ).map((char) => char.charCodeAt(0)),
-                            gas: new BN("300000000000000"),
-                            deposit: new BN("0"),
+                            args: new Uint8Array(
+                                Array.from(
+                                    JSON.stringify({
+                                        payload: [
+                                            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2,
+                                        ],
+                                        path: "test",
+                                    })
+                                ).map((char) => char.charCodeAt(0))
+                            ),
+                            gas: BigInt("300000000000000"),
+                            deposit: BigInt("0"),
                         }),
                     }),
                 ],
@@ -60,7 +65,7 @@ const NearPage = () => {
 
             console.log(
                 "Signed delegate nonce: ",
-                signedDelegate.delegateAction.nonce.toNumber()
+                signedDelegate.delegateAction.nonce
             );
 
             const res = await fetch(
@@ -82,33 +87,52 @@ const NearPage = () => {
     };
 
     return (
-        <div className="flex justify-center items-center h-screen">
-            <div className="w-full max-w-xs">
-                <h1 className="text-center text-2xl font-bold mb-4">
-                    NEAR Delegate Example
-                </h1>
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-                    <Input
-                        label="Message"
-                        {...register("message")}
-                        placeholder="Enter a message"
-                        className="mb-4"
-                    />
-                    <Button
-                        type="submit"
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                    >
-                        Delegate
-                    </Button>
-                </form>
-                <Button
-                    type="button"
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                    onClick={showNonce}
-                >
-                    Nonce
-                </Button>
-            </div>
+        <div className="grow flex flex-col items-center justify-center">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-bold text-center">NEAR Delegate Example</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {!account && (
+                        <p className="text-red-500 mb-4 text-center">
+                            Please connect your NEAR wallet to continue
+                        </p>
+                    )}
+
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="space-y-2">
+                            <label htmlFor="message" className="text-sm font-medium text-gray-200">
+                                Message
+                            </label>
+                            <Input
+                                id="message"
+                                {...register("message")}
+                                placeholder="Enter your message here"
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <Button
+                                type="submit"
+                                disabled={!account}
+                                className="w-full"
+                            >
+                                Sign & Delegate
+                            </Button>
+
+                            <Button
+                                type="button"
+                                onClick={showNonce}
+                                disabled={!account}
+                                variant="secondary"
+                                className="w-full"
+                            >
+                                Show Nonce
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
         </div>
     );
 };
