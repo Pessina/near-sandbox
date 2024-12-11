@@ -30,10 +30,6 @@ export const useEnv = (
               process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID2,
             NEXT_PUBLIC_NEAR_PRIVATE_KEY2:
               process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY2,
-            NEXT_PUBLIC_NEAR_ACCOUNT_ID3:
-              process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID3,
-            NEXT_PUBLIC_NEAR_PRIVATE_KEY3:
-              process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY3,
           }
         : {};
 
@@ -49,7 +45,7 @@ export const useEnv = (
       });
     }
 
-    [2, 3].forEach((num) => {
+    [2].forEach((num) => {
       const accountId =
         envVars[`NEXT_PUBLIC_NEAR_ACCOUNT_ID${num}` as keyof typeof envVars];
       const privateKey =
