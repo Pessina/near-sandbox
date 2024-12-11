@@ -23,8 +23,6 @@ export function StorageBalanceCard({
 }: StorageBalanceCardProps) {
     const [depositAmount, setDepositAmount] = useState("")
 
-    if (!storageBalance) return null
-
     return (
         <Card>
             <CardHeader>
@@ -38,11 +36,11 @@ export function StorageBalanceCard({
                     <div className="space-y-2">
                         <p className="flex justify-between">
                             <span className="text-muted-foreground">Total:</span>
-                            <span className="font-semibold">{formatNearAmount(storageBalance.total)} NEAR</span>
+                            <span className="font-semibold">{formatNearAmount(storageBalance?.total || "0")} NEAR</span>
                         </p>
                         <p className="flex justify-between">
                             <span className="text-muted-foreground">Available:</span>
-                            <span className="font-semibold">{formatNearAmount(storageBalance.available)} NEAR</span>
+                            <span className="font-semibold">{formatNearAmount(storageBalance?.available || "0")} NEAR</span>
                         </p>
                     </div>
 
@@ -79,8 +77,8 @@ export function StorageBalanceCard({
                                     </div>
                                 </div>
                                 <Button
-                                    onClick={() => onStorageWithdraw?.(storageBalance.available)}
-                                    disabled={isProcessing || !parseFloat(storageBalance.available)}
+                                    onClick={() => onStorageWithdraw?.(storageBalance?.available || "0")}
+                                    disabled={isProcessing || !parseFloat(storageBalance?.available || "0")}
                                     variant="outline"
                                     className="w-full"
                                 >
