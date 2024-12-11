@@ -17,6 +17,7 @@ import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 import { NFTKeysMarketplaceContract } from "../../_contract/NFTKeysMarketplaceContract";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bitcoin } from "multichain-tools";
 
 export interface ListNFTArgs {
   data: FormData;
@@ -330,7 +331,7 @@ export function useNFTMarketplace({
                 from: derivedAddressAndPublicKey.address,
                 publicKey: derivedAddressAndPublicKey.publicKey,
                 to: data.to,
-                value: data.value,
+                value: Bitcoin.toSatoshi(Number(data.value)).toString(),
               },
               "",
               nft.token_id
@@ -346,7 +347,12 @@ export function useNFTMarketplace({
                     typeUrl: "/cosmos.bank.v1beta1.MsgSend",
                     value: {
                       toAddress: data.to,
-                      amount: [{ denom: "uosmo", amount: data.value }],
+                      amount: [
+                        {
+                          denom: "uosmo",
+                          amount: (Number(data.value) * 1_000_000).toString(),
+                        },
+                      ],
                     },
                   },
                 ],
