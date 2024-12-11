@@ -346,6 +346,7 @@ export function useNFTMarketplace({
                   {
                     typeUrl: "/cosmos.bank.v1beta1.MsgSend",
                     value: {
+                      fromAddress: derivedAddressAndPublicKey.address,
                       toAddress: data.to,
                       amount: [
                         {
