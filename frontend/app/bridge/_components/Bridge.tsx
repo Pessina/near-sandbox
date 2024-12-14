@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { ArrowRightLeft, Wallet, Loader2 } from 'lucide-react'
+import { ArrowRightLeft, Wallet, Loader2, ArrowRight } from 'lucide-react'
 import { useAccount, useConnect, useSendTransaction } from 'wagmi'
 import { parseEther, encodeAbiParameters } from 'viem'
 import { useForm } from "react-hook-form"
 import { metaMask } from 'wagmi/connectors'
+import { Badge } from "@/components/ui/badge"
 
 type FormData = {
     amount: string
@@ -86,66 +87,87 @@ export default function Bridge() {
     }
 
     return (
-        <div className="grow flex flex-col items-center justify-center">
-            <Card className="max-w-md">
-                <CardHeader>
-                    <CardTitle className="text-2xl font-bold">Token Bridge</CardTitle>
-                    <CardDescription>Bridge your tokens across different blockchains</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {!isConnected ? (
-                        <Button
-                            onClick={() => connect({ connector: metaMask() })}
-                            disabled={isConnectPending}
-                            className="w-full"
-                        >
-                            <Wallet className="mr-2 h-4 w-4" /> Connect MetaMask
-                        </Button>
-                    ) : (
-                        <div className="text-sm text-muted-foreground">
-                            Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+        <Card className="w-full max-w-md mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl font-bold">Cross-Chain Bridge</CardTitle>
+                <CardDescription>Transfer your assets securely across blockchains</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                {!isConnected ? (
+                    <Button
+                        onClick={() => connect({ connector: metaMask() })}
+                        disabled={isConnectPending}
+                        className="w-full"
+                    >
+                        <Wallet className="mr-2 h-4 w-4" /> Connect MetaMask
+                    </Button>
+                ) : (
+                    <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
+                        <span className="text-sm font-medium">Connected Wallet</span>
+                        <Badge variant="secondary">
+                            {address?.slice(0, 6)}...{address?.slice(-4)}
+                        </Badge>
+                    </div>
+                )}
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium mb-1 block">From</label>
+                            <Select
+                                value={formValues.sourceChain}
+                                onValueChange={(value) => register("sourceChain").onChange({ target: { value } })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Source Chain" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="11155111">Sepolia</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                    )}
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                        <Select
-                            value={formValues.sourceChain}
-                            onValueChange={(value) => register("sourceChain").onChange({ target: { value } })}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Source Chain" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="11155111">Sepolia</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select
-                            value={formValues.destChain}
-                            onValueChange={(value) => register("destChain").onChange({ target: { value } })}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Destination Chain" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="1">BTC</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div>
+                            <label className="text-sm font-medium mb-1 block">To</label>
+                            <Select
+                                value={formValues.destChain}
+                                onValueChange={(value) => register("destChain").onChange({ target: { value } })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Destination Chain" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">BTC</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="bridgeAddress" className="text-sm font-medium mb-1 block">Bridge Address</label>
                         <Input
+                            id="bridgeAddress"
                             {...register("bridgeAddress", { required: "Bridge address is required" })}
                             type="text"
-                            placeholder="Bridge Address"
+                            placeholder="0x..."
                         />
                         {errors.bridgeAddress && (
-                            <p className="text-sm text-red-500">{errors.bridgeAddress.message}</p>
+                            <p className="text-sm text-red-500 mt-1">{errors.bridgeAddress.message}</p>
                         )}
+                    </div>
+                    <div>
+                        <label htmlFor="toAddress" className="text-sm font-medium mb-1 block">Recipient Address</label>
                         <Input
+                            id="toAddress"
                             {...register("toAddress", { required: "To address is required" })}
                             type="text"
-                            placeholder="To Address (on destination chain)"
+                            placeholder="Destination address"
                         />
                         {errors.toAddress && (
-                            <p className="text-sm text-red-500">{errors.toAddress.message}</p>
+                            <p className="text-sm text-red-500 mt-1">{errors.toAddress.message}</p>
                         )}
+                    </div>
+                    <div>
+                        <label htmlFor="amount" className="text-sm font-medium mb-1 block">Amount</label>
                         <Input
+                            id="amount"
                             {...register("amount", {
                                 required: "Amount is required",
                                 pattern: {
@@ -154,22 +176,22 @@ export default function Bridge() {
                                 }
                             })}
                             type="text"
-                            placeholder="Amount"
+                            placeholder="0.0"
                         />
                         {errors.amount && (
-                            <p className="text-sm text-red-500">{errors.amount.message}</p>
+                            <p className="text-sm text-red-500 mt-1">{errors.amount.message}</p>
                         )}
-                        <Button type="submit" disabled={!isConnected || isPending} className="w-full">
-                            {isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <ArrowRightLeft className="mr-2 h-4 w-4" />
-                            )}
-                            Bridge Tokens
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
+                    </div>
+                    <Button type="submit" disabled={!isConnected || isPending} className="w-full">
+                        {isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <ArrowRightLeft className="mr-2 h-4 w-4" />
+                        )}
+                        Initiate Bridge
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
     )
 }

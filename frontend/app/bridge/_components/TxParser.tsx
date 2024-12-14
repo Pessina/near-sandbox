@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { usePublicClient } from 'wagmi'
 import { decodeAbiParameters, formatEther } from 'viem'
+import { Loader2, Search } from 'lucide-react'
 
 export default function TxParser() {
     const [txHash, setTxHash] = useState('')
@@ -16,12 +17,14 @@ export default function TxParser() {
         amount: string
     } | null>(null)
     const [error, setError] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
     const publicClient = usePublicClient()
 
     const decodeTx = async () => {
         try {
             setError('')
             setDecodedData(null)
+            setIsLoading(true)
 
             if (!txHash) {
                 throw new Error('Please enter a transaction hash')
@@ -52,11 +55,13 @@ export default function TxParser() {
 
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to decode transaction')
+        } finally {
+            setIsLoading(false)
         }
     }
 
     return (
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md mx-auto">
             <CardHeader>
                 <CardTitle>Transaction Parser</CardTitle>
             </CardHeader>
@@ -67,28 +72,37 @@ export default function TxParser() {
                         value={txHash}
                         onChange={(e) => setTxHash(e.target.value)}
                     />
-                    <Button onClick={decodeTx}>Decode</Button>
+                    <Button onClick={decodeTx} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </Button>
                 </div>
 
                 {error && (
-                    <div className="text-sm text-red-500">
+                    <div className="text-sm text-red-500 p-2 bg-red-50 rounded">
                         {error}
                     </div>
                 )}
 
                 {decodedData && (
-                    <div className="space-y-2 text-sm">
-                        <div>
-                            <span className="font-semibold">From Address:</span> {decodedData.from}
-                        </div>
-                        <div>
-                            <span className="font-semibold">To Address:</span> {decodedData.to}
-                        </div>
-                        <div>
-                            <span className="font-semibold">Amount:</span> {decodedData.amount} ETH
-                        </div>
-                        <div>
-                            <span className="font-semibold">Destination Chain:</span> {decodedData.chain.toString()}
+                    <div className="space-y-2 text-sm bg-muted p-4 rounded-lg">
+                        <h3 className="font-semibold text-lg mb-2">Decoded Transaction</h3>
+                        <div className="flex flex-col gap-2">
+                            <div>
+                                <span className="font-semibold block">From Address:</span>
+                                <span className="text-muted-foreground break-all">{decodedData.from}</span>
+                            </div>
+                            <div>
+                                <span className="font-semibold block">To Address:</span>
+                                <span className="text-muted-foreground break-all">{decodedData.to}</span>
+                            </div>
+                            <div>
+                                <span className="font-semibold block">Amount:</span>
+                                <span className="text-muted-foreground">{decodedData.amount} ETH</span>
+                            </div>
+                            <div>
+                                <span className="font-semibold block">Destination Chain:</span>
+                                <span className="text-muted-foreground">{decodedData.chain.toString()}</span>
+                            </div>
                         </div>
                     </div>
                 )}
