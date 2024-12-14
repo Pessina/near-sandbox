@@ -7,6 +7,7 @@ import { KeyPairAuthProvider } from "@/providers/KeyPairAuthProvider";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import Header from "@/components/Header";
 import "./globals.css";
+import { WagmiProvider } from "@/providers/WagmiProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,21 +24,23 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full`}>
-        <ReactQueryProvider>
-          <KeyPairAuthProvider>
-            <WalletAuthProvider>
-              <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-                <main className="container mx-auto p-4 space-y-6 h-full flex flex-col">
-                  <Header />
-                  <div className="grow flex flex-col">
-                    {children}
-                  </div>
-                </main>
-                <Toaster />
-              </ThemeProvider>
-            </WalletAuthProvider>
-          </KeyPairAuthProvider>
-        </ReactQueryProvider>
+        <WagmiProvider>
+          <ReactQueryProvider>
+            <KeyPairAuthProvider>
+              <WalletAuthProvider>
+                <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+                  <main className="container mx-auto p-4 space-y-6 h-full flex flex-col">
+                    <Header />
+                    <div className="grow flex flex-col">
+                      {children}
+                    </div>
+                  </main>
+                  <Toaster />
+                </ThemeProvider>
+              </WalletAuthProvider>
+            </KeyPairAuthProvider>
+          </ReactQueryProvider>
+        </WagmiProvider>
       </body>
     </html>
   );

@@ -43,9 +43,12 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.1",
     "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "viem": "^2.21.55",
+    "wagmi": "^2.14.1"
   },
   "devDependencies": {
+    "@metamask/providers": "^18.2.0",
     "@testing-library/react": "^16.1.0",
     "@types/bn.js": "^5.1.6",
     "@types/bs58": "^4.0.4",
