@@ -1,15 +1,18 @@
 "use client"
 
 import { WagmiProvider as WagmiConfig, createConfig, http } from 'wagmi'
-import { mainnet, sepolia } from 'wagmi/chains'
+import { sepolia } from 'wagmi/chains'
 import { type ReactNode } from 'react'
+import { metaMask } from 'wagmi/connectors'
 
 const config = createConfig({
-    chains: [mainnet, sepolia],
+    chains: [sepolia],
     transports: {
-        [mainnet.id]: http(),
         [sepolia.id]: http()
-    }
+    },
+    connectors: [
+        metaMask()
+    ]
 })
 
 export function WagmiProvider({ children }: { children: ReactNode }) {
