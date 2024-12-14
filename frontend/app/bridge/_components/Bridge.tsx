@@ -183,4 +183,4 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             </CardContent>
         </Card>
     )
-}
+}   

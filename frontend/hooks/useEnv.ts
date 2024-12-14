@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowser } from "@/lib/utils";
 import { useMemo } from "react";
 
 interface NearAccount {
@@ -21,19 +22,23 @@ export const useEnv = (
   }
 ): EnvVariables => {
   return useMemo(() => {
-    const envVars =
-      typeof window !== "undefined"
-        ? {
-            NEXT_PUBLIC_NEAR_ACCOUNT_ID:
-              process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID,
-            NEXT_PUBLIC_NEAR_PRIVATE_KEY:
-              process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY,
-            NEXT_PUBLIC_NEAR_ACCOUNT_ID2:
-              process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID2,
-            NEXT_PUBLIC_NEAR_PRIVATE_KEY2:
-              process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY2,
-          }
-        : {};
+    // Return early if not in browser
+    if (!isBrowser()) {
+      return {
+        nearAccounts: [],
+        chainSignatureContract: "",
+        nftKeysContract: "",
+        nftKeysMarketplaceContract: "",
+        nearNetworkId: "testnet",
+      };
+    }
+
+    const envVars = {
+      NEXT_PUBLIC_NEAR_ACCOUNT_ID: process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID,
+      NEXT_PUBLIC_NEAR_PRIVATE_KEY: process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY,
+      NEXT_PUBLIC_NEAR_ACCOUNT_ID2: process.env.NEXT_PUBLIC_NEAR_ACCOUNT_ID2,
+      NEXT_PUBLIC_NEAR_PRIVATE_KEY2: process.env.NEXT_PUBLIC_NEAR_PRIVATE_KEY2,
+    };
 
     const accounts: NearAccount[] = [];
 
