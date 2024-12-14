@@ -3,24 +3,24 @@
 import { useToast } from "@/hooks/use-toast"
 import Bridge from "./_components/Bridge"
 import { usePrices } from "./_hooks/usePrices"
-import { useGetTxData } from "./_hooks/useGetTxData"
+import { useETHTxData } from "./_hooks/useETHTxData"
 import { useBTCInfo } from "./_hooks/useBTCInfo"
-import { Chain, chainsConfig } from "@/constants/chains"
+import { Chain, CHAINS } from "@/constants/chains"
 
 export default function BridgePage() {
     const { toast } = useToast()
-    const { getPrice } = usePrices()
-    const { getTxData } = useGetTxData()
+    const { getPrices } = usePrices()
+    const { getTxData: getEthTxData } = useETHTxData()
     const { getBTCInfo } = useBTCInfo()
 
-    const handleSuccess = async (data: `0x${string}`) => {
-        const explorerUrl = `${chainsConfig.ethereum.explorerUrl}/tx/${data}`
+    const handleSuccess = async (txHash: `0x${string}`) => {
+        const explorerUrl = `${CHAINS[Chain.ETH].explorerUrl}/tx/${txHash}`
 
-        const txData = await getTxData(data)
+        const txData = await getEthTxData(txHash)
         console.log("Transaction Data:", txData)
 
         try {
-            const priceData = await getPrice(Chain.ETH, Chain.BTC)
+            const priceData = await getPrices(Chain.ETH, Chain.BTC)
             console.log("Price Data:", priceData)
 
             const btcInfo = await getBTCInfo('tb1qp47syg7nq26w3mehq594yq93cvcx4eatrvrtmc')
@@ -56,7 +56,6 @@ export default function BridgePage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-6 text-center">Cross-Chain Bridge</h1>
             <Bridge onSuccess={handleSuccess} onError={handleError} />
         </div>
     )

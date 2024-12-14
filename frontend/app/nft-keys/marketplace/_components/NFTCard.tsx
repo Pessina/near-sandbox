@@ -8,7 +8,7 @@ import { NFTOfferDialog } from "./NFTOfferDialog"
 import { NFTTransactionDialog } from "./NFTTransactionDialog"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useAccountBalance } from "@/hooks/useAccountBalance"
-import { Chain } from "@/constants/chains"
+import { Chain, CHAINS } from "@/constants/chains"
 import { useCopy } from "@/hooks/useCopy"
 import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
@@ -60,7 +60,7 @@ export function NFTCard({ nft, isProcessing, onList, onRemoveListing, onOffer, o
                     {nft.saleConditions?.amount && (
                         <Badge variant="secondary">
                             <Tag className="mr-1 h-3 w-3" />
-                            {formatTokenAmount(nft.saleConditions.amount, nft.saleConditions.token as Chain)} {nft.saleConditions.token.toUpperCase()}
+                            {formatTokenAmount(nft.saleConditions.amount, nft.saleConditions.token as Chain)} {CHAINS[nft.saleConditions.token as Chain].shortName}
                         </Badge>
                     )}
                 </div>

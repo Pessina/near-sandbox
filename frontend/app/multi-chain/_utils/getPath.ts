@@ -1,11 +1,11 @@
-import { CHAIN_CONFIGS } from "@/constants/chains";
+import { CHAINS } from "@/constants/chains";
 import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
 import { Chain } from "@/constants/chains";
 
 export const getPath = (chain: Chain, derivedPath: string) => {
-  const chainConfig = CHAIN_CONFIGS[chain];
+  const chainConfig = CHAINS[chain];
   return getCanonicalizedDerivationPath({
-    chain: chainConfig.chainId,
+    chain: chainConfig.slip44,
     domain: "",
     meta: { path: derivedPath },
   });

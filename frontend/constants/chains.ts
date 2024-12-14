@@ -5,34 +5,40 @@ export enum Chain {
   OSMOSIS = "OSMOSIS",
 }
 
-export const CHAIN_CONFIGS = {
-  // [Chain.BNB]: { chainId: 60 },
-  [Chain.ETH]: { chainId: 60 },
-  [Chain.BTC]: { chainId: 0 },
-  [Chain.OSMOSIS]: { chainId: 118 },
-} as const;
-
-export const chainsConfig = {
-  ethereum: {
+export const CHAINS = {
+  [Chain.ETH]: {
+    shortName: "ETH",
+    name: "Ethereum",
+    slip44: 60,
     providerUrl:
       "https://sepolia.infura.io/v3/6df51ccaa17f4e078325b5050da5a2dd",
     explorerUrl: "https://sepolia.etherscan.io",
-    name: "ETH",
+    testnet: true,
   },
-  // bsc: {
+  // [Chain.BNB]: {
+  //   shortName: "BNB",
+  //   name: "BNB Chain",
+  //   slip44: 714,
   //   providerUrl: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
   //   explorerUrl: "https://testnet.bscscan.com",
-  //   name: "BNB",
+  //   testnet: true
   // },
-  btc: {
-    name: "BTC",
+  [Chain.BTC]: {
+    shortName: "BTC",
+    name: "Bitcoin",
+    slip44: 0,
     networkType: "testnet" as const,
     rpcEndpoint: "https://mempool.space/testnet4/api",
     explorerUrl: "https://mempool.space/testnet4",
+    testnet: true,
   },
-  osmosis: {
+  [Chain.OSMOSIS]: {
+    shortName: "OSMO",
+    name: "Osmosis",
+    slip44: 118,
     restEndpoint: "https://lcd.osmotest5.osmosis.zone/",
     chainId: "osmo-test-5",
     explorerUrl: "https://www.mintscan.io/osmosis-testnet",
+    testnet: true,
   },
-};
+} as const;

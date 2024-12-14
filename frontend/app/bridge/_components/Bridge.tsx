@@ -11,7 +11,7 @@ import { parseEther, encodeAbiParameters } from 'viem'
 import { useForm } from "react-hook-form"
 import { metaMask } from 'wagmi/connectors'
 import { Badge } from "@/components/ui/badge"
-import { Chain, CHAIN_CONFIGS } from "@/constants/chains"
+import { Chain, CHAINS } from "@/constants/chains"
 
 type FormData = {
     amount: string
@@ -63,7 +63,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                 { name: 'to', type: 'string' },
                 { name: 'chain', type: 'uint256' }
             ],
-            [data.toAddress, BigInt(CHAIN_CONFIGS[data.destChain].chainId)]
+            [data.toAddress, BigInt(CHAINS[data.destChain].slip44)]
         )
 
         sendTransaction({
@@ -109,7 +109,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                                     <SelectValue placeholder="Source Chain" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={Chain.ETH}>ETH</SelectItem>
+                                    <SelectItem value={Chain.ETH}>{CHAINS[Chain.ETH].name}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -123,8 +123,8 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                                     <SelectValue placeholder="Destination Chain" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={Chain.BTC}>BTC</SelectItem>
-                                    <SelectItem value={Chain.OSMOSIS}>OSMOSIS</SelectItem>
+                                    <SelectItem value={Chain.BTC}>{CHAINS[Chain.BTC].name}</SelectItem>
+                                    <SelectItem value={Chain.OSMOSIS}>{CHAINS[Chain.OSMOSIS].name}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

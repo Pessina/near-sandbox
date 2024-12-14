@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { usePublicClient } from "wagmi";
 import { decodeAbiParameters, formatEther } from "viem";
-import { Chain, CHAIN_CONFIGS } from "@/constants/chains";
+import { Chain, CHAINS } from "@/constants/chains";
 
 export type DecodedTxData = {
+  sourceChain: Chain;
+  destChain: Chain;
   from: `0x${string}`;
   to: string;
-  chain: Chain;
-  amount: string;
+  depositAmount: string;
 } | null;
 
-export function useGetTxData() {
+export function useETHTxData() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const publicClient = usePublicClient();
@@ -43,19 +44,20 @@ export function useGetTxData() {
       );
 
       const chainId = Number(decoded[1]);
-      const chain = Object.entries(CHAIN_CONFIGS).find(
-        ([_, config]) => config.chainId === chainId
+      const destChain = Object.entries(CHAINS).find(
+        ([_, config]) => config.slip44 === chainId
       )?.[0] as Chain;
 
-      if (!chain) {
+      if (!destChain) {
         throw new Error("Invalid chain ID");
       }
 
       return {
+        sourceChain: Chain.ETH,
+        destChain,
         from: tx.from,
         to: decoded[0],
-        chain,
-        amount: formatEther(tx.value),
+        depositAmount: formatEther(tx.value),
       };
     } catch (err) {
       setError(

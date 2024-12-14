@@ -36,6 +36,11 @@ const PAGE_CONFIGS: Record<string, PageConfig> = {
         title: "NEAR Sign Delegate",
         icon: <Layers className="h-6 w-6" />,
         description: "Sign a delegate transaction with your NEAR account"
+    },
+    "bridge": {
+        title: "Cross-Chain Bridge",
+        icon: <Layers className="h-6 w-6" />,
+        description: "Transfer assets across chains"
     }
 }
 

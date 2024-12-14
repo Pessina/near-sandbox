@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { ListPlus, Wallet } from "lucide-react"
 import { useState, useEffect } from "react"
-import { Chain } from "@/constants/chains"
+import { Chain, CHAINS } from "@/constants/chains"
 import { useAccountBalance } from "@/hooks/useAccountBalance"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useEnv } from "@/hooks/useEnv"
@@ -80,9 +80,9 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                                         <SelectValue placeholder="Select blockchain network" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.values(Chain).map(token => (
-                                            <SelectItem key={token} value={token}>
-                                                {token}
+                                        {Object.entries(CHAINS).map(([chain, details]) => (
+                                            <SelectItem key={chain} value={chain}>
+                                                {details.name} ({details.shortName})
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -130,9 +130,9 @@ export const NFTListDialog: React.FC<NFTListDialogProps> = ({ isProcessing, onLi
                                             <SelectValue placeholder="Select payment token" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {Object.values(Chain).map(token => (
-                                                <SelectItem key={token} value={token}>
-                                                    {token}
+                                            {Object.entries(CHAINS).map(([chain, details]) => (
+                                                <SelectItem key={chain} value={chain}>
+                                                    {details.name} ({details.shortName})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

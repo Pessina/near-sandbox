@@ -14,7 +14,7 @@ import {
 import { useCallback, useEffect } from "react";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import { useChains } from "./useChains";
-import { chainsConfig } from "../constants/chains";
+import { CHAINS } from "@/constants/chains";
 import { toast } from "@/hooks/use-toast";
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
 
@@ -176,11 +176,11 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
                 window.history.replaceState({}, '', window.location.pathname);
                 let explorerUrl = '';
                 if (evmTransaction) {
-                    explorerUrl = `${chainsConfig.ethereum.explorerUrl}/tx/${foreignerChainTxHash}`;
+                    explorerUrl = `${CHAINS.ETH.explorerUrl}/tx/${foreignerChainTxHash}`;
                 } else if (btcTransaction) {
-                    explorerUrl = `${chainsConfig.btc.explorerUrl}/tx/${foreignerChainTxHash}`;
+                    explorerUrl = `${CHAINS.BTC.explorerUrl}/tx/${foreignerChainTxHash}`;
                 } else if (cosmosTransaction) {
-                    explorerUrl = `${chainsConfig.osmosis.explorerUrl}/tx/${foreignerChainTxHash}`;
+                    explorerUrl = `${CHAINS.OSMOSIS.explorerUrl}/tx/${foreignerChainTxHash}`;
                 }
                 toast({
                     title: "Transaction sent!",

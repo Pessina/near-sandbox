@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { chainsConfig } from "@/constants/chains";
+import { Chain, CHAINS } from "@/constants/chains";
 
 interface UTXO {
   txid: string;
@@ -10,7 +10,46 @@ interface UTXO {
   status: {
     confirmed: boolean;
     block_height?: number;
+    block_hash?: string;
     block_time?: number;
+  };
+  tx?: {
+    txid: string;
+    version: number;
+    locktime: number;
+    vin: {
+      txid: string;
+      vout: number;
+      prevout: {
+        scriptpubkey: string;
+        scriptpubkey_asm: string;
+        scriptpubkey_type: string;
+        scriptpubkey_address: string;
+        value: number;
+      };
+      scriptsig: string;
+      scriptsig_asm: string;
+      witness: string[];
+      is_coinbase: boolean;
+      sequence: number;
+    }[];
+    vout: {
+      scriptpubkey: string;
+      scriptpubkey_asm: string;
+      scriptpubkey_type: string;
+      scriptpubkey_address: string;
+      value: number;
+    }[];
+    size: number;
+    weight: number;
+    sigops?: number;
+    fee: number;
+    status: {
+      confirmed: boolean;
+      block_height?: number;
+      block_hash?: string;
+      block_time?: number;
+    };
   };
 }
 
@@ -31,24 +70,38 @@ export function useBTCInfo() {
     try {
       // Fetch fee rate from mempool.space testnet API
       const feeResponse = await fetch(
-        `${chainsConfig.btc.rpcEndpoint}/v1/fees/recommended`
+        `${CHAINS[Chain.BTC].rpcEndpoint}/v1/fees/recommended`
       );
       if (!feeResponse.ok) throw new Error("Failed to fetch fee data");
       const feeData = await feeResponse.json();
 
       // Fetch UTXOs from mempool.space testnet API
       const utxoResponse = await fetch(
-        `${chainsConfig.btc.rpcEndpoint}/address/${address}/utxo`
+        `${CHAINS[Chain.BTC].rpcEndpoint}/address/${address}/utxo`
       );
       if (!utxoResponse.ok) throw new Error("Failed to fetch UTXO data");
       const utxoData: UTXO[] = await utxoResponse.json();
 
-      // Calculate total balance from UTXOs
-      const balance = utxoData.reduce((sum, utxo) => sum + utxo.value, 0);
+      const utxosWithTx = await Promise.all(
+        utxoData.map(async (utxo) => {
+          const txResponse = await fetch(
+            `${CHAINS[Chain.BTC].rpcEndpoint}/tx/${utxo.txid}`
+          );
+          if (!txResponse.ok)
+            throw new Error(`Failed to fetch tx data for ${utxo.txid}`);
+          const txData = await txResponse.json();
+          return {
+            ...utxo,
+            tx: txData,
+          };
+        })
+      );
+
+      const balance = utxosWithTx.reduce((sum, utxo) => sum + utxo.value, 0);
 
       return {
-        feeRate: feeData.hourFee, // Using hourly fee rate
-        utxos: utxoData,
+        feeRate: feeData.hourFee,
+        utxos: utxosWithTx,
         balance,
       };
     } catch (err) {

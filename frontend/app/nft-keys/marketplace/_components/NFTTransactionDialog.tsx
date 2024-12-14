@@ -95,9 +95,11 @@ export const NFTTransactionDialog: React.FC<NFTTransactionDialogProps> = ({
                                     <SelectValue placeholder="Select chain" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value={Chain.ETH}>ETH</SelectItem>
-                                    <SelectItem value={Chain.BTC}>BTC</SelectItem>
-                                    <SelectItem value={Chain.OSMOSIS}>OSMOSIS</SelectItem>
+                                    {Object.values(Chain).map((chainValue) => (
+                                        <SelectItem key={chainValue} value={chainValue}>
+                                            {chainValue}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
