@@ -2,23 +2,24 @@
 
 import { WagmiProvider as WagmiConfig, createConfig, http } from 'wagmi'
 import { sepolia } from 'wagmi/chains'
-import { type ReactNode } from 'react'
-import { metaMask } from 'wagmi/connectors'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const config = createConfig({
     chains: [sepolia],
     transports: {
         [sepolia.id]: http()
     },
-    connectors: [
-        metaMask()
-    ]
 })
 
-export function WagmiProvider({ children }: { children: ReactNode }) {
+const queryClient = new QueryClient();
+
+export const WagmiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
     return (
         <WagmiConfig config={config}>
-            {children}
+            <QueryClientProvider client={queryClient}>
+                {children}
+            </QueryClientProvider>
         </WagmiConfig>
     )
 }

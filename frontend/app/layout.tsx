@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import { WalletAuthProvider } from "@/providers/WalletAuthProvider";
 import { KeyPairAuthProvider } from "@/providers/KeyPairAuthProvider";
-import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import Header from "@/components/Header";
 import "./globals.css";
 import { WagmiProvider } from "@/providers/WagmiProvider";
@@ -26,19 +25,17 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full`}>
         <WagmiProvider>
-          <ReactQueryProvider>
-            <KeyPairAuthProvider>
-              <WalletAuthProvider>
-                <main className="container mx-auto p-4 space-y-6 h-full flex flex-col">
-                  <Header />
-                  <div className="grow flex flex-col">
-                    {children}
-                  </div>
-                </main>
-                <Toaster />
-              </WalletAuthProvider>
-            </KeyPairAuthProvider>
-          </ReactQueryProvider>
+          <KeyPairAuthProvider>
+            <WalletAuthProvider>
+              <main className="container mx-auto p-4 space-y-6 h-full flex flex-col">
+                <Header />
+                <div className="grow flex flex-col">
+                  {children}
+                </div>
+              </main>
+              <Toaster />
+            </WalletAuthProvider>
+          </KeyPairAuthProvider>
         </WagmiProvider>
       </body>
     </html >

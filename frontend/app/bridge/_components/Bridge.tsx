@@ -12,6 +12,10 @@ import { useForm } from "react-hook-form"
 import { metaMask } from 'wagmi/connectors'
 import { Badge } from "@/components/ui/badge"
 import { Chain, CHAINS } from "@/constants/chains"
+import { useMounted } from "@/hooks/useMounted"
+
+import type { UseSendTransactionParameters } from 'wagmi'
+import type { Config } from '@wagmi/core'
 
 type FormData = {
     amount: string
@@ -20,8 +24,6 @@ type FormData = {
     sourceChain: Chain
     destChain: Chain
 }
-import type { UseSendTransactionParameters } from 'wagmi'
-import type { Config } from '@wagmi/core'
 
 interface BridgeProps {
     onSuccess: NonNullable<UseSendTransactionParameters<Config>['mutation']>['onSuccess'];
@@ -39,6 +41,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     const { address, isConnected } = useAccount()
     const { connect, isPending: isConnectPending } = useConnect()
     const formValues = watch()
+    const mounted = useMounted()
 
     const { sendTransaction, isPending } = useSendTransaction({
         mutation: {
@@ -74,6 +77,8 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         })
     }
 
+    if (!mounted) return null
+
     return (
         <Card className="w-full max-w-md mx-auto">
             <CardHeader>
@@ -96,7 +101,8 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                             {address?.slice(0, 6)}...{address?.slice(-4)}
                         </Badge>
                     </div>
-                )}
+                )
+                }
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -124,7 +130,6 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={Chain.BTC}>{CHAINS[Chain.BTC].name}</SelectItem>
-                                    <SelectItem value={Chain.OSMOSIS}>{CHAINS[Chain.OSMOSIS].name}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -180,7 +185,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                         Initiate Bridge
                     </Button>
                 </form>
-            </CardContent>
-        </Card>
+            </CardContent >
+        </Card >
     )
 }   
