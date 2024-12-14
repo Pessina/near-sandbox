@@ -5,26 +5,34 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { ArrowRightLeft, Wallet, Loader2, ArrowRight } from 'lucide-react'
+import { ArrowRightLeft, Wallet, Loader2 } from 'lucide-react'
 import { useAccount, useConnect, useSendTransaction } from 'wagmi'
 import { parseEther, encodeAbiParameters } from 'viem'
 import { useForm } from "react-hook-form"
 import { metaMask } from 'wagmi/connectors'
 import { Badge } from "@/components/ui/badge"
+import { Chain, CHAIN_CONFIGS } from "@/constants/chains"
 
 type FormData = {
     amount: string
     bridgeAddress: string
     toAddress: string
-    sourceChain: string
-    destChain: string
+    sourceChain: Chain
+    destChain: Chain
+}
+import type { UseSendTransactionParameters } from 'wagmi'
+import type { Config } from '@wagmi/core'
+
+interface BridgeProps {
+    onSuccess: NonNullable<UseSendTransactionParameters<Config>['mutation']>['onSuccess'];
+    onError: NonNullable<UseSendTransactionParameters<Config>['mutation']>['onError'];
 }
 
-export default function Bridge() {
+export default function Bridge({ onSuccess, onError }: BridgeProps) {
     const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
         defaultValues: {
-            sourceChain: "11155111",
-            destChain: "1"
+            sourceChain: Chain.ETH,
+            destChain: Chain.BTC
         }
     })
     const { toast } = useToast()
@@ -34,40 +42,20 @@ export default function Bridge() {
 
     const { sendTransaction, isPending } = useSendTransaction({
         mutation: {
-            onSuccess(data) {
-                const explorerUrl = `https://sepolia.etherscan.io/tx/${data}`
-                toast({
-                    title: "Bridge Initiated",
-                    description: (
-                        <a
-                            href={explorerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline"
-                        >
-                            View on Explorer
-                        </a>
-                    ),
-                })
-            },
-            onError(error) {
-                toast({
-                    title: "Bridge Failed",
-                    description: error.message,
-                    variant: "destructive",
-                })
-            },
+            onSuccess,
+            onError
         }
     })
 
-    const onSubmit = (data: FormData) => {
+    const onSubmit = async (data: FormData) => {
         if (!isConnected) {
+            const error = new Error("Please connect your wallet first.")
             toast({
                 title: "Wallet Not Connected",
-                description: "Please connect your wallet first.",
+                description: error.message,
                 variant: "destructive",
             })
-            return
+            throw error
         }
 
         const encodedData = encodeAbiParameters(
@@ -75,7 +63,7 @@ export default function Bridge() {
                 { name: 'to', type: 'string' },
                 { name: 'chain', type: 'uint256' }
             ],
-            [data.toAddress, BigInt(data.destChain)]
+            [data.toAddress, BigInt(CHAIN_CONFIGS[data.destChain].chainId)]
         )
 
         sendTransaction({
@@ -115,13 +103,13 @@ export default function Bridge() {
                             <label className="text-sm font-medium mb-1 block">From</label>
                             <Select
                                 value={formValues.sourceChain}
-                                onValueChange={(value) => register("sourceChain").onChange({ target: { value } })}
+                                onValueChange={(value) => register("sourceChain").onChange({ target: { value: value as Chain } })}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Source Chain" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="11155111">Sepolia</SelectItem>
+                                    <SelectItem value={Chain.ETH}>ETH</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -129,13 +117,14 @@ export default function Bridge() {
                             <label className="text-sm font-medium mb-1 block">To</label>
                             <Select
                                 value={formValues.destChain}
-                                onValueChange={(value) => register("destChain").onChange({ target: { value } })}
+                                onValueChange={(value) => register("destChain").onChange({ target: { value: value as Chain } })}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Destination Chain" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="1">BTC</SelectItem>
+                                    <SelectItem value={Chain.BTC}>BTC</SelectItem>
+                                    <SelectItem value={Chain.OSMOSIS}>OSMOSIS</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

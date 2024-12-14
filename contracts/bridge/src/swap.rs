@@ -1,6 +1,7 @@
-pub struct DepositTx { 
+pub struct DepositData { 
     pub to: String, 
     pub amount: String,
+    pub chain: u64,
 }
 
 pub struct UTXO {
@@ -10,7 +11,7 @@ pub struct UTXO {
 }
 
 pub struct Swap {
-    pub deposit_tx_hex: String,
+    pub deposit_tx: DepositData,
     pub price: String, 
     pub utxos: Vec<UTXO>,
 }
