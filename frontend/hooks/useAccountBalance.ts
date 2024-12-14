@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useCallback } from "react";
 import { Chain } from "../constants/chains";
 import { useChains } from "@/hooks/useChains";

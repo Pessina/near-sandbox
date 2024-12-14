@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo } from "react";
 import { Bitcoin, EVM, Cosmos } from "multichain-tools";
 import { useEnv } from "@/hooks/useEnv";

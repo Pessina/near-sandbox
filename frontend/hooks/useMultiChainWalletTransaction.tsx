@@ -1,3 +1,5 @@
+"use client";
+
 import { useEnv } from "@/hooks/useEnv";
 import { useWalletAuth } from "@/providers/WalletAuthProvider";
 import {
@@ -47,6 +49,7 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
         }
 
         const { transaction, mpcPayloads } = await chain.getMPCPayloadAndTransaction(transactionRequest);
+
         chain.setTransaction(transaction, storageKey);
 
         const wallet = await walletSelector?.wallet('my-near-wallet');

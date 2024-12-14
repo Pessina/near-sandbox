@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Chain } from "../constants/chains";
 import { useChains } from "./useChains";

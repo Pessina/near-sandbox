@@ -1,3 +1,5 @@
+"use client";
+
 import { CHAINS } from "@/constants/chains";
 import { getCanonicalizedDerivationPath } from "@/lib/canonicalize";
 import { Chain } from "@/constants/chains";
