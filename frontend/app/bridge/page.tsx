@@ -55,7 +55,7 @@ export default function BridgePage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="grow flex flex-col justify-center items-center">
             <Bridge onSuccess={handleSuccess} onError={handleError} />
         </div>
     )
