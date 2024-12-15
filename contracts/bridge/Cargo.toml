@@ -15,7 +15,12 @@ passed_env = []
 container_build_command = ["cargo", "near", "build"]
 
 [dependencies]
-near-sdk = "5.6.0"
+near-sdk = {workspace = true}
+omni-transaction = {workspace = true}
+hex = {workspace = true}
+serde = {workspace = true}
+schemars = {workspace = true}
+sha2 = {workspace = true}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2.15", features = ["custom"] }

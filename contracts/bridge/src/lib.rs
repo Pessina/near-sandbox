@@ -1,4 +1,5 @@
 use near_sdk::{log, near, PanicOnDefault};
+use swap::UTXO;
 
 pub mod swap;
 
@@ -11,9 +12,9 @@ pub struct Contract {
 
 #[near]
 impl Contract {
-    pub fn swap(&mut self, ) {
+    pub fn swap(&mut self, utxos: Vec<UTXO>, receiver_address_str: String, spend_amount: u64) {
         log!("Swap starting");
-        
+        let swap = swap::prepare_btc_tx(&utxos, &receiver_address_str, spend_amount);
     }
 }
 
