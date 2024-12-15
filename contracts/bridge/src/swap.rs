@@ -14,26 +14,17 @@ use schemars::JsonSchema;
 use sha2::{Digest, Sha256};
 use std::error::Error;
 
-/// Default fee in satoshis.
-/// TODO: Consider making fee dynamic or configurable instead of hardcoded.
-const DEFAULT_FEE: u64 = 452;
-
 /// Length of a valid P2WPKH witness program script_pubkey.
 /// P2WPKH script_pubkey: 0x00 0x14 (20-byte-hash)
 /// Thus total length = 2 + 20 = 22 bytes.
 const P2WPKH_WITNESS_LEN: usize = 22;
 
-/// Data structure representing an Unspent Transaction Output (UTXO).
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "near_sdk::serde")]
 pub struct UTXO {
-    /// Transaction ID containing this UTXO
     pub txid: String,
-    /// Output index in the transaction
     pub vout: u32,
-    /// Amount in satoshis
     pub value: u64,
-    /// Hex-encoded script pubkey (typically "0014..." for P2WPKH)
     pub script_pubkey: String,
 }
 
@@ -63,26 +54,13 @@ fn p2wpkh_script_code_from_witness_program(script_pubkey: &ScriptBuf) -> Result<
     Ok(ScriptBuf(script))
 }
 
-/// Build a simple SegWit v0 transaction (version = 2) spending given UTXOs to a receiver.
-///
-/// # Arguments
-/// * `utxos` - List of UTXOs to spend
-/// * `receiver_script_pubkey_hex` - Hex-encoded script pubkey of the receiver
-/// * `spend_amount` - Amount to send in satoshis
-///
-/// # Errors
-/// Returns an error if:
-/// * Hex parsing fails
-/// * There are insufficient funds
-/// * Arithmetic overflow occurs
 pub fn prepare_btc_tx(
-    utxos: &[UTXO],
-    receiver_script_pubkey_hex: &str,
-    spend_amount: u64,
+    input_utxos: &[UTXO],
+    output_utxos: &[UTXO],
 ) -> Result<BitcoinTransaction, Box<dyn Error>> {
     log_str("Starting prepare_btc_tx");
 
-    let inputs: Vec<_> = utxos
+    let inputs: Vec<_> = input_utxos
         .iter()
         .map(|utxo| {
             let txid = Txid(Hash::from_hex(&utxo.txid)?);
@@ -95,35 +73,16 @@ pub fn prepare_btc_tx(
         })
         .collect::<Result<_, Box<dyn Error>>>()?;
 
-    let total_input = utxos
+    let outputs: Vec<_> = output_utxos
         .iter()
-        .try_fold(0u64, |acc, utxo| {
-            acc.checked_add(utxo.value)
-                .ok_or_else(|| "Overflow calculating total input")
-        })?;
-
-    if total_input < spend_amount {
-        return Err("Insufficient funds to cover spending amount".into());
-    }
-
-    let change_amount = total_input
-        .checked_sub(spend_amount)
-        .and_then(|amount| amount.checked_sub(DEFAULT_FEE))
-        .ok_or("Overflow when calculating change")?;
-
-    let receiver_script = ScriptBuf::from_hex(receiver_script_pubkey_hex)?;
-    let mut outputs = vec![TxOut {
-        value: Amount::from_sat(spend_amount),
-        script_pubkey: receiver_script,
-    }];
-
-    if change_amount > 0 {
-        let change_script = ScriptBuf::from_hex(&utxos[0].script_pubkey)?;
-        outputs.push(TxOut {
-            value: Amount::from_sat(change_amount),
-            script_pubkey: change_script,
-        });
-    }
+        .map(|utxo| {
+            let script = ScriptBuf::from_hex(&utxo.script_pubkey)?;
+            Ok(TxOut {
+                value: Amount::from_sat(utxo.value),
+                script_pubkey: script,
+            })
+        })
+        .collect::<Result<_, Box<dyn Error>>>()?;
 
     Ok(BitcoinTransactionBuilder::new()
         .version(Version::Two)
@@ -162,7 +121,6 @@ fn is_p2wpkh_script(script: &[u8]) -> bool {
     script.len() == P2WPKH_WITNESS_LEN && script[0] == 0x00 && script[1] == 0x14
 }
 
-/// Perform double SHA-256 hashing on the given data.
 #[inline]
 fn double_sha256(data: &[u8]) -> Vec<u8> {
     Sha256::digest(Sha256::digest(data)).to_vec()
@@ -174,22 +132,36 @@ mod tests {
 
     #[test]
     fn test_p2wpkh_sighash() {
-        let test_utxos = vec![UTXO {
+        let input_utxos = vec![UTXO {
             txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370".to_string(),
             vout: 1,
             value: 430506,
             script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
         }];
 
-        let receiver_script_pubkey = "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46";
-        let tx = prepare_btc_tx(&test_utxos, receiver_script_pubkey, 120)
+        let output_utxos = vec![
+            UTXO {
+                txid: String::new(),
+                vout: 0,
+                value: 120,
+                script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46".to_string(),
+            },
+            UTXO {
+                txid: String::new(),
+                vout: 1,
+                value: 429934,
+                script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
+            }
+        ];
+
+        let tx = prepare_btc_tx(&input_utxos, &output_utxos)
             .expect("Failed to build tx");
 
         let sighash = compute_segwit_sighash(
             &tx,
             0,
-            &test_utxos[0].script_pubkey,
-            test_utxos[0].value,
+            &input_utxos[0].script_pubkey,
+            input_utxos[0].value,
         ).expect("Failed to compute sighash");
 
         assert_eq!(
