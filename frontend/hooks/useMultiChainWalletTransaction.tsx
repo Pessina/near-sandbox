@@ -52,34 +52,34 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
 
         chain.setTransaction(transaction, storageKey);
 
-        const wallet = await walletSelector?.wallet('my-near-wallet');
-        if (!wallet) {
-            throw new Error("Wallet not found");
-        }
+        // const wallet = await walletSelector?.wallet('my-near-wallet');
+        // if (!wallet) {
+        //     throw new Error("Wallet not found");
+        // }
 
-        if (tokenId) {
-            // NFT Keys flow
-            return wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToNFTKeysTransaction({
-                    networkId: nearNetworkId,
-                    chainSigContract: chainSignatureContract,
-                    nftKeysContract,
-                    mpcPayloads,
-                    path,
-                    tokenId
-                })),
-            });
-        } else {
-            // Chain Signature flow
-            return wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToChainSigTransaction({
-                    networkId: nearNetworkId,
-                    contractId: chainSignatureContract,
-                    mpcPayloads,
-                    path,
-                })),
-            });
-        }
+        // if (tokenId) {
+        //     // NFT Keys flow
+        //     return wallet.signAndSendTransaction({
+        //         ...(await transactionBuilder.near.mpcPayloadsToNFTKeysTransaction({
+        //             networkId: nearNetworkId,
+        //             chainSigContract: chainSignatureContract,
+        //             nftKeysContract,
+        //             mpcPayloads,
+        //             path,
+        //             tokenId
+        //         })),
+        //     });
+        // } else {
+        //     // Chain Signature flow
+        //     return wallet.signAndSendTransaction({
+        //         ...(await transactionBuilder.near.mpcPayloadsToChainSigTransaction({
+        //             networkId: nearNetworkId,
+        //             contractId: chainSignatureContract,
+        //             mpcPayloads,
+        //             path,
+        //         })),
+        //     });
+        // }
     }, [accountId, chainSignatureContract, nearNetworkId, nftKeysContract, walletSelector]);
 
     const sendTransaction = useCallback(async <TRequest, TUnsigned>(

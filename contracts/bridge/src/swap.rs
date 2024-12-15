@@ -9,37 +9,56 @@ use omni_transaction::{
     },
     transaction_builder::TxBuilder,
 };
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{env::log_str, serde::{Deserialize, Serialize}};
 use schemars::JsonSchema;
 use sha2::{Digest, Sha256};
 use std::error::Error;
 
-/// Data structure representing a UTXO that we want to spend.
+/// Data structure representing a UTXO.
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "near_sdk::serde")]
 pub struct UTXO {
     pub txid: String,
     pub vout: u32,
     pub value: u64,
-    pub script_pubkey: String,
+    pub script_pubkey: String, // hex-encoded script pubkey (likely "0014..." for P2WPKH)
 }
 
-/// Prepares a Bitcoin transaction spending from the provided UTXOs to a given receiver.
-///
-/// The function uses a simple calculation for change and does not include fee calculation logic.
-/// Ensure that `spend_amount` plus fees is less than total input to avoid failure.
-///
-/// # Errors
-/// Returns an error if hex parsing fails or if spend_amount exceeds total inputs.
+/// Convert a P2WPKH witness program script_pubkey (`0x0014{20-byte-hash}`) into the BIP143 script_code:
+/// `OP_DUP OP_HASH160 <20-byte-hash> OP_EQUALVERIFY OP_CHECKSIG`
+fn p2wpkh_script_code_from_witness_program(script_pubkey: &ScriptBuf) -> Result<ScriptBuf, Box<dyn Error>> {
+    // P2WPKH script_pubkey is 0x00 0x14 followed by a 20-byte hash:
+    // e.g. [0x00, 0x14, <20-bytes>]
+    let bytes = script_pubkey.0.clone();
+    if bytes.len() != 22 || bytes[0] != 0x00 || bytes[1] != 0x14 {
+        return Err("Not a valid P2WPKH witness program".into());
+    }
+
+    let hash160 = &bytes[2..22];
+    // Construct the classic P2PKH script:
+    // OP_DUP OP_HASH160 <hash160> OP_EQUALVERIFY OP_CHECKSIG
+    // 0x76 = OP_DUP
+    // 0xa9 = OP_HASH160
+    // 0x14 = push 20 bytes
+    // 0x88 = OP_EQUALVERIFY
+    // 0xac = OP_CHECKSIG
+    let mut script = vec![0x76, 0xa9, 0x14];
+    script.extend_from_slice(hash160);
+    script.extend_from_slice(&[0x88, 0xac]);
+
+    Ok(ScriptBuf(script))
+}
+
+/// Builds a simple SegWit transaction (Version 2) with given UTXO and spend amount.
 pub fn prepare_btc_tx(
     utxos: &[UTXO],
-    receiver_script_pubkey: &str,
+    receiver_script_pubkey_hex: &str,
     spend_amount: u64,
 ) -> Result<BitcoinTransaction, Box<dyn Error>> {
+    log_str("Starting prepare_btc_tx");
     let mut inputs = Vec::with_capacity(utxos.len());
     let mut total_input = 0u64;
 
-    // Create inputs from UTXOs
     for utxo in utxos {
         let hash = Hash::from_hex(&utxo.txid)?;
         let txid = Txid(hash);
@@ -52,25 +71,24 @@ pub fn prepare_btc_tx(
             witness: Witness::new(),
         };
 
-        total_input = total_input.checked_add(utxo.value).ok_or("Overflow in total_input")?;
+        total_input += utxo.value;
         inputs.push(input);
     }
 
-    // Create the receiver output
-    let receiver_script = ScriptBuf::from_hex(receiver_script_pubkey)?;
+    if total_input < spend_amount {
+        return Err("Insufficient funds".into());
+    }
+
+    let fee = 452u64;
+    let change_amount = total_input - spend_amount - fee;
+
+    let receiver_script = ScriptBuf::from_hex(receiver_script_pubkey_hex)?;
 
     let mut outputs = vec![TxOut {
         value: Amount::from_sat(spend_amount),
         script_pubkey: receiver_script,
     }];
 
-    // Calculate change
-    if total_input < spend_amount {
-        return Err("Insufficient funds".into());
-    }
-    let change_amount = total_input - spend_amount;
-
-    // Add change output if needed
     if change_amount > 0 {
         let change_script = ScriptBuf::from_hex(&utxos[0].script_pubkey)?;
         outputs.push(TxOut {
@@ -89,84 +107,58 @@ pub fn prepare_btc_tx(
     Ok(tx)
 }
 
-/// Computes the SegWit signature hash for a given input.
-///
-/// # Errors
-/// Returns an error if script code hex parsing fails.
+/// Compute SegWit sighash for a given input.
+/// For P2WPKH, transform the witness program into the correct script_code.
 pub fn compute_segwit_sighash(
     tx: &BitcoinTransaction,
     input_index: usize,
-    script_code_hex: &str,
+    script_pubkey_hex: &str,
     value: u64,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
-    let script_code = ScriptBuf::from_hex(script_code_hex)?;
+    let script_pubkey = ScriptBuf::from_hex(script_pubkey_hex)?;
+
+    // If it's a P2WPKH (starting with 0x0014), build the script_code accordingly:
+    let script_code = if script_pubkey.0.len() == 22 && script_pubkey.0[0] == 0x00 && script_pubkey.0[1] == 0x14 {
+        p2wpkh_script_code_from_witness_program(&script_pubkey)?
+    } else {
+        // Otherwise, use the script_pubkey directly
+        script_pubkey
+    };
+
     let sighash = tx.build_for_signing_segwit(EcdsaSighashType::All, input_index, &script_code, value);
+
     let hash1 = Sha256::digest(&sighash);
     let hash2 = Sha256::digest(hash1);
+
     Ok(hash2.to_vec())
 }
 
-/// Injects signatures and public keys into the transaction's witnesses for each input.
-///
-/// # Errors
-/// Returns an error if the number of signatures/public keys doesn't match inputs.
-pub fn sign_transaction(
-    mut tx: BitcoinTransaction,
-    signatures: Vec<Vec<u8>>,
-    pubkeys: Vec<Vec<u8>>,
-) -> Result<BitcoinTransaction, Box<dyn Error>> {
-    if signatures.len() != tx.input.len() || pubkeys.len() != tx.input.len() {
-        return Err("Must provide a signature and pubkey for each input".into());
-    }
-
-    for (i, (signature, pubkey)) in signatures.into_iter().zip(pubkeys).enumerate() {
-        let witness = vec![signature, pubkey];
-        tx.input[i].witness = Witness::from_slice(&witness);
-    }
-
-    Ok(tx)
-}
-
-/// Serializes the transaction into a broadcastable byte array.
-pub fn get_broadcast_tx(tx: &BitcoinTransaction) -> Vec<u8> {
-    tx.serialize()
-}
-
-
 #[cfg(test)]
 mod tests {
-    use near_sdk::env::log_str;
-
     use super::*;
 
     #[test]
-    fn test_prepare_and_sign_tx() {
+    fn test_p2wpkh_sighash() {
         let test_utxos = vec![UTXO {
-            txid: "2ece6cd71fee90ff613cee8f30a52c3ecc58685acf9b817b9c467b7ff199871c".to_string(),
-            vout: 0,
-            value: 300_000_000,
-            script_pubkey: "0014cb8a3018cf279311b148cb8d13728bd8cbe95bda".to_string(),
+            txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370".to_string(),
+            vout: 1,
+            value: 430506,
+            script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
         }];
 
-        let receiver_script_pubkey = "0014cb8a3018cf279311b148cb8d13728bd8cbe95bda";
-        let spend_amount = 250_000_000;
+        let receiver_script_pubkey = "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46";
+        let tx = prepare_btc_tx(&test_utxos, receiver_script_pubkey, 120).expect("Failed to build tx");
 
-        let tx = prepare_btc_tx(&test_utxos, receiver_script_pubkey, spend_amount).unwrap();
-        assert_eq!(tx.output.len(), 2);
+        let sighash = compute_segwit_sighash(
+            &tx,
+            0,
+            &test_utxos[0].script_pubkey,
+            test_utxos[0].value,
+        ).expect("Failed to compute sighash");
 
-        let script_code_hex = &test_utxos[0].script_pubkey;
-        let sighash = compute_segwit_sighash(&tx, 0, script_code_hex, test_utxos[0].value).unwrap();
+        println!("Computed sighash: {:?}", sighash);
 
-        log_str(format!("sighash: {:?}", sighash).as_str());
-
-        // Sign the sighash
-        // let signature = sign_payload(&secp, &secret_key, &sighash)?;
-
-        // Add signature and pubkey to the transaction as witness data
-        // let signed_tx = sign_transaction(tx, vec![signature], vec![pubkey_bytes])?;
-        // let serialized = get_broadcast_tx(&signed_tx);
-        // assert!(!serialized.is_empty());
-
+        // Compare this sighash with the TS implementation result.
         assert!(false);
     }
 }
