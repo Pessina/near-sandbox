@@ -148,29 +148,88 @@ impl Contract {
         &self,
         tx: BitcoinTransaction,
         signature: SignResult,
+        public_key_hex: &str,
     ) -> String {
-        log!("Got signature from signer {:?}", signature);
+        // Extract R and S as 32-byte integers
+        let r_bytes = extract_32_byte_scalar_from_hex(&signature.big_r.affine_point);
+        let s_bytes = extract_32_byte_scalar_from_hex(&signature.s.scalar);
+
+        // Normalize R and S for DER
+        let r = normalize_der_int(r_bytes);
+        let s = normalize_der_int(s_bytes);
+
+        // Construct the DER-encoded signature
+        let total_len = 2 + r.len() + 2 + s.len(); // 2 bytes overhead per integer
+        let mut der_signature = Vec::with_capacity(6 + r.len() + s.len());
+        der_signature.push(0x30); // DER sequence
+        der_signature.push(total_len as u8);
+        der_signature.push(0x02); // integer for R
+        der_signature.push(r.len() as u8);
+        der_signature.extend_from_slice(&r);
+        der_signature.push(0x02); // integer for S
+        der_signature.push(s.len() as u8);
+        der_signature.extend_from_slice(&s);
         
-        // Add DER-encoded signature with SIGHASH_ALL
-        let mut signature_data = Vec::new();
-        signature_data.extend_from_slice(&hex::decode(&signature.big_r.affine_point).expect("Invalid big_r hex"));
-        signature_data.extend_from_slice(&hex::decode(&signature.s.scalar).expect("Invalid s hex")); 
-        signature_data.push(0x01); // SIGHASH_ALL
+        // Append SIGHASH_ALL (0x01)
+        der_signature.push(0x01);
 
-        // Add public key
-        let public_key = hex::decode("03f5661286e599cdc51808ac23aeb6e4c4ada46d252b984bac0500c879a589437a").expect("Invalid public key hex");
+        // Decode the public key from hex
+        let public_key = hex::decode(public_key_hex).expect("Invalid public key hex");
 
-        // Create witness with signature and public key
-        let witness = Witness::from_slice(&[&signature_data, &public_key]);
+        // Create the witness with DER-encoded signature and public key
+        let witness = Witness::from_slice(&[&der_signature, &public_key]);
+
+        // Assign witness to the first input
         let mut final_tx = tx;
         final_tx.input[0].witness = witness;
 
-        // Convert transaction to hex for broadcasting
+        // Serialize and return hex
         let serialized = final_tx.serialize();
-        let tx_hex = hex::encode(serialized);
-        
-        // Return transaction hex that needs to be broadcasted
-        tx_hex
+        hex::encode(serialized)
+    }
+}
+fn normalize_der_int(mut val: Vec<u8>) -> Vec<u8> {
+    // Remove leading zeros
+    while val.len() > 1 && val[0] == 0x00 {
+        val.remove(0);
+    }
+    // If MSB is set, prepend 0x00 to indicate positive integer
+    if val[0] & 0x80 != 0 {
+        let mut prefixed = vec![0x00];
+        prefixed.extend(val);
+        prefixed
+    } else {
+        val
+    }
+}
+
+/// Extract a 32-byte scalar from a hex string. If your input isn't already
+/// guaranteed to be 32 bytes, adjust accordingly.
+/// If `affine_point` is actually a compressed point, you need a method
+/// to extract just the x-coordinate as a 32-byte integer.
+fn extract_32_byte_scalar_from_hex(hex_str: &str) -> Vec<u8> {
+    let bytes = hex::decode(hex_str).expect("Invalid hex");
+    // Ensure exactly 32 bytes. If shorter, pad on the left with zeros.
+    // If longer, you'd need to handle the specific format.
+    // This step depends on the exact format of your input data.
+    if bytes.len() == 32 {
+        bytes
+    } else if bytes.len() < 32 {
+        let mut padded = vec![0u8; 32 - bytes.len()];
+        padded.extend_from_slice(&bytes);
+        padded
+    } else {
+        // If there's more than 32 bytes, you need to extract the 32-byte integer part.
+        // For example, if this represents a compressed point starting with 0x02 or 0x03,
+        // drop the first byte and ensure the rest is 32 bytes:
+        // Typically, a compressed point starts with 0x02 or 0x03 followed by 32 bytes of x.
+        // In that case:
+        let scalar = bytes[1..33].to_vec();
+        // Now scalar should be 32 bytes.
+        if scalar.len() != 32 {
+            panic!("Could not extract a 32-byte scalar from the given input");
+        }
+        scalar
     }
 }
 
@@ -265,7 +324,9 @@ mod tests {
             recovery_id: 0,
         };
 
-        let final_tx = contract.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature);
+        let public_key = "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24";
+
+        let final_tx = contract.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature, public_key);
 
         assert_eq!(
             final_tx,

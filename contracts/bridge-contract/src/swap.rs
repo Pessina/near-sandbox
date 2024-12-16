@@ -53,7 +53,9 @@ impl Contract {
     ) -> String {
         if let Ok(signature) = sign_result {
             log!("Got signature from signer {:?}", signature);
-            self.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature)
+            // TODO: Should not be hardcoded
+            let public_key = "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24";
+            self.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature, public_key)
         } else {
             log!("Failed to get signature from signer");
             panic!("Failed to get signature from signer");
