@@ -278,39 +278,13 @@ mod tests {
 
         let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());
 
-        let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos, output_utxos);
+        let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos.clone(), output_utxos.clone());
 
         assert_eq!(
             prepared_bitcoin_transaction.sighashes[0],
             [224, 73, 126, 48, 217, 94, 79, 58, 71, 74, 219, 119, 243, 197, 183, 197, 103, 2, 227, 119, 154, 47, 20, 175, 240, 168, 89, 60, 152, 92, 190, 186]
         );
-    }
 
-    #[test]
-    fn test_btc_tx_finalization() {
-        let input_utxos = vec![UTXO {
-            txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370".to_string(),
-            vout: 1,
-            value: 430506,
-            script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
-        }];
-
-        let output_utxos = vec![
-            UTXO {
-                txid: String::new(),
-                vout: 0,
-                value: 1200,
-                script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46".to_string(),
-            },
-            UTXO {
-                txid: String::new(),
-                vout: 1,
-                value: 428854,
-                script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
-            }
-        ];
-
-        let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());
         let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos, output_utxos);
 
         // This is a valid signature for the transaction above
@@ -333,6 +307,4 @@ mod tests {
             "020000000001017053bc4f12b37901db04da385e1db5bd7371a8953dbb78f1990f1216a4e0d3b90100000000ffffffff02b004000000000000160014d3ae5a5de66aa44e7d5723b74e590340b3212f46368b0600000000001600140d7d0223d302b4e8ef37050b5200b1c3306ae7ab02483045022100e123dac9ea85ff349a301bd6591657f1ed8a0d349f226080d624022284f4d1930220689983efbbf85df34a99507df24077ba85c92fcb54146d554f55b60a1626a816012102b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd2400000000"
         );
     }
-
-    // TODO: Include test for multiple UTXOs
 }
