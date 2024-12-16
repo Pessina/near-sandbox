@@ -30,31 +30,10 @@ export type PreparedBitcoinTransaction = {
 };
 
 export type BridgeContract = Contract & {
-  new: (args: ContractChangeMethodArgs<{}>) => Promise<void>;
-
-  set_signer_account: (
-    args: ContractChangeMethodArgs<{
-      signer_account: string;
-    }>
-  ) => Promise<void>;
-
-  prepare_btc_tx: (
-    args: ContractChangeMethodArgs<{
-      input_utxos: UTXO[];
-      output_utxos: UTXO[];
-    }>
-  ) => Promise<PreparedBitcoinTransaction>;
-
   swap_btc: (
     args: ContractChangeMethodArgs<{
       input_utxos: UTXO[];
       output_utxos: UTXO[];
-    }>
-  ) => Promise<string>;
-
-  swap_btc_callback: (
-    args: ContractChangeMethodArgs<{
-      prepared_bitcoin_transaction: PreparedBitcoinTransaction;
     }>
   ) => Promise<string>;
 };

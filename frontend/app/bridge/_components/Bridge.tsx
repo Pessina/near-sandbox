@@ -22,6 +22,9 @@ import { createBridgeContract } from "../../../contracts/BridgeContract/BridgeCo
 import { useState, useEffect } from "react"
 import { BridgeContract } from "../../../contracts/BridgeContract/types"
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
+import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
+import { useChains } from "@/hooks/useChains"
+import { Bitcoin } from "multichain-tools"
 
 type FormData = {
     amount: string
@@ -49,6 +52,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     const formValues = watch()
     const mounted = useMounted()
     const { bridgeContract } = useEnv()
+    const { btc } = useChains()
 
     const { sendTransaction, isPending } = useSendTransaction({
         mutation: {
@@ -58,6 +62,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     })
     const [bridgeContractInstance, setBridgeContractInstance] = useState<BridgeContract>()
     const { selectedAccount } = useKeyPairAuth()
+    const btcBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.BTC, "m/44'/0'/0'/0/0")
 
     useEffect(() => {
         if (!selectedAccount) return
@@ -69,7 +74,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         setBridgeContractInstance(contract)
     }, [selectedAccount, bridgeContract])
 
-    const { isProcessing, handleSwapBTC, handlePrepareBTCTx, isLoading, error } = useBridge({
+    const { isProcessing, handleSwapBTC, isLoading, error } = useBridge({
         bridgeContract: bridgeContractInstance ?? null
     })
 
@@ -99,29 +104,45 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         //     chainId: 11155111
         // })
 
+        if (!btcBridgeAddressAndPk) return
+
+        console.log({
+            address: btcBridgeAddressAndPk.address,
+            data: {
+                publicKey: btcBridgeAddressAndPk.publicKey,
+                from: data.bridgeAddress,
+                to: data.toAddress,
+                value: data.amount
+            }
+        })
+
+        const psbt = await btc.createPSBT({
+            address: btcBridgeAddressAndPk.address,
+            data: {
+                publicKey: btcBridgeAddressAndPk.publicKey,
+                from: btcBridgeAddressAndPk.address,
+                to: "tb1qp47syg7nq26w3mehq594yq93cvcx4eatrvrtmc",
+                value: Bitcoin.toSatoshi(Number(data.amount)).toString()
+            }
+        })
+
+        const inputUtxos = psbt.data.inputs.map((input, index) => ({
+            txid: Buffer.from(psbt.txInputs[index].hash).reverse().toString('hex'),
+            vout: psbt.txInputs[index].index,
+            value: input.witnessUtxo?.value ?? 0,
+            script_pubkey: input.witnessUtxo?.script.toString('hex') ?? ''
+        }))
+
+        const outputUtxos = psbt.txOutputs.map((output, index) => ({
+            txid: '',
+            vout: index,
+            value: output.value,
+            script_pubkey: output.script.toString('hex')
+        }))
+
         handleSwapBTC({
-            inputUtxos: [
-                {
-                    txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370",
-                    vout: 1,
-                    value: 430506,
-                    script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab"
-                }
-            ],
-            outputUtxos: [
-                {
-                    txid: "",
-                    vout: 0,
-                    value: 120,
-                    script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46"
-                },
-                {
-                    txid: "",
-                    vout: 1,
-                    value: 429934,
-                    script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab"
-                }
-            ]
+            inputUtxos,
+            outputUtxos
         })
     }
 

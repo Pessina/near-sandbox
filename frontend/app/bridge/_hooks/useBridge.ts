@@ -16,10 +16,6 @@ export interface BridgeActions {
     inputUtxos: UTXO[];
     outputUtxos: UTXO[];
   }) => Promise<void>;
-  handlePrepareBTCTx: (args: {
-    inputUtxos: UTXO[];
-    outputUtxos: UTXO[];
-  }) => Promise<void>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -90,33 +86,6 @@ export function useBridge({
     [bridgeContract, withErrorHandling]
   );
 
-  const handlePrepareBTCTx = useCallback(
-    async ({
-      inputUtxos,
-      outputUtxos,
-    }: {
-      inputUtxos: UTXO[];
-      outputUtxos: UTXO[];
-    }) => {
-      if (!bridgeContract) return;
-
-      await withErrorHandling(
-        async () =>
-          await bridgeContract.prepare_btc_tx({
-            gas: NEAR_MAX_GAS,
-            amount: parseNearAmount("0.005") || "0",
-            args: {
-              input_utxos: inputUtxos,
-              output_utxos: outputUtxos,
-            },
-          }),
-        "BTC transaction prepared successfully",
-        "Failed to prepare BTC transaction"
-      );
-    },
-    [bridgeContract, withErrorHandling]
-  );
-
   const { isLoading, error } = useQuery({
     queryKey: ["bridge"],
     queryFn: async () => {
@@ -129,7 +98,6 @@ export function useBridge({
   return {
     isProcessing,
     handleSwapBTC,
-    handlePrepareBTCTx,
     isLoading,
     error,
   };

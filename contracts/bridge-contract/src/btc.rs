@@ -14,6 +14,7 @@ use omni_transaction::{
 use near_sdk::{log, near, serde::{Deserialize, Serialize}};
 use schemars::JsonSchema;
 use sha2::{Digest, Sha256};
+use signer::SignResult;
 use std::error::Error;
 
 /// Length of a valid P2WPKH witness program script_pubkey.
@@ -143,25 +144,34 @@ impl Contract {
         PreparedBitcoinTransaction { tx, sighashes }
     }
 
-    // #[private]
-    // pub fn prepare_btc_tx_callback(
-    //     &self,
-    //     tx: BitcoinTransaction,
-    //     value: u64,
-    //     #[callback_result] sign_result: Result<SignResult, PromiseError>,
-    // ) -> Result<BitcoinTransaction, Box<dyn Error>> {
-    //     let signature = if let Ok(result) = sign_result {
-    //         result
-    //     } else {
-    //         return Err("Failed to get signature from signer".into());
-    //     };
+    pub fn finalize_btc_tx(
+        &self,
+        tx: BitcoinTransaction,
+        signature: SignResult,
+    ) -> String {
+        log!("Got signature from signer {:?}", signature);
+        
+        // Add DER-encoded signature with SIGHASH_ALL
+        let mut signature_data = Vec::new();
+        signature_data.extend_from_slice(&hex::decode(&signature.big_r.affine_point).expect("Invalid big_r hex"));
+        signature_data.extend_from_slice(&hex::decode(&signature.s.scalar).expect("Invalid s hex")); 
+        signature_data.push(0x01); // SIGHASH_ALL
 
-    //     // TODO: Add signature to transaction witness
-    //     // This part needs to be implemented based on how signatures should be added
-    //     // to the Bitcoin transaction witness
+        // Add public key
+        let public_key = hex::decode("03f5661286e599cdc51808ac23aeb6e4c4ada46d252b984bac0500c879a589437a").expect("Invalid public key hex");
 
-    //     Ok(tx)
-    // }
+        // Create witness with signature and public key
+        let witness = Witness::from_slice(&[&signature_data, &public_key]);
+        let mut final_tx = tx;
+        final_tx.input[0].witness = witness;
+
+        // Convert transaction to hex for broadcasting
+        let serialized = final_tx.serialize();
+        let tx_hex = hex::encode(serialized);
+        
+        // Return transaction hex that needs to be broadcasted
+        tx_hex
+    }
 }
 
 /// Check if the given script_pubkey is a valid P2WPKH witness program.
@@ -179,6 +189,8 @@ fn double_sha256(data: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    use signer::{SerializableAffinePoint, SerializableScalar};
+
     use super::*;
 
     #[test]
@@ -194,13 +206,13 @@ mod tests {
             UTXO {
                 txid: String::new(),
                 vout: 0,
-                value: 120,
+                value: 1200,
                 script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46".to_string(),
             },
             UTXO {
                 txid: String::new(),
                 vout: 1,
-                value: 429934,
+                value: 428854,
                 script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
             }
         ];
@@ -211,7 +223,53 @@ mod tests {
 
         assert_eq!(
             prepared_bitcoin_transaction.sighashes[0],
-            [180, 25, 219, 49, 165, 52, 159, 142, 98, 43, 197, 118, 56, 64, 38, 144, 3, 138, 28, 117, 77, 47, 22, 188, 36, 204, 57, 86, 57, 126, 60, 155]
+            [224, 73, 126, 48, 217, 94, 79, 58, 71, 74, 219, 119, 243, 197, 183, 197, 103, 2, 227, 119, 154, 47, 20, 175, 240, 168, 89, 60, 152, 92, 190, 186]
+        );
+    }
+
+    #[test]
+    fn test_btc_tx_finalization() {
+        let input_utxos = vec![UTXO {
+            txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370".to_string(),
+            vout: 1,
+            value: 430506,
+            script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
+        }];
+
+        let output_utxos = vec![
+            UTXO {
+                txid: String::new(),
+                vout: 0,
+                value: 1200,
+                script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46".to_string(),
+            },
+            UTXO {
+                txid: String::new(),
+                vout: 1,
+                value: 428854,
+                script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
+            }
+        ];
+
+        let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());
+        let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos, output_utxos);
+
+        // This is a valid signature for the transaction above
+        let signature = SignResult {
+            big_r: SerializableAffinePoint {
+                affine_point: "03E123DAC9EA85FF349A301BD6591657F1ED8A0D349F226080D624022284F4D193".to_string(),
+            },
+            s: SerializableScalar {
+                scalar: "689983EFBBF85DF34A99507DF24077BA85C92FCB54146D554F55B60A1626A816".to_string(),
+            },
+            recovery_id: 0,
+        };
+
+        let final_tx = contract.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature);
+
+        assert_eq!(
+            final_tx,
+            "020000000001017053bc4f12b37901db04da385e1db5bd7371a8953dbb78f1990f1216a4e0d3b90100000000ffffffff02b004000000000000160014d3ae5a5de66aa44e7d5723b74e590340b3212f46368b0600000000001600140d7d0223d302b4e8ef37050b5200b1c3306ae7ab02483045022100e123dac9ea85ff349a301bd6591657f1ed8a0d349f226080d624022284f4d1930220689983efbbf85df34a99507df24077ba85c92fcb54146d554f55b60a1626a816012102b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd2400000000"
         );
     }
 
