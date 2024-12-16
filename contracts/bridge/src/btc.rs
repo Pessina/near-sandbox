@@ -30,6 +30,13 @@ pub struct UTXO {
     pub script_pubkey: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(crate = "near_sdk::serde")]
+pub struct PreparedBitcoinTransaction {
+    pub tx: BitcoinTransaction,
+    pub sighashes: Vec<[u8; 32]>,
+}
+
 /// Convert a P2WPKH witness program (`0x0014{20-byte-hash}`) into the BIP143 script_code:
 /// `OP_DUP OP_HASH160 <20-byte-hash> OP_EQUALVERIFY OP_CHECKSIG`.
 fn p2wpkh_script_code_from_witness_program(script_pubkey: &ScriptBuf) -> Result<ScriptBuf, Box<dyn Error>> {
@@ -83,7 +90,7 @@ impl Contract {
         &mut self,
         input_utxos: &[UTXO],
         output_utxos: &[UTXO],
-    ) -> Vec<[u8; 32]> {
+    ) -> PreparedBitcoinTransaction {
         log!("Starting prepare_btc_tx");
 
         let inputs: Vec<_> = input_utxos
@@ -133,7 +140,7 @@ impl Contract {
             sighashes.push(hash);
         }
 
-        sighashes
+        PreparedBitcoinTransaction { tx, sighashes }
     }
 
     // #[private]
@@ -200,10 +207,10 @@ mod tests {
 
         let mut contract = Contract::new();
 
-        let sighashes = contract.prepare_btc_tx(&input_utxos, &output_utxos);
+        let prepared_bitcoin_transaction = contract.prepare_btc_tx(&input_utxos, &output_utxos);
 
         assert_eq!(
-            sighashes[0],
+            prepared_bitcoin_transaction.sighashes[0],
             [180, 25, 219, 49, 165, 52, 159, 142, 98, 43, 197, 118, 56, 64, 38, 144, 3, 138, 28, 117, 77, 47, 22, 188, 36, 204, 57, 86, 57, 126, 60, 155]
         );
     }
