@@ -1,6 +1,6 @@
 import { Chain } from "@/constants/chains";
 import { KeyDerivationPath } from "multichain-tools";
-import { NFT } from "../_contract/NFTKeysContract";
+import { NFT } from "../../../contracts/NFTKeysContract";
 
 interface SaleConditions {
   token: string;

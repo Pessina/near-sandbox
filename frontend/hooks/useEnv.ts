@@ -13,6 +13,7 @@ interface EnvVariables {
   chainSignatureContract: string;
   nftKeysContract: string;
   nftKeysMarketplaceContract: string;
+  bridgeContract: string;
   nearNetworkId: "mainnet" | "testnet";
 }
 
@@ -29,6 +30,7 @@ export const useEnv = (
         chainSignatureContract: "",
         nftKeysContract: "",
         nftKeysMarketplaceContract: "",
+        bridgeContract: "",
         nearNetworkId: "testnet",
       };
     }
@@ -67,6 +69,7 @@ export const useEnv = (
     const nftKeysContract = process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT;
     const nftKeysMarketplaceContract =
       process.env.NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT;
+    const bridgeContract = process.env.NEXT_PUBLIC_BRIDGE_CONTRACT;
     const nearNetworkId = process.env.NEXT_PUBLIC_NEAR_NETWORK_ID;
 
     if (accounts.length === 0 && !options?.isViewOnly) {
@@ -83,6 +86,9 @@ export const useEnv = (
         "NEXT_PUBLIC_NFT_KEYS_MARKETPLACE_CONTRACT is not defined"
       );
     }
+    if (!bridgeContract) {
+      throw new Error("NEXT_PUBLIC_BRIDGE_CONTRACT is not defined");
+    }
     if (
       !nearNetworkId ||
       (nearNetworkId !== "mainnet" && nearNetworkId !== "testnet")
@@ -97,6 +103,7 @@ export const useEnv = (
       chainSignatureContract,
       nftKeysContract,
       nftKeysMarketplaceContract,
+      bridgeContract,
       nearNetworkId: nearNetworkId as "mainnet" | "testnet",
     };
   }, [options?.isViewOnly]);

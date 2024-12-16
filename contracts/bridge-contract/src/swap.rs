@@ -12,11 +12,14 @@ use omni_transaction::bitcoin::types::Witness;
 use crate::signer::{SignRequest, SignResult, ext_signer};
 
 // TODO: Should be provided by the caller as it's dynamic
-const NO_DEPOSIT: NearToken = NearToken::from_yoctonear(50000);
-const XCC_GAS: Gas = Gas::from_tgas(300);
+const STATIC_DEPOSIT: NearToken = NearToken::from_yoctonear(50000000000000000000);
+const SIGN_GAS: Gas = Gas::from_tgas(100);
+const SWAP_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 
 #[near]
 impl Contract {
+
+    #[payable]
     pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>) ->Promise {
         log!("Swap starting");
         let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
@@ -24,15 +27,18 @@ impl Contract {
         let sign_request = SignRequest::new(
             prepared_bitcoin_transaction.sighashes[0].try_into().expect("Invalid sighash length"),
             "".to_string(),
-            1
+            0
         );
 
+        log!("Sign request: {:?}", sign_request);
+
         ext_signer::ext(self.signer_account.clone())
-            .with_attached_deposit(NO_DEPOSIT)
+            .with_attached_deposit(STATIC_DEPOSIT)
+            .with_static_gas(SIGN_GAS)
             .sign(sign_request)
             .then(
                 Self::ext(env::current_account_id())
-                    .with_static_gas(XCC_GAS)
+                    .with_static_gas(SWAP_CALLBACK_GAS)
                     .with_unused_gas_weight(0)
                     .swap_btc_callback(
                         prepared_bitcoin_transaction

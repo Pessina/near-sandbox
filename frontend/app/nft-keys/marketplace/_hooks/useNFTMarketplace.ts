@@ -1,6 +1,9 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { NFT, NFTKeysContract } from "../../_contract/NFTKeysContract/types";
+import {
+  NFT,
+  NFTKeysContract,
+} from "../../../../contracts/NFTKeysContract/types";
 import { NFTListed, FormData } from "../types";
 import { Chain } from "@/constants/chains";
 import { parseTokenAmount } from "../_utils/chains";
@@ -9,13 +12,13 @@ import {
   NEAR_MAX_GAS,
   KrnlPayload,
   MOCK_KRNL,
-} from "../../_contract/constants";
+} from "../../../../contracts/constants";
 import { useMultiChainWalletTransaction } from "@/hooks/useMultiChainWalletTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
 import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
-import { NFTKeysMarketplaceContract } from "../../_contract/NFTKeysMarketplaceContract";
+import { NFTKeysMarketplaceContract } from "../../../../contracts/NFTKeysMarketplaceContract";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bitcoin } from "multichain-tools";
 

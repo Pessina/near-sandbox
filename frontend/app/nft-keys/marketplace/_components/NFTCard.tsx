@@ -14,7 +14,7 @@ import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
 import { formatTokenAmount } from "../_utils/chains"
-import { NFT } from "../../_contract/NFTKeysContract"
+import { NFT } from "../../../../contracts/NFTKeysContract"
 import { ListNFTArgs, OfferNFTArgs, TransactionArgs, RemoveListingArgs } from "../_hooks/useNFTMarketplace"
 
 interface NFTCardProps {

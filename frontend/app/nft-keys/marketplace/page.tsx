@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createNFTContract } from "../_contract/NFTKeysContract"
-import { createMarketplaceContract, NFTKeysMarketplaceContract } from "../_contract/NFTKeysMarketplaceContract"
-import type { NFTKeysContract } from "../_contract/NFTKeysContract/types"
+import { createNFTContract } from "../../../contracts/NFTKeysContract"
+import { createMarketplaceContract, NFTKeysMarketplaceContract } from "../../../contracts/NFTKeysMarketplaceContract"
+import type { NFTKeysContract } from "../../../contracts/NFTKeysContract/types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { ContractManagement } from "../_components/ContractManagement/ContractManagement"

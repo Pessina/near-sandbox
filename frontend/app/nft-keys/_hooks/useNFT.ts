@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { NFT, NFTKeysContract } from "../_contract/NFTKeysContract/types";
-import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../_contract/constants";
+import { NFT, NFTKeysContract } from "../../../contracts/NFTKeysContract/types";
+import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../../../contracts/constants";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 

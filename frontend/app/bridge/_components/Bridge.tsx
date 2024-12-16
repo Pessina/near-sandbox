@@ -16,6 +16,12 @@ import { useMounted } from "@/hooks/useMounted"
 
 import type { UseSendTransactionParameters } from 'wagmi'
 import type { Config } from '@wagmi/core'
+import { useEnv } from "@/hooks/useEnv"
+import { useBridge } from "../_hooks/useBridge"
+import { createBridgeContract } from "../../../contracts/BridgeContract/BridgeContract"
+import { useState, useEffect } from "react"
+import { BridgeContract } from "../../../contracts/BridgeContract/types"
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
 
 type FormData = {
     amount: string
@@ -42,6 +48,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     const { connect, isPending: isConnectPending } = useConnect()
     const formValues = watch()
     const mounted = useMounted()
+    const { bridgeContract } = useEnv()
 
     const { sendTransaction, isPending } = useSendTransaction({
         mutation: {
@@ -49,38 +56,79 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             onError
         }
     })
+    const [bridgeContractInstance, setBridgeContractInstance] = useState<BridgeContract>()
+    const { selectedAccount } = useKeyPairAuth()
+
+    useEffect(() => {
+        if (!selectedAccount) return
+
+        const contract = createBridgeContract({
+            account: selectedAccount,
+            contractId: bridgeContract
+        })
+        setBridgeContractInstance(contract)
+    }, [selectedAccount, bridgeContract])
+
+    const { isProcessing, handleSwapBTC, handlePrepareBTCTx, isLoading, error } = useBridge({
+        bridgeContract: bridgeContractInstance ?? null
+    })
 
     const onSubmit = async (data: FormData) => {
-        if (!isConnected) {
-            const error = new Error("Please connect your wallet first.")
-            toast({
-                title: "Wallet Not Connected",
-                description: error.message,
-                variant: "destructive",
-            })
-            throw error
-        }
+        // if (!isConnected) {
+        //     const error = new Error("Please connect your wallet first.")
+        //     toast({
+        //         title: "Wallet Not Connected",
+        //         description: error.message,
+        //         variant: "destructive",
+        //     })
+        //     throw error
+        // }
 
-        const encodedData = encodeAbiParameters(
-            [
-                { name: 'to', type: 'string' },
-                { name: 'chain', type: 'uint256' }
+        // const encodedData = encodeAbiParameters(
+        //     [
+        //         { name: 'to', type: 'string' },
+        //         { name: 'chain', type: 'uint256' }
+        //     ],
+        //     [data.toAddress, BigInt(CHAINS[data.destChain].slip44)]
+        // )
+
+        // sendTransaction({
+        //     to: data.bridgeAddress as `0x${string}`,
+        //     value: parseEther(data.amount),
+        //     data: encodedData,
+        //     chainId: 11155111
+        // })
+
+        handleSwapBTC({
+            inputUtxos: [
+                {
+                    txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370",
+                    vout: 1,
+                    value: 430506,
+                    script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab"
+                }
             ],
-            [data.toAddress, BigInt(CHAINS[data.destChain].slip44)]
-        )
-
-        sendTransaction({
-            to: data.bridgeAddress as `0x${string}`,
-            value: parseEther(data.amount),
-            data: encodedData,
-            chainId: 11155111
+            outputUtxos: [
+                {
+                    txid: "",
+                    vout: 0,
+                    value: 120,
+                    script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46"
+                },
+                {
+                    txid: "",
+                    vout: 1,
+                    value: 429934,
+                    script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab"
+                }
+            ]
         })
     }
 
     if (!mounted) return null
 
     return (
-        <Card className="w-full max-w-md mx-auto">
+        <Card className="w-full max-w-md mx-auto" >
             <CardHeader>
                 <CardTitle className="text-2xl font-bold">Cross-Chain Bridge</CardTitle>
                 <CardDescription>Transfer your assets securely across blockchains</CardDescription>

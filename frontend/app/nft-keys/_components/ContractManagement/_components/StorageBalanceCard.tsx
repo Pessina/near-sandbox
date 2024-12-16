@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
-import { StorageBalanceResult } from "@/app/nft-keys/_contract/NFTKeysContract"
+import { StorageBalanceResult } from "@/contracts/NFTKeysContract"
 
 interface StorageBalanceCardProps {
     storageBalance?: StorageBalanceResult

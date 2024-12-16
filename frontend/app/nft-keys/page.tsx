@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { createNFTContract } from "./_contract/NFTKeysContract"
-import { NFTKeysContract } from "./_contract/NFTKeysContract/types"
+import { createNFTContract } from "../../contracts/NFTKeysContract"
+import { NFTKeysContract } from "../../contracts/NFTKeysContract/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"

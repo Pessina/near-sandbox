@@ -1,11 +1,5 @@
 import { Contract } from "near-api-js";
-
-// Types
-type ContractChangeMethodArgs<T = void> = {
-  args?: T;
-  gas?: string;
-  amount?: string;
-};
+import { ContractChangeMethodArgs } from "../types";
 
 type StorageBalanceResult = {
   total: string;

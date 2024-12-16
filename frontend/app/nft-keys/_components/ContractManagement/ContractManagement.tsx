@@ -1,6 +1,6 @@
 "use client"
 
-import type { StorageBalanceResult } from "../../_contract/NFTKeysContract/types"
+import type { StorageBalanceResult } from "../../../../contracts/NFTKeysContract/types"
 import { MintNFTCard } from "../MintNFTCard"
 import { StorageBalanceCard } from "./_components/StorageBalanceCard"
 
