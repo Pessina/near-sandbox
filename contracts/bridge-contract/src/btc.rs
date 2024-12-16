@@ -205,7 +205,7 @@ mod tests {
             }
         ];
 
-        let mut contract = Contract::new();
+        let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());
 
         let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos, output_utxos);
 

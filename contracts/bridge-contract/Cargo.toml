@@ -19,10 +19,10 @@ near-sdk = {workspace = true}
 omni-transaction = {workspace = true}
 hex = {workspace = true}
 serde = {workspace = true}
+borsh = {workspace = true}
 schemars = {workspace = true}
 sha2 = {workspace = true}
 ethers-core = {workspace = true}
-thiserror = {workspace = true}
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2.15", features = ["custom"] }

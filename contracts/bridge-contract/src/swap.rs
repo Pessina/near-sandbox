@@ -1,6 +1,6 @@
 use crate::*;
 
-use btc::PreparedBitcoinTransaction;
+use btc::{PreparedBitcoinTransaction, UTXO};
 use near_sdk::{
     env,
     Gas, 

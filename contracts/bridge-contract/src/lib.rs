@@ -1,33 +1,29 @@
 use near_sdk::{log, near, AccountId, PanicOnDefault};
-use btc::UTXO;
 
 pub mod signer;
 pub mod btc;
 pub mod swap;
 
+#[derive(Debug, PanicOnDefault)]
 #[near(contract_state)]
-#[derive(PanicOnDefault)]
 pub struct Contract {
-    signer_account: AccountId,
-    transaction_list: String, // Type is wrong, should be a list of transaction and corresponding status (pending, signed...)
-    balance: String, // Type is wrong, should be the balance of each pool
+    pub signer_account: AccountId,
+    // transaction_list: String, // Type is wrong, should be a list of transaction and corresponding status (pending, signed...)
+    // balance: String, // Type is wrong, should be the balance of each pool
 }
 
 #[near]
 impl Contract {
-
+    #[private]
     #[init]
-    pub fn new() -> Self {
+    pub fn new(signer_account: AccountId) -> Self {
         Self {
-            // TODO: Change to the actual signer account
-            signer_account: "v1.signer-prod.testnet".parse().unwrap(),
-            transaction_list: String::new(),
-            balance: String::new(),
+            signer_account,
         }
     }
 
-    pub fn set_signer_account(&mut self, signer_account: AccountId) {
-        self.signer_account = signer_account;
+    pub fn get_signer_account(&self) -> AccountId {
+        self.signer_account.clone()
     }
 }
 
