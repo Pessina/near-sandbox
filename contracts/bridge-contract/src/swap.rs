@@ -19,7 +19,7 @@ const XCC_GAS: Gas = Gas::from_tgas(300);
 impl Contract {
     pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>) ->Promise {
         log!("Swap starting");
-        let prepared_bitcoin_transaction = self.prepare_btc_tx(&input_utxos, &output_utxos);
+        let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
         
         let sign_request = SignRequest::new(
             prepared_bitcoin_transaction.sighashes[0].try_into().expect("Invalid sighash length"),

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "bridge",
+  "bridge-contract",
 ]
 
 [workspace.dependencies]

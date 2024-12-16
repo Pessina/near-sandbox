@@ -88,8 +88,8 @@ pub fn compute_segwit_sighash(
 impl Contract {
     pub fn prepare_btc_tx(
         &mut self,
-        input_utxos: &[UTXO],
-        output_utxos: &[UTXO],
+        input_utxos: Vec<UTXO>,
+        output_utxos: Vec<UTXO>,
     ) -> PreparedBitcoinTransaction {
         log!("Starting prepare_btc_tx");
 
@@ -207,7 +207,7 @@ mod tests {
 
         let mut contract = Contract::new();
 
-        let prepared_bitcoin_transaction = contract.prepare_btc_tx(&input_utxos, &output_utxos);
+        let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos, output_utxos);
 
         assert_eq!(
             prepared_bitcoin_transaction.sighashes[0],
