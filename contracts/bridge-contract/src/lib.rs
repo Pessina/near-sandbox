@@ -1,4 +1,4 @@
-use near_sdk::{log, near, AccountId, PanicOnDefault};
+use near_sdk::{near, AccountId, PanicOnDefault};
 
 pub mod signer;
 pub mod btc;

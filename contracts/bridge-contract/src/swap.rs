@@ -17,8 +17,6 @@ impl Contract {
             0
         );
 
-        log!("Sign request: {:?}", sign_request);
-
         ext_signer::ext(self.signer_account.clone())
             .with_attached_deposit(deposit)
             .with_static_gas(SIGN_GAS)
@@ -27,13 +25,10 @@ impl Contract {
 
     #[payable]
     pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>, sender_public_key: String) -> Promise {
-        log!("Swap starting");
         let input_utxos_len = input_utxos.len() as u128;
-
-        let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
-
         let sign_deposit = env::attached_deposit().saturating_div(input_utxos_len);
         
+        let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
         let mut combined_promise = self.promise_sign(prepared_bitcoin_transaction.sighashes[0], sign_deposit);
 
         for sighash in prepared_bitcoin_transaction.sighashes.iter().skip(1) {

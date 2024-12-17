@@ -10,7 +10,6 @@ import {
   Near,
 } from "near-api-js";
 import { useEnv } from "./useEnv";
-import { KeyPairString } from "near-api-js/lib/utils";
 
 const useInitNear = (
   options: { isViewOnly?: boolean } = {
@@ -48,7 +47,7 @@ const useInitNear = (
 
           // Store all account keys in keyStore
           for (const { accountId, privateKey } of nearAccounts) {
-            const keyPair = KeyPair.fromString(privateKey as KeyPairString);
+            const keyPair = KeyPair.fromString(privateKey);
             await keyStore.setKey(nearNetworkId, accountId, keyPair);
           }
         }
@@ -58,8 +57,8 @@ const useInitNear = (
           keyStore,
           nodeUrl:
             nearNetworkId === "mainnet"
-              ? "https://rpc.mainnet.near.org"
-              : "https://rpc.testnet.near.org",
+              ? "https://free.rpc.fastnear.com"
+              : "https://test.rpc.fastnear.com",
           helperUrl:
             nearNetworkId === "mainnet"
               ? "https://helper.mainnet.near.org"
