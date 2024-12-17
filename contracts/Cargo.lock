@@ -291,9 +291,11 @@ name = "bridge-contract"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "ethabi",
  "ethers-core",
  "getrandom",
  "hex",
+ "k256",
  "near-sdk",
  "near-workspaces",
  "omni-transaction",
@@ -301,6 +303,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sha3",
  "tokio",
 ]
 
@@ -1912,6 +1915,7 @@ dependencies = [
  "elliptic-curve",
  "once_cell",
  "sha2",
+ "signature",
 ]
 
 [[package]]
