@@ -6,6 +6,8 @@ import { NEAR_MAX_GAS } from "@/contracts/constants";
 import { ChainSignaturesContract } from "multichain-tools";
 import { useEnv } from "@/hooks/useEnv";
 import { BN } from "bn.js";
+import axios from "axios";
+import { Chain, CHAINS } from "@/constants/chains";
 
 export interface UseBridgeProps {
   bridgeContract: BridgeContract | null;
@@ -34,7 +36,6 @@ export function useBridge({
   const withErrorHandling = useCallback(
     async (
       operation: () => Promise<any>,
-      successMessage: string,
       errorPrefix: string
     ) => {
       if (isProcessing) return;
@@ -43,17 +44,26 @@ export function useBridge({
         const result = await operation();
         toast({
           title: "Success",
-          description:
-            successMessage + (result ? `: ${JSON.stringify(result)}` : ""),
+          description: (
+            <div>
+              <a
+                href={result.explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                View transaction on explorer
+              </a>
+            </div>
+          ),
         });
         await onSuccess?.();
         return result;
       } catch (error) {
         toast({
           title: "Error",
-          description: `${errorPrefix}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          description: `${errorPrefix}: ${error instanceof Error ? error.message : String(error)
+            }`,
           variant: "destructive",
         });
       } finally {
@@ -86,7 +96,7 @@ export function useBridge({
 
           const totalFee = fee?.mul(new BN(inputUtxos.length));
 
-          return await bridgeContract.swap_btc({
+          const txHex = await bridgeContract.swap_btc({
             gas: NEAR_MAX_GAS,
             amount: totalFee?.toString() || "0",
             args: {
@@ -95,8 +105,23 @@ export function useBridge({
               sender_public_key: senderPublicKey,
             },
           });
+
+          const response = await axios.post<string>(
+            `${CHAINS[Chain.BTC].rpcEndpoint}/tx`,
+            txHex
+          );
+
+          if (response.status === 200 && response.data) {
+            const explorerUrl = `${CHAINS[Chain.BTC].explorerUrl}/tx/${response.data
+              }`;
+            return {
+              txHash: response.data,
+              explorerUrl,
+            };
+          }
+
+          throw new Error(`Failed to broadcast transaction: ${response.data}`);
         },
-        "BTC swap initiated successfully",
         "Failed to initiate BTC swap"
       );
     },
