@@ -19,7 +19,7 @@ const SWAP_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 impl Contract {
 
     #[payable]
-    pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>) ->Promise {
+    pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>, sender_public_key: String) ->Promise {
         log!("Swap starting");
         let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
         
@@ -40,7 +40,8 @@ impl Contract {
                     .with_static_gas(SWAP_CALLBACK_GAS)
                     .with_unused_gas_weight(0)
                     .swap_btc_callback(
-                        prepared_bitcoin_transaction
+                        prepared_bitcoin_transaction,
+                        sender_public_key
                     )
             )
     }
@@ -49,13 +50,14 @@ impl Contract {
     pub fn swap_btc_callback(
         &mut self,
         prepared_bitcoin_transaction: PreparedBitcoinTransaction,
+        sender_public_key: String,
         #[callback_result] sign_result: Result<SignResult, PromiseError>
     ) -> String {
         if let Ok(signature) = sign_result {
             log!("Got signature from signer {:?}", signature);
-            // TODO: Should not be hardcoded
-            let public_key = "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24";
-            self.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature, public_key)
+            let tx_hex = self.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature, sender_public_key);
+            log!("Finalized BTC transaction hex: {:?}", tx_hex);
+            tx_hex
         } else {
             log!("Failed to get signature from signer");
             panic!("Failed to get signature from signer");

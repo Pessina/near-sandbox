@@ -23,8 +23,6 @@ export default function MultiChain() {
   const derivedAddressAndPublicKey = useDeriveAddressAndPublicKey(accountId ?? '', chain, getPath(chain, derivedPath));
   const { accountBalance, getAccountBalance } = useAccountBalance(chain, derivedAddressAndPublicKey?.address ?? '');
 
-  console.log(derivedAddressAndPublicKey?.publicKey)
-
   const handleChainChange = useCallback((value: string) => {
     setChain(value as Chain);
   }, []);

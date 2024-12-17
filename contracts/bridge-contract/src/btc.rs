@@ -148,7 +148,7 @@ impl Contract {
         &self,
         tx: BitcoinTransaction,
         signature: SignResult,
-        public_key_hex: &str,
+        public_key_hex: String,
     ) -> String {
         // Extract R and S as 32-byte integers
         let r_bytes = extract_32_byte_scalar_from_hex(&signature.big_r.affine_point);
@@ -298,7 +298,7 @@ mod tests {
             recovery_id: 0,
         };
 
-        let public_key = "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24";
+        let public_key = "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24".to_string();
 
         let final_tx = contract.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature, public_key);
 

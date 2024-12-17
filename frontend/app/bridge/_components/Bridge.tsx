@@ -62,7 +62,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     })
     const [bridgeContractInstance, setBridgeContractInstance] = useState<BridgeContract>()
     const { selectedAccount } = useKeyPairAuth()
-    const btcBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.BTC, "m/44'/0'/0'/0/0")
+    const btcBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.BTC, "")
 
     useEffect(() => {
         if (!selectedAccount) return
@@ -106,44 +106,45 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
 
         if (!btcBridgeAddressAndPk) return
 
-        console.log({
-            address: btcBridgeAddressAndPk.address,
-            data: {
-                publicKey: btcBridgeAddressAndPk.publicKey,
-                from: data.bridgeAddress,
-                to: data.toAddress,
-                value: data.amount
-            }
-        })
-
         const psbt = await btc.createPSBT({
             address: btcBridgeAddressAndPk.address,
             data: {
                 publicKey: btcBridgeAddressAndPk.publicKey,
                 from: btcBridgeAddressAndPk.address,
-                to: "tb1qp47syg7nq26w3mehq594yq93cvcx4eatrvrtmc",
+                to: data.toAddress,
                 value: Bitcoin.toSatoshi(Number(data.amount)).toString()
             }
         })
 
-        const inputUtxos = psbt.data.inputs.map((input, index) => ({
-            txid: Buffer.from(psbt.txInputs[index].hash).reverse().toString('hex'),
-            vout: psbt.txInputs[index].index,
-            value: input.witnessUtxo?.value ?? 0,
-            script_pubkey: input.witnessUtxo?.script.toString('hex') ?? ''
+        const inputUtxos = await Promise.all(psbt.data.inputs.map(async (input, index) => {
+            if (!input.witnessUtxo) {
+                throw new Error(`Missing witnessUtxo for input ${index}`)
+            }
+
+            return {
+                txid: Buffer.from(psbt.txInputs[index].hash).reverse().toString('hex'),
+                vout: psbt.txInputs[index].index,
+                value: input.witnessUtxo.value,
+                script_pubkey: input.witnessUtxo.script.toString('hex')
+            }
         }))
 
-        const outputUtxos = psbt.txOutputs.map((output, index) => ({
-            txid: '',
-            vout: index,
-            value: output.value,
-            script_pubkey: output.script.toString('hex')
-        }))
-
-        handleSwapBTC({
-            inputUtxos,
-            outputUtxos
+        const outputUtxos = psbt.txOutputs.map((output, index) => {
+            return {
+                txid: '',
+                vout: index,
+                value: output.value,
+                script_pubkey: output.script.toString('hex')
+            }
         })
+
+        const txHex = await handleSwapBTC({
+            inputUtxos,
+            outputUtxos,
+            senderPublicKey: btcBridgeAddressAndPk.publicKey
+        })
+
+        console.log({ txHex })
     }
 
     if (!mounted) return null

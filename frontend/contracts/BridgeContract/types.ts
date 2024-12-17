@@ -34,6 +34,7 @@ export type BridgeContract = Contract & {
     args: ContractChangeMethodArgs<{
       input_utxos: UTXO[];
       output_utxos: UTXO[];
+      sender_public_key: string;
     }>
   ) => Promise<string>;
 };

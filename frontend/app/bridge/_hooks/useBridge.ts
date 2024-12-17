@@ -15,7 +15,8 @@ export interface BridgeActions {
   handleSwapBTC: (args: {
     inputUtxos: UTXO[];
     outputUtxos: UTXO[];
-  }) => Promise<void>;
+    senderPublicKey: string;
+  }) => Promise<string>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -63,13 +64,17 @@ export function useBridge({
     async ({
       inputUtxos,
       outputUtxos,
+      senderPublicKey,
     }: {
       inputUtxos: UTXO[];
       outputUtxos: UTXO[];
+      senderPublicKey: string;
     }) => {
-      if (!bridgeContract) return;
+      if (!bridgeContract) {
+        throw new Error("Bridge contract not available");
+      }
 
-      await withErrorHandling(
+      return await withErrorHandling(
         async () =>
           await bridgeContract.swap_btc({
             gas: NEAR_MAX_GAS,
@@ -77,6 +82,7 @@ export function useBridge({
             args: {
               input_utxos: inputUtxos,
               output_utxos: outputUtxos,
+              sender_public_key: senderPublicKey,
             },
           }),
         "BTC swap initiated successfully",
