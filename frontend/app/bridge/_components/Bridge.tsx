@@ -28,7 +28,6 @@ import { Bitcoin } from "multichain-tools"
 
 type FormData = {
     amount: string
-    bridgeAddress: string
     toAddress: string
     sourceChain: Chain
     destChain: Chain
@@ -74,7 +73,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         setBridgeContractInstance(contract)
     }, [selectedAccount, bridgeContract])
 
-    const { isProcessing, handleSwapBTC, isLoading, error } = useBridge({
+    const { handleSwapBTC } = useBridge({
         bridgeContract: bridgeContractInstance ?? null
     })
 
@@ -107,8 +106,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         if (!btcBridgeAddressAndPk) return
 
         const psbt = await btc.createPSBT({
-            address: btcBridgeAddressAndPk.address,
-            data: {
+            transactionRequest: {
                 publicKey: btcBridgeAddressAndPk.publicKey,
                 from: btcBridgeAddressAndPk.address,
                 to: data.toAddress,
@@ -203,18 +201,6 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
-                    <div>
-                        <label htmlFor="bridgeAddress" className="text-sm font-medium mb-1 block">Bridge Address</label>
-                        <Input
-                            id="bridgeAddress"
-                            {...register("bridgeAddress", { required: "Bridge address is required" })}
-                            type="text"
-                            placeholder="0x..."
-                        />
-                        {errors.bridgeAddress && (
-                            <p className="text-sm text-red-500 mt-1">{errors.bridgeAddress.message}</p>
-                        )}
                     </div>
                     <div>
                         <label htmlFor="toAddress" className="text-sm font-medium mb-1 block">Recipient Address</label>

@@ -2,8 +2,10 @@ import { useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { BridgeContract, UTXO } from "../../../contracts/BridgeContract/types";
 import { useQuery } from "@tanstack/react-query";
-import { parseNearAmount } from "near-api-js/lib/utils/format";
 import { NEAR_MAX_GAS } from "@/contracts/constants";
+import { ChainSignaturesContract } from "multichain-tools";
+import { useEnv } from "@/hooks/useEnv";
+import { BN } from "bn.js";
 
 export interface UseBridgeProps {
   bridgeContract: BridgeContract | null;
@@ -27,6 +29,7 @@ export function useBridge({
 }: UseBridgeProps): BridgeActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { nearNetworkId, chainSignatureContract } = useEnv();
 
   const withErrorHandling = useCallback(
     async (
@@ -75,16 +78,24 @@ export function useBridge({
       }
 
       return await withErrorHandling(
-        async () =>
-          await bridgeContract.swap_btc({
+        async () => {
+          const fee = await ChainSignaturesContract.getCurrentFee({
+            networkId: nearNetworkId,
+            contract: chainSignatureContract,
+          });
+
+          const totalFee = fee?.mul(new BN(inputUtxos.length));
+
+          return await bridgeContract.swap_btc({
             gas: NEAR_MAX_GAS,
-            amount: parseNearAmount("0.005") || "0",
+            amount: totalFee?.toString() || "0",
             args: {
               input_utxos: inputUtxos,
               output_utxos: outputUtxos,
               sender_public_key: senderPublicKey,
             },
-          }),
+          });
+        },
         "BTC swap initiated successfully",
         "Failed to initiate BTC swap"
       );

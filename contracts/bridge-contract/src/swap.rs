@@ -1,7 +1,7 @@
 use crate::*;
 
 use btc::{PreparedBitcoinTransaction, UTXO};
-use near_sdk::{env, log, near, Gas, Promise};
+use near_sdk::{env, log, near, Gas, NearToken, Promise};
 use crate::signer::{SignRequest, SignResult, ext_signer};
 
 const SIGN_GAS: Gas = Gas::from_tgas(100);
@@ -9,7 +9,7 @@ const SWAP_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 
 #[near]
 impl Contract {
-    fn promise_sign(&self, sighash: [u8; 32]) -> Promise {
+    fn promise_sign(&self, sighash: [u8; 32], deposit: NearToken) -> Promise {
         // TODO: Should be customizable by the caller
         let sign_request = SignRequest::new(
             sighash,
@@ -20,8 +20,7 @@ impl Contract {
         log!("Sign request: {:?}", sign_request);
 
         ext_signer::ext(self.signer_account.clone())
-            // TODO: The current min deposit should be provided by the caller
-            .with_attached_deposit(env::attached_deposit())
+            .with_attached_deposit(deposit)
             .with_static_gas(SIGN_GAS)
             .sign(sign_request)
     }
@@ -29,12 +28,16 @@ impl Contract {
     #[payable]
     pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>, sender_public_key: String) -> Promise {
         log!("Swap starting");
+        let input_utxos_len = input_utxos.len() as u128;
+
         let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
+
+        let sign_deposit = env::attached_deposit().saturating_div(input_utxos_len);
         
-        let mut combined_promise = self.promise_sign(prepared_bitcoin_transaction.sighashes[0]);
+        let mut combined_promise = self.promise_sign(prepared_bitcoin_transaction.sighashes[0], sign_deposit);
 
         for sighash in prepared_bitcoin_transaction.sighashes.iter().skip(1) {
-            let sign_promise = self.promise_sign(*sighash);
+            let sign_promise = self.promise_sign(*sighash, sign_deposit);
             combined_promise = combined_promise.and(sign_promise);
         }
 
