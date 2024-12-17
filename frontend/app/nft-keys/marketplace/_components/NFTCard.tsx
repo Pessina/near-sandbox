@@ -13,9 +13,9 @@ import { useCopy } from "@/hooks/useCopy"
 import { useEffect } from "react"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
-import { formatTokenAmount } from "../_utils/chains"
-import { NFT } from "../../../../contracts/NFTKeysContract"
-import { ListNFTArgs, OfferNFTArgs, TransactionArgs, RemoveListingArgs } from "../_hooks/useNFTMarketplace"
+import { NFT } from "@/contracts/NFTKeysContract"
+import { ListNFTArgs, OfferNFTArgs, TransactionArgs, RemoveListingArgs } from "@/contracts/NFTKeysMarketplaceContract/useNFTMarketplaceContract"
+import { formatTokenAmount } from "@/lib/unit-formatter"
 
 interface NFTCardProps {
     nft: NFTListed

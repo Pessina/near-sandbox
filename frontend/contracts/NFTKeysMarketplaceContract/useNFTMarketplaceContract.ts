@@ -1,26 +1,24 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  NFT,
-  NFTKeysContract,
-} from "../../../../contracts/NFTKeysContract/types";
-import { NFTListed, FormData } from "../types";
+import { NFT, NFTKeysContract } from "../NFTKeysContract/types";
+import { NFTListed, FormData } from "../../app/nft-keys/marketplace/types";
 import { Chain } from "@/constants/chains";
-import { parseTokenAmount } from "../_utils/chains";
-import {
-  ONE_YOCTO_NEAR,
-  NEAR_MAX_GAS,
-  KrnlPayload,
-  MOCK_KRNL,
-} from "../../../../contracts/constants";
+import { parseTokenAmount } from "@/lib/unit-formatter";
+import { KrnlPayload, MOCK_KRNL } from "../constants";
+import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "@/constants/near";
 import { useMultiChainWalletTransaction } from "@/hooks/useMultiChainWalletTransaction";
 import { useEnv } from "@/hooks/useEnv";
 import { ethers } from "ethers";
-import { getBalanceBTC, getBalanceETH } from "../_krnl/getBalance";
+import {
+  getBalanceBTC,
+  getBalanceETH,
+} from "../../app/nft-keys/marketplace/_krnl/getBalance";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
-import { NFTKeysMarketplaceContract } from "../../../../contracts/NFTKeysMarketplaceContract";
+import { createMarketplaceContract, NFTKeysMarketplaceContract } from ".";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bitcoin } from "multichain-tools";
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
+import { createNFTContract } from "../NFTKeysContract";
 
 export interface ListNFTArgs {
   data: FormData;
@@ -52,10 +50,7 @@ export interface RemoveListingArgs {
 export interface StorageDepositArgs {
   amount: string;
 }
-
 export interface UseNFTMarketplaceProps {
-  nftContract: NFTKeysContract | null;
-  marketplaceContract: NFTKeysMarketplaceContract | null;
   onSuccess?: () => Promise<void>;
   accountId?: string;
 }
@@ -78,9 +73,7 @@ export interface NFTMarketplaceActions {
   error: Error | null;
 }
 
-export function useNFTMarketplace({
-  nftContract,
-  marketplaceContract,
+export function useNFTMarketplaceContract({
   onSuccess,
   accountId,
 }: UseNFTMarketplaceProps): NFTMarketplaceActions {
@@ -88,8 +81,31 @@ export function useNFTMarketplace({
   const { toast } = useToast();
   const { signEvmTransaction, signBtcTransaction, signCosmosTransaction } =
     useMultiChainWalletTransaction();
-  const { nftKeysMarketplaceContract } = useEnv();
+  const {
+    nftKeysMarketplaceContract: marketplaceContractAccountId,
+    nftKeysContract: nftContractAccountId,
+  } = useEnv();
   const queryClient = useQueryClient();
+  const { selectedAccount } = useKeyPairAuth();
+  const [nftContract, setNftContract] = useState<NFTKeysContract>();
+  const [marketplaceContract, setMarketplaceContract] =
+    useState<NFTKeysMarketplaceContract>();
+
+  useEffect(() => {
+    if (!selectedAccount) return;
+
+    const nftContract = createNFTContract({
+      account: selectedAccount,
+      contractId: nftContractAccountId,
+    });
+    setNftContract(nftContract);
+
+    const marketplaceContract = createMarketplaceContract({
+      account: selectedAccount,
+      contractId: marketplaceContractAccountId,
+    });
+    setMarketplaceContract(marketplaceContract);
+  }, [selectedAccount, nftContractAccountId, marketplaceContractAccountId]);
 
   const {
     data: marketplaceData,
@@ -210,14 +226,14 @@ export function useNFTMarketplace({
           // Not ideal but temporary solution - check if approved, revoke and approve again
           const isApproved = await nftContract.nft_is_approved({
             token_id: data.tokenId,
-            approved_account_id: nftKeysMarketplaceContract,
+            approved_account_id: marketplaceContractAccountId,
           });
 
           if (isApproved) {
             await nftContract.nft_revoke({
               args: {
                 token_id: data.tokenId,
-                account_id: nftKeysMarketplaceContract,
+                account_id: marketplaceContractAccountId,
               },
               amount: ONE_YOCTO_NEAR,
             });
@@ -226,7 +242,7 @@ export function useNFTMarketplace({
           await nftContract.nft_approve({
             args: {
               token_id: data.tokenId,
-              account_id: nftKeysMarketplaceContract,
+              account_id: marketplaceContractAccountId,
               msg: JSON.stringify({
                 path: data.path,
                 token: data.token,
@@ -243,7 +259,7 @@ export function useNFTMarketplace({
         "Failed to list NFT"
       );
     },
-    [nftContract, nftKeysMarketplaceContract, withErrorHandling]
+    [nftContract, marketplaceContractAccountId, withErrorHandling]
   );
 
   const handleOfferNFT = useCallback(
@@ -277,14 +293,14 @@ export function useNFTMarketplace({
           // Not ideal but temporary solution - check if approved, revoke and approve again
           const isApproved = await nftContract.nft_is_approved({
             token_id: offerTokenId,
-            approved_account_id: nftKeysMarketplaceContract,
+            approved_account_id: marketplaceContractAccountId,
           });
 
           if (isApproved) {
             await nftContract.nft_revoke({
               args: {
                 token_id: offerTokenId,
-                account_id: nftKeysMarketplaceContract,
+                account_id: marketplaceContractAccountId,
               },
               amount: ONE_YOCTO_NEAR,
             });
@@ -293,7 +309,7 @@ export function useNFTMarketplace({
           await nftContract.nft_approve({
             args: {
               token_id: offerTokenId,
-              account_id: nftKeysMarketplaceContract,
+              account_id: marketplaceContractAccountId,
               msg: JSON.stringify({
                 token_id: purchaseTokenId,
                 krnl_payload: krnlPayload,
@@ -309,7 +325,7 @@ export function useNFTMarketplace({
         "Failed to submit offer"
       );
     },
-    [nftContract, nftKeysMarketplaceContract, withErrorHandling]
+    [nftContract, marketplaceContractAccountId, withErrorHandling]
   );
 
   const handleTransaction = useCallback(

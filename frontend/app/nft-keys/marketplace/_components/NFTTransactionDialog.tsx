@@ -12,7 +12,7 @@ import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicK
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
 import { useCopy } from "@/hooks/useCopy"
-import { TransactionArgs } from "../_hooks/useNFTMarketplace"
+import { TransactionArgs } from "../../../../contracts/NFTKeysMarketplaceContract/useNFTMarketplaceContract"
 
 interface NFTTransactionDialogProps {
     nft: NFTListed

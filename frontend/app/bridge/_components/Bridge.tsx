@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
 import { ArrowRightLeft, Wallet, Loader2 } from 'lucide-react'
 import { useAccount, useConnect, useSendTransaction } from 'wagmi'
 import { parseEther, encodeAbiParameters } from 'viem'
@@ -16,12 +15,7 @@ import { useMounted } from "@/hooks/useMounted"
 
 import type { UseSendTransactionParameters } from 'wagmi'
 import type { Config } from '@wagmi/core'
-import { useEnv } from "@/hooks/useEnv"
-import { useBridge } from "../_hooks/useBridge"
-import { createBridgeContract } from "../../../contracts/BridgeContract/BridgeContract"
-import { useState, useEffect } from "react"
-import { BridgeContract } from "../../../contracts/BridgeContract/types"
-import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
+import { useBridgeContract } from "../../../contracts/BridgeContract/useBridgeContract"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useChains } from "@/hooks/useChains"
 import { Bitcoin } from "multichain-tools"
@@ -45,12 +39,11 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             destChain: Chain.BTC
         }
     })
-    const { toast } = useToast()
     const { address, isConnected } = useAccount()
     const { connect, isPending: isConnectPending } = useConnect()
     const formValues = watch()
     const mounted = useMounted()
-    const { bridgeContract } = useEnv()
+    const { handleSwapBTC } = useBridgeContract()
     const { btc } = useChains()
 
     const { sendTransaction, isPending } = useSendTransaction({
@@ -59,23 +52,9 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             onError
         }
     })
-    const [bridgeContractInstance, setBridgeContractInstance] = useState<BridgeContract>()
-    const { selectedAccount } = useKeyPairAuth()
+
+
     const btcBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.BTC, "")
-
-    useEffect(() => {
-        if (!selectedAccount) return
-
-        const contract = createBridgeContract({
-            account: selectedAccount,
-            contractId: bridgeContract
-        })
-        setBridgeContractInstance(contract)
-    }, [selectedAccount, bridgeContract])
-
-    const { handleSwapBTC } = useBridge({
-        bridgeContract: bridgeContractInstance ?? null
-    })
 
     const onSubmit = async (data: FormData) => {
         // if (!isConnected) {

@@ -1,40 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { createNFTContract } from "../../../contracts/NFTKeysContract"
-import { createMarketplaceContract, NFTKeysMarketplaceContract } from "../../../contracts/NFTKeysMarketplaceContract"
-import type { NFTKeysContract } from "../../../contracts/NFTKeysContract/types"
 import { ConnectWalletCard } from "./_components/ConnectWalletCard"
 import { RegisterMarketplaceCard } from "./_components/RegisterMarketplaceCard"
 import { ContractManagement } from "../_components/ContractManagement/ContractManagement"
 import { NFTGrid } from "./_components/NFTGrid"
-import { useNFTMarketplace } from "./_hooks/useNFTMarketplace"
+import { useNFTMarketplaceContract } from "../../../contracts/NFTKeysMarketplaceContract/useNFTMarketplaceContract"
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
-import { useEnv } from "@/hooks/useEnv"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingBag, Wallet } from 'lucide-react'
 
 export default function NFTMarketplace() {
     const { selectedAccount } = useKeyPairAuth()
-    const { nftKeysContract, nftKeysMarketplaceContract } = useEnv()
-    const [nftContract, setNftContract] = useState<NFTKeysContract | null>(null)
-    const [marketplaceContract, setMarketplaceContract] = useState<NFTKeysMarketplaceContract | null>(null)
-
-    useEffect(() => {
-        if (!selectedAccount) return
-
-        const nftContract = createNFTContract({
-            account: selectedAccount,
-            contractId: nftKeysContract
-        })
-        setNftContract(nftContract)
-
-        const marketplaceContract = createMarketplaceContract({
-            account: selectedAccount,
-            contractId: nftKeysMarketplaceContract
-        })
-        setMarketplaceContract(marketplaceContract)
-    }, [nftKeysContract, nftKeysMarketplaceContract, selectedAccount])
 
     const {
         isProcessing,
@@ -50,9 +26,7 @@ export default function NFTMarketplace() {
         listedNfts,
         isRegistered,
         storageBalance
-    } = useNFTMarketplace({
-        nftContract,
-        marketplaceContract,
+    } = useNFTMarketplaceContract({
         accountId: selectedAccount?.accountId
     })
 

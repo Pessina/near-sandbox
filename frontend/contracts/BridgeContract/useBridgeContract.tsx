@@ -1,18 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { BridgeContract, UTXO } from "../../../contracts/BridgeContract/types";
+import { BridgeContract, UTXO } from "./types";
 import { useQuery } from "@tanstack/react-query";
-import { NEAR_MAX_GAS } from "@/contracts/constants";
+import { NEAR_MAX_GAS } from "@/constants/near";
 import { ChainSignaturesContract } from "multichain-tools";
 import { useEnv } from "@/hooks/useEnv";
 import { BN } from "bn.js";
 import axios from "axios";
 import { Chain, CHAINS } from "@/constants/chains";
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
+import { createBridgeContract } from "./BridgeContract";
 
-export interface UseBridgeProps {
-  bridgeContract: BridgeContract | null;
-  onSuccess?: () => Promise<void>;
-}
 
 export interface BridgeActions {
   isProcessing: boolean;
@@ -25,13 +23,24 @@ export interface BridgeActions {
   error: Error | null;
 }
 
-export function useBridge({
-  bridgeContract,
-  onSuccess,
-}: UseBridgeProps): BridgeActions {
+export function useBridgeContract(): BridgeActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { nearNetworkId, chainSignatureContract } = useEnv();
+
+  const [bridgeContract, setBridgeContract] = useState<BridgeContract>()
+  const { selectedAccount } = useKeyPairAuth()
+  const { bridgeContract: bridgeContractAccountId } = useEnv()
+
+  useEffect(() => {
+    if (!selectedAccount) return
+
+    const contract = createBridgeContract({
+      account: selectedAccount,
+      contractId: bridgeContractAccountId
+    })
+    setBridgeContract(contract)
+  }, [selectedAccount, bridgeContractAccountId])
 
   const withErrorHandling = useCallback(
     async (
@@ -57,7 +66,6 @@ export function useBridge({
             </div>
           ),
         });
-        await onSuccess?.();
         return result;
       } catch (error) {
         toast({
@@ -70,7 +78,7 @@ export function useBridge({
         setIsProcessing(false);
       }
     },
-    [isProcessing, onSuccess, toast]
+    [isProcessing, toast]
   );
 
   const handleSwapBTC = useCallback(

@@ -1,9 +1,35 @@
+import { parseUnits, formatUnits } from "ethers";
+
 export enum Chain {
   ETH = "ETH",
   // BNB = "BNB",
   BTC = "BTC",
   OSMOSIS = "OSMOSIS",
 }
+
+export interface TokenConfig {
+  symbol: string;
+  decimals: number;
+  displaySymbol: string;
+}
+
+export const TOKEN_CONFIGS: Record<Chain, TokenConfig> = {
+  [Chain.ETH]: {
+    symbol: "eth",
+    decimals: 18,
+    displaySymbol: "ETH",
+  },
+  [Chain.BTC]: {
+    symbol: "btc",
+    decimals: 8,
+    displaySymbol: "BTC",
+  },
+  [Chain.OSMOSIS]: {
+    symbol: "osmo",
+    decimals: 6,
+    displaySymbol: "OSMO",
+  },
+};
 
 export const CHAINS = {
   [Chain.ETH]: {

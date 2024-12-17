@@ -10,7 +10,7 @@ import { useAccountBalance } from "@/hooks/useAccountBalance"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useEnv } from "@/hooks/useEnv"
 import { getPath } from "../_utils/getPath"
-import { ListNFTArgs } from "../_hooks/useNFTMarketplace"
+import { ListNFTArgs } from "../../../../contracts/NFTKeysMarketplaceContract/useNFTMarketplaceContract"
 
 interface NFTListDialogProps {
     isProcessing: boolean

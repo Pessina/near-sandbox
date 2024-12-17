@@ -9,7 +9,7 @@ import { Chain } from "@/constants/chains"
 import { getPath } from "../_utils/getPath"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useEnv } from "@/hooks/useEnv"
-import { OfferNFTArgs } from "../_hooks/useNFTMarketplace"
+import { OfferNFTArgs } from "../../../../contracts/NFTKeysMarketplaceContract/useNFTMarketplaceContract"
 
 interface OfferDialogProps {
     isProcessing: boolean

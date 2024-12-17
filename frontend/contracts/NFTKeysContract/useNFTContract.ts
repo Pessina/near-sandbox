@@ -1,9 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { NFT, NFTKeysContract } from "../../../contracts/NFTKeysContract/types";
-import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "../../../contracts/constants";
+import { NFT, NFTKeysContract } from "./types";
+import { ONE_YOCTO_NEAR, NEAR_MAX_GAS } from "@/constants/near";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEnv } from "@/hooks/useEnv";
+import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
+import { createNFTContract } from "./NFTKeysContract";
+
+interface StorageBalance {
+  total: string;
+  available: string;
+}
 
 export interface FormData {
   tokenId: string;
@@ -16,9 +24,7 @@ export interface FormData {
   approvalId?: string;
   memo?: string;
 }
-
 export interface UseNFTProps {
-  nftContract: NFTKeysContract | null;
   onSuccess?: () => Promise<void>;
   accountId?: string;
 }
@@ -39,16 +45,31 @@ export interface NFTActions {
   ownedNfts: NFT[];
   isLoading: boolean;
   error: Error | null;
+  storageBalance: StorageBalance | null;
 }
 
-export function useNFT({
-  nftContract,
+export function useNFTContract({
   accountId,
   onSuccess,
 }: UseNFTProps): NFTActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedAccount } = useKeyPairAuth();
+  const { nftKeysContract: nftKeysContractAccountId } = useEnv();
+  const [nftContract, setNftContract] = useState<NFTKeysContract>();
+  const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(
+    null
+  );
+  useEffect(() => {
+    if (!selectedAccount) return;
+
+    const contract = createNFTContract({
+      account: selectedAccount,
+      contractId: nftKeysContractAccountId,
+    });
+    setNftContract(contract);
+  }, [selectedAccount, nftKeysContractAccountId]);
 
   const withErrorHandling = useCallback(
     async (
@@ -318,6 +339,27 @@ export function useNFT({
     [nftContract, withErrorHandling]
   );
 
+  const loadStorageBalance = useCallback(async () => {
+    if (!nftContract || !selectedAccount) return;
+
+    try {
+      const balance = await nftContract.storage_balance_of({
+        account_id: selectedAccount.accountId,
+      });
+      setStorageBalance(balance);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error loading storage balance",
+        description: String(error),
+      });
+    }
+  }, [nftContract, selectedAccount, toast]);
+
+  useEffect(() => {
+    loadStorageBalance();
+  }, [loadStorageBalance]);
+
   return {
     isProcessing,
     handleMint,
@@ -334,5 +376,6 @@ export function useNFT({
     ownedNfts: nftData?.userNfts ?? [],
     isLoading,
     error,
+    storageBalance,
   };
 }

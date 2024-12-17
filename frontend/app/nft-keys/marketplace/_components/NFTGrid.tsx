@@ -2,7 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { NFTCard } from "./NFTCard"
 import type { NFTListed } from "../types"
 import { NFT } from "../../../../contracts/NFTKeysContract"
-import type { ListNFTArgs, OfferNFTArgs, TransactionArgs, RemoveListingArgs } from "../_hooks/useNFTMarketplace"
+import type { ListNFTArgs, OfferNFTArgs, TransactionArgs, RemoveListingArgs } from "../../../../contracts/NFTKeysMarketplaceContract/useNFTMarketplaceContract"
 
 interface NFTGridProps {
     nfts: NFTListed[]

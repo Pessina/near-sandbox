@@ -1,11 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { createNFTContract } from "../../contracts/NFTKeysContract"
-import { NFTKeysContract } from "../../contracts/NFTKeysContract/types"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
 import { NFTKeysGrid } from "./_components/NFTKeysGrid"
 import { ContractManagement } from "./_components/ContractManagement/ContractManagement"
 import { useForm } from "react-hook-form"
@@ -13,16 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2 } from 'lucide-react'
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider"
 import { ManageNFTForm } from "./_components/ContractManagement/_components/ManageNFTForm"
-import { useNFT } from "./_hooks/useNFT"
-
-interface NFTToken {
-  token_id: string
-}
-
-interface StorageBalance {
-  total: string
-  available: string
-}
+import { useNFTContract } from "../../contracts/NFTKeysContract/useNFTContract"
 
 type FormData = {
   tokenId: string
@@ -38,42 +26,8 @@ type FormData = {
 
 export default function NFTKeysPage() {
   const { selectedAccount } = useKeyPairAuth()
-  const { toast } = useToast()
-  const [nftContract, setNftContract] = useState<NFTKeysContract>()
   const [publicKey, setPublicKey] = useState<string>('')
-  const { register, handleSubmit, watch, reset } = useForm<FormData>()
-  const [storageBalance, setStorageBalance] = useState<StorageBalance | null>(null)
-
-  const loadStorageBalance = useCallback(async () => {
-    if (!nftContract || !selectedAccount) return
-
-    try {
-      const balance = await nftContract.storage_balance_of({
-        account_id: selectedAccount.accountId
-      })
-      setStorageBalance(balance)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error loading storage balance",
-        description: String(error)
-      })
-    }
-  }, [nftContract, selectedAccount, toast])
-
-  useEffect(() => {
-    loadStorageBalance()
-  }, [loadStorageBalance])
-
-  useEffect(() => {
-    if (!selectedAccount) return
-
-    const contract = createNFTContract({
-      account: selectedAccount,
-      contractId: process.env.NEXT_PUBLIC_NFT_KEYS_CONTRACT!
-    })
-    setNftContract(contract)
-  }, [selectedAccount])
+  const { register, handleSubmit, watch } = useForm<FormData>()
 
   const {
     isProcessing,
@@ -88,9 +42,9 @@ export default function NFTKeysPage() {
     handleStorageDeposit,
     handleStorageWithdraw,
     nfts,
-    ownedNfts
-  } = useNFT({
-    nftContract: nftContract ?? null,
+    ownedNfts,
+    storageBalance,
+  } = useNFTContract({
     accountId: selectedAccount?.accountId
   })
 

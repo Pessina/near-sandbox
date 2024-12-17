@@ -153,7 +153,6 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
                 const txOutcome = await accounts[0].connection.provider.txStatus(
                     nearTxHash,
                     accounts[0].accountId,
-                    'FINAL'
                 );
 
                 if (!txOutcome) {
