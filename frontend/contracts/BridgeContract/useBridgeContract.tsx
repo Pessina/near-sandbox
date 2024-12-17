@@ -11,7 +11,6 @@ import { Chain, CHAINS } from "@/constants/chains";
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
 import { createBridgeContract } from "./BridgeContract";
 
-
 export interface BridgeActions {
   isProcessing: boolean;
   handleSwapBTC: (args: {
