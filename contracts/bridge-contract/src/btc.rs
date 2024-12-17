@@ -147,41 +147,44 @@ impl Contract {
     pub fn finalize_btc_tx(
         &self,
         tx: BitcoinTransaction,
-        signature: SignResult,
+        signatures: Vec<SignResult>,
         public_key_hex: String,
     ) -> String {
-        // Extract R and S as 32-byte integers
-        let r_bytes = extract_32_byte_scalar_from_hex(&signature.big_r.affine_point);
-        let s_bytes = extract_32_byte_scalar_from_hex(&signature.s.scalar);
-
-        // Normalize R and S for DER
-        let r = normalize_der_int(r_bytes);
-        let s = normalize_der_int(s_bytes);
-
-        // Construct the DER-encoded signature
-        let total_len = 2 + r.len() + 2 + s.len(); // 2 bytes overhead per integer
-        let mut der_signature = Vec::with_capacity(6 + r.len() + s.len());
-        der_signature.push(0x30); // DER sequence
-        der_signature.push(total_len as u8);
-        der_signature.push(0x02); // integer for R
-        der_signature.push(r.len() as u8);
-        der_signature.extend_from_slice(&r);
-        der_signature.push(0x02); // integer for S
-        der_signature.push(s.len() as u8);
-        der_signature.extend_from_slice(&s);
-        
-        // Append SIGHASH_ALL (0x01)
-        der_signature.push(0x01);
-
         // Decode the public key from hex
         let public_key = hex::decode(public_key_hex).expect("Invalid public key hex");
 
-        // Create the witness with DER-encoded signature and public key
-        let witness = Witness::from_slice(&[&der_signature, &public_key]);
-
-        // Assign witness to the first input
+        // Create witnesses for each input
         let mut final_tx = tx;
-        final_tx.input[0].witness = witness;
+        for (i, signature) in signatures.iter().enumerate() {
+            // Extract R and S as 32-byte integers
+            let r_bytes = extract_32_byte_scalar_from_hex(&signature.big_r.affine_point);
+            let s_bytes = extract_32_byte_scalar_from_hex(&signature.s.scalar);
+
+            // Normalize R and S for DER
+            let r = normalize_der_int(r_bytes);
+            let s = normalize_der_int(s_bytes);
+
+            // Construct the DER-encoded signature
+            let total_len = 2 + r.len() + 2 + s.len(); // 2 bytes overhead per integer
+            let mut der_signature = Vec::with_capacity(6 + r.len() + s.len());
+            der_signature.push(0x30); // DER sequence
+            der_signature.push(total_len as u8);
+            der_signature.push(0x02); // integer for R
+            der_signature.push(r.len() as u8);
+            der_signature.extend_from_slice(&r);
+            der_signature.push(0x02); // integer for S
+            der_signature.push(s.len() as u8);
+            der_signature.extend_from_slice(&s);
+            
+            // Append SIGHASH_ALL (0x01)
+            der_signature.push(0x01);
+
+            // Create the witness with DER-encoded signature and public key
+            let witness = Witness::from_slice(&[&der_signature, &public_key]);
+
+            // Assign witness to this input
+            final_tx.input[i].witness = witness;
+        }
 
         // Serialize and return hex
         let serialized = final_tx.serialize();
@@ -300,7 +303,7 @@ mod tests {
 
         let public_key = "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24".to_string();
 
-        let final_tx = contract.finalize_btc_tx(prepared_bitcoin_transaction.tx, signature, public_key);
+        let final_tx = contract.finalize_btc_tx(prepared_bitcoin_transaction.tx, vec![signature], public_key);
 
         assert_eq!(
             final_tx,
