@@ -136,13 +136,12 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             }
         })
 
-        const txHex = await handleSwapBTC({
+        await handleSwapBTC({
             inputUtxos,
             outputUtxos,
             senderPublicKey: btcBridgeAddressAndPk.publicKey
         })
 
-        console.log({ txHex })
     }
 
     if (!mounted) return null
