@@ -52,8 +52,12 @@ impl Contract {
         kernel_response: String,
         utxo_pub_key: String,
     ) -> bool {
-        let sender: [u8; 20] = decode_hex(&sender).try_into().expect("address should be 20 bytes");
         println!("test decoding auth");
+
+        let sender: [u8; 20] = decode_hex(&sender).try_into().expect("address should be 20 bytes");
+        let auth = decode_hex(&auth);
+        let kernel_response = decode_hex(&kernel_response);
+        let utxo_pub_key = decode_hex(&utxo_pub_key);
 
         // Decode auth: (bytes (signatureToken), bytes32 (nonce))
         let param_types = vec![
@@ -61,25 +65,39 @@ impl Contract {
             ParamType::FixedBytes(32),
         ];
 
-        let auth = decode_hex(&auth);
-        let tokens = decode(&param_types, &auth).map_err(|e| format!("Error unpacking auth: {:?}", e)).unwrap();
-        
-        let signature_bytes = match &tokens[0] {
-            Token::Bytes(b) => b.clone(),
-            _ => panic!("signature token is not bytes")
+        let tokens = match decode(&param_types, &auth) {
+            Ok(t) => t,
+            Err(e) => {
+                println!("Error unpacking auth: {:?}", e);
+                return false;
+            }
         };
+
+        let signature_token = match &tokens[0] {
+            Token::Bytes(b) => b.clone(),
+            _ => {
+                println!("signature token is not bytes");
+                return false;
+            }
+        };
+
         let nonce = match &tokens[1] {
             Token::FixedBytes(n) => n.clone(),
-            _ => panic!("nonce is not bytes32") 
+            _ => {
+                println!("nonce is not bytes32");
+                return false;
+            }
         };
 
         let mut nonce_bytes = [0u8; 32];
         nonce_bytes.copy_from_slice(&nonce);
 
-        // kernelResponsesDigest
-        let kernel_responses_digest = keccak256(&decode_hex(&kernel_response));
+        println!("signatureToken: 0x{}", hex::encode(&signature_token));
+        println!("nonce: 0x{}", hex::encode(&nonce_bytes));
+        println!("kernelResponse: 0x{}", hex::encode(&kernel_response));
 
-        let utxo_pub_key = decode_hex(&utxo_pub_key);
+        // kernelResponsesDigest
+        let kernel_responses_digest = keccak256(&kernel_response);
 
         // dataDigest = keccak256(sender | nonce | kernelResponsesDigest | utxoPubKey)
         let mut data = vec![];
@@ -90,10 +108,17 @@ impl Contract {
         let data_digest = keccak256(&data);
 
         // Recover address
-        let recovered_addr = recover_eth_address(&data_digest, &signature_bytes).ok_or("Recover failed").unwrap();
+        let recovered_addr = match recover_eth_address(&data_digest, &signature_token) {
+            Some(addr) => addr,
+            None => {
+                println!("Error recovering address");
+                return false;
+            }
+        };
 
         println!("recoveredAddr: 0x{}", hex::encode_upper(&recovered_addr));
-        println!("sender: 0x{}", hex::encode_upper(sender));
+        println!("sender: 0x{}", hex::encode_upper(&sender));
+
         if recovered_addr == sender {
             println!("signature verification successful");
             true
