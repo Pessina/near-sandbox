@@ -27,6 +27,8 @@ ethabi = {workspace = true}
 k256 = {workspace = true}
 sha3 = {workspace = true}
 serde_json = {workspace = true}
+alloy-primitives = {workspace = true}
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2.15", features = ["custom"] }
 
