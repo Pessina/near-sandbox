@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { BridgeContract, UTXO } from "./types";
+import { BridgeContract, UTXO, EvmTransaction } from "./types";
 import { useQuery } from "@tanstack/react-query";
 import { NEAR_MAX_GAS } from "@/constants/near";
 import { ChainSignaturesContract } from "multichain-tools";
@@ -17,6 +17,9 @@ export interface BridgeActions {
     inputUtxos: UTXO[];
     outputUtxos: UTXO[];
     senderPublicKey: string;
+  }) => Promise<string>;
+  handleSwapEVM: (args: {
+    tx: EvmTransaction;
   }) => Promise<string>;
   isLoading: boolean;
   error: Error | null;
@@ -135,6 +138,57 @@ export function useBridgeContract(): BridgeActions {
     [bridgeContract, withErrorHandling]
   );
 
+  const handleSwapEVM = useCallback(
+    async ({
+      tx
+    }: {
+      tx: EvmTransaction;
+    }) => {
+      if (!bridgeContract) {
+        throw new Error("Bridge contract not available");
+      }
+
+      return await withErrorHandling(
+        async () => {
+          const fee = await ChainSignaturesContract.getCurrentFee({
+            networkId: nearNetworkId,
+            contract: chainSignatureContract,
+          });
+
+          const txHex = await bridgeContract.swap_evm({
+            gas: NEAR_MAX_GAS,
+            amount: fee?.toString() || "0",
+            args: {
+              tx
+            },
+          });
+
+          const response = await axios.post<string>(
+            `${CHAINS[Chain.ETH].providerUrl}`,
+            {
+              jsonrpc: "2.0",
+              method: "eth_sendRawTransaction",
+              params: [txHex],
+              id: 1
+            }
+          );
+
+          if (response.status === 200 && response.data) {
+            const explorerUrl = `${CHAINS[Chain.ETH].explorerUrl}/tx/${response.data}`;
+            return {
+              txHash: response.data,
+              explorerUrl,
+            };
+          }
+
+          throw new Error(`Failed to broadcast transaction: ${response.data || 'Unknown error'}`);
+        },
+        "Failed to initiate EVM swap"
+      );
+    },
+    [bridgeContract, withErrorHandling]
+  );
+
   const { isLoading, error } = useQuery({
     queryKey: ["bridge"],
     queryFn: async () => {
@@ -147,6 +201,7 @@ export function useBridgeContract(): BridgeActions {
   return {
     isProcessing,
     handleSwapBTC,
+    handleSwapEVM,
     isLoading,
     error,
   };

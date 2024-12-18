@@ -19,6 +19,7 @@ import { useBridgeContract } from "../../../contracts/BridgeContract/useBridgeCo
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useChains } from "@/hooks/useChains"
 import { Bitcoin } from "multichain-tools"
+import { EvmTransaction } from "@/contracts/BridgeContract"
 
 type FormData = {
     amount: string
@@ -43,8 +44,8 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     const { connect, isPending: isConnectPending } = useConnect()
     const formValues = watch()
     const mounted = useMounted()
-    const { handleSwapBTC } = useBridgeContract()
-    const { btc } = useChains()
+    const { handleSwapBTC, handleSwapEVM } = useBridgeContract()
+    const { btc, evm } = useChains()
 
     const { sendTransaction, isPending } = useSendTransaction({
         mutation: {
@@ -55,6 +56,9 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
 
 
     const btcBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.BTC, "")
+    const evmBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.ETH, "")
+
+    console.log({ evmBridgeAddressAndPk, btcBridgeAddressAndPk })
 
     const onSubmit = async (data: FormData) => {
         // if (!isConnected) {
@@ -120,7 +124,31 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             outputUtxos,
             senderPublicKey: btcBridgeAddressAndPk.publicKey
         })
+    }
 
+    const handleSwapETH = async () => {
+        if (!evmBridgeAddressAndPk) return
+
+        const { transaction, mpcPayloads } = await evm.getMPCPayloadAndTransaction({
+            to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
+            from: evmBridgeAddressAndPk.address,
+            value: BigInt("10000"),
+        })
+
+        const mockEvmTransaction: EvmTransaction = {
+            nonce: Number(transaction.nonce) || 0,
+            to: transaction.to || "0x0000000000000000000000000000000000000000",
+            value: (transaction.value?.toString() || "0"),
+            max_priority_fee_per_gas: (transaction.maxPriorityFeePerGas?.toString() || "0"),
+            max_fee_per_gas: (transaction.maxFeePerGas?.toString() || "0"),
+            gas_limit: (transaction.gasLimit?.toString() || "0"),
+            chain_id: Number(transaction.chainId) || 1,
+            data: transaction.data ? new Uint8Array(Buffer.from(transaction.data, 'hex')) : new Uint8Array()
+        };
+
+        await handleSwapEVM({
+            tx: mockEvmTransaction
+        });
     }
 
     if (!mounted) return null
@@ -218,6 +246,7 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
                         )}
                         Initiate Bridge
                     </Button>
+                    <Button onClick={handleSwapETH} disabled={!isConnected || isPending} className="w-full">Withdraw</Button>
                 </form>
             </CardContent >
         </Card >

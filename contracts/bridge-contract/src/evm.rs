@@ -1,7 +1,6 @@
 use crate::*;
 
-use ethers_core::utils::keccak256;
-use near_sdk::{log, near, serde::{Deserialize, Serialize}};
+use near_sdk::{env::keccak256, log, near, serde::{Deserialize, Serialize}};
 use schemars::JsonSchema;
 use omni_transaction::{
     evm::{evm_transaction::EVMTransaction, types::Signature as OmniSignature, utils::parse_eth_address},
@@ -54,7 +53,7 @@ impl Contract {
 
         PreparedEvmTransaction {
             omni_evm_tx,
-            tx_hash
+            tx_hash: tx_hash.try_into().expect("Array conversion failed")
         }
     }
 
@@ -63,14 +62,11 @@ impl Contract {
         omni_evm_tx: EVMTransaction,
         signature: SignResult
     ) -> String {
-        // Decode the big_r affine_point hex and remove the first byte (compression prefix)
         let mut r_bytes = hex::decode(&signature.big_r.affine_point).expect("Invalid r hex");
         r_bytes = r_bytes[1..].to_vec();
     
-        // Decode s as a 32-byte scalar (already 32 bytes in the provided test)
         let s_bytes = hex::decode(&signature.s.scalar).expect("Invalid s hex");
     
-        // For EIP-1559 (type 2) transactions, v should be the recovery_id directly (0 or 1)
         let v = signature.recovery_id as u64;
     
         let omni_signature = OmniSignature { v, r: r_bytes, s: s_bytes };
@@ -78,8 +74,6 @@ impl Contract {
     
         format!("0x{}", hex::encode(tx))
     }
-    
-    
 }
 
 #[cfg(test)]

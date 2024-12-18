@@ -1,8 +1,8 @@
 use crate::*;
 
 use btc::{PreparedBitcoinTransaction, UTXO};
-use near_sdk::{env, log, near, Gas, NearToken, Promise};
-use crate::signer::{SignRequest, SignResult, ext_signer};
+use near_sdk::{env, log, near, Gas, NearToken, Promise, PromiseError};
+use signer::{SignRequest, SignResult, ext_signer};
 
 const SIGN_GAS: Gas = Gas::from_tgas(100);
 const SWAP_CALLBACK_GAS: Gas = Gas::from_tgas(10);
@@ -82,5 +82,57 @@ impl Contract {
         );
         log!("Finalized BTC transaction hex: {:?}", tx_hex);
         tx_hex
+    }
+
+    #[payable]
+    pub fn swap_evm(
+        &mut self,
+        tx: evm::EvmTransaction,
+    ) -> near_sdk::Promise {
+        log!("Starting swap_evm");
+
+        let prepared_evm_transaction = self.prepare_evm_tx(tx);
+        log!("Prepared EVM transaction with hash: {:?}", prepared_evm_transaction.tx_hash);
+
+        let request = SignRequest::new(
+            prepared_evm_transaction.tx_hash,
+            "".to_string(),
+            0
+        );
+
+        ext_signer::ext(self.signer_account.clone())
+            .with_attached_deposit(env::attached_deposit())
+            .with_static_gas(SIGN_GAS)
+            .sign(request)
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(SWAP_CALLBACK_GAS.into())
+                    .swap_evm_callback(
+                        prepared_evm_transaction.omni_evm_tx
+                    )
+            )
+    }
+
+    #[private]
+    pub fn swap_evm_callback(
+        &mut self,
+        omni_evm_tx: omni_transaction::evm::evm_transaction::EVMTransaction,
+        #[callback_result] result: Result<SignResult, PromiseError>
+    ) -> String {
+        match result {
+            Ok(signature) => {
+                log!("Got signature from signer {:?}", signature);
+                let tx_hex = self.finalize_evm_tx(
+                    omni_evm_tx,
+                    signature
+                );
+                log!("Finalized EVM transaction hex: {:?}", tx_hex);
+                tx_hex
+            }
+            Err(e) => {
+                log!("Failed to get signature from signer: {:?}", e);
+                panic!("Failed to get signature from signer");
+            }
+        }
     }
 }

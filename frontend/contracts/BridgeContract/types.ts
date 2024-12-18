@@ -29,12 +29,29 @@ export type PreparedBitcoinTransaction = {
   sighashes: number[][];
 };
 
+export type EvmTransaction = {
+  nonce: number;
+  to: string;
+  value: string;
+  max_priority_fee_per_gas: string;
+  max_fee_per_gas: string;
+  gas_limit: string;
+  chain_id: number;
+  data: Uint8Array;
+};
+
 export type BridgeContract = Contract & {
   swap_btc: (
     args: ContractChangeMethodArgs<{
       input_utxos: UTXO[];
       output_utxos: UTXO[];
       sender_public_key: string;
+    }>
+  ) => Promise<string>;
+
+  swap_evm: (
+    args: ContractChangeMethodArgs<{
+      tx: EvmTransaction;
     }>
   ) => Promise<string>;
 };
