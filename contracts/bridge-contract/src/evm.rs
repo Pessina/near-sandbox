@@ -22,12 +22,12 @@ pub struct PreparedEvmTransaction {
 pub struct EvmTransaction {
     pub nonce: u64,
     pub to: String,
-    pub value: u128,
-    pub max_priority_fee_per_gas: u128,
-    pub max_fee_per_gas: u128,
-    pub gas_limit: u128,
+    pub value: String,
+    pub max_priority_fee_per_gas: String,
+    pub max_fee_per_gas: String,
+    pub gas_limit: String,
     pub chain_id: u64,
-    pub data: Vec<u8>,
+    pub data: Option<Vec<u8>>,
 }
 
 #[near]
@@ -40,11 +40,11 @@ impl Contract {
         let omni_evm_tx = TransactionBuilder::new::<EVM>()
             .nonce(tx.nonce)
             .to(to_address)
-            .value(tx.value)
-            .input(tx.data)
-            .max_priority_fee_per_gas(tx.max_priority_fee_per_gas)
-            .max_fee_per_gas(tx.max_fee_per_gas) 
-            .gas_limit(tx.gas_limit)
+            .value(tx.value.parse::<u128>().unwrap())
+            .input(tx.data.unwrap_or(vec![]))
+            .max_priority_fee_per_gas(tx.max_priority_fee_per_gas.parse::<u128>().unwrap())
+            .max_fee_per_gas(tx.max_fee_per_gas.parse::<u128>().unwrap()) 
+            .gas_limit(tx.gas_limit.parse::<u128>().unwrap())
             .chain_id(tx.chain_id)
             .build();
 
@@ -85,13 +85,13 @@ mod tests {
     fn test_evm_tx() {
         let input_tx = EvmTransaction {
             to: "0x4174678c78fEaFd778c1ff319D5D326701449b25".to_string(),
-            value: 1000000000000u128,
+            value: "1000000000000".to_string(),
             nonce: 26,
-            max_priority_fee_per_gas: 25302576,
-            max_fee_per_gas: 63015311300,
-            gas_limit: 21000,
+            max_priority_fee_per_gas: "25302576".to_string(),
+            max_fee_per_gas: "63015311300".to_string(),
+            gas_limit: "21000".to_string(),
             chain_id: 11155111,
-            data: vec![]
+            data: None
         };
 
         let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());

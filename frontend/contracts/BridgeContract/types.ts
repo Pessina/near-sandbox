@@ -37,7 +37,7 @@ export type EvmTransaction = {
   max_fee_per_gas: string;
   gas_limit: string;
   chain_id: number;
-  data: Uint8Array;
+  data?: number[];
 };
 
 export type BridgeContract = Contract & {

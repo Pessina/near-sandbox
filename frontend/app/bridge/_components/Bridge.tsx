@@ -58,8 +58,6 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
     const btcBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.BTC, "")
     const evmBridgeAddressAndPk = useDeriveAddressAndPublicKey("felipe-bridge-contract.testnet", Chain.ETH, "")
 
-    console.log({ evmBridgeAddressAndPk, btcBridgeAddressAndPk })
-
     const onSubmit = async (data: FormData) => {
         // if (!isConnected) {
         //     const error = new Error("Please connect your wallet first.")
@@ -126,7 +124,8 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         })
     }
 
-    const handleSwapETH = async () => {
+    const handleSwapETH = async (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.preventDefault()
         if (!evmBridgeAddressAndPk) return
 
         const { transaction, mpcPayloads } = await evm.getMPCPayloadAndTransaction({
@@ -143,7 +142,6 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
             max_fee_per_gas: (transaction.maxFeePerGas?.toString() || "0"),
             gas_limit: (transaction.gasLimit?.toString() || "0"),
             chain_id: Number(transaction.chainId) || 1,
-            data: transaction.data ? new Uint8Array(Buffer.from(transaction.data, 'hex')) : new Uint8Array()
         };
 
         await handleSwapEVM({
