@@ -1,11 +1,22 @@
 import { Contract } from "near-api-js";
 import { ContractChangeMethodArgs } from "../types";
 
-export type UTXO = {
+export type BtcInput = {
   txid: string;
   vout: number;
   value: number;
   script_pubkey: string;
+};
+
+export type BtcOutput = {
+  value: number;
+  script_pubkey: string;
+};
+
+export type BitcoinTransactionRequest = {
+  inputs: BtcInput[];
+  outputs: BtcOutput[];
+  signer_public_key: string;
 };
 
 export type PreparedBitcoinTransaction = {
@@ -26,10 +37,20 @@ export type PreparedBitcoinTransaction = {
       script_pubkey: string;
     }[];
   };
-  sighashes: number[][];
+  sighashes: Uint8Array[];
 };
 
-export type EvmTransaction = {
+export type SignResult = {
+  big_r: {
+    affine_point: string;
+  };
+  s: {
+    scalar: string;
+  };
+  recovery_id: number;
+};
+
+export type EvmTransactionRequest = {
   nonce: number;
   to: string;
   value: string;
@@ -40,19 +61,18 @@ export type EvmTransaction = {
   data?: number[];
 };
 
+export type PreparedEvmTransaction = {
+  omni_evm_tx: any; // TODO: Define proper type
+  tx_hash: Uint8Array;
+};
+
 export type BridgeContract = Contract & {
-  swap_btc: (
-    args: ContractChangeMethodArgs<{
-      input_utxos: UTXO[];
-      output_utxos: UTXO[];
-      sender_public_key: string;
-    }>
+  sign_btc: (
+    args: ContractChangeMethodArgs<BitcoinTransactionRequest>
   ) => Promise<string>;
 
-  swap_evm: (
-    args: ContractChangeMethodArgs<{
-      tx: EvmTransaction;
-    }>
+  sign_evm: (
+    args: ContractChangeMethodArgs<EvmTransactionRequest>
   ) => Promise<string>;
 
   swap_btc_krnl: (

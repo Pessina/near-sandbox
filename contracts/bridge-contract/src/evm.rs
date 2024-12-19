@@ -19,7 +19,7 @@ pub struct PreparedEvmTransaction {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "near_sdk::serde")]
-pub struct EvmTransaction {
+pub struct EvmTransactionRequest {
     pub nonce: u64,
     pub to: String,
     pub value: String,
@@ -32,20 +32,20 @@ pub struct EvmTransaction {
 
 #[near]
 impl Contract {
-    pub fn prepare_evm_tx(&mut self, tx: EvmTransaction) -> PreparedEvmTransaction {
+    pub fn prepare_evm_tx(&mut self, tx_request: EvmTransactionRequest) -> PreparedEvmTransaction {
         log!("Starting prepare_evm_tx");
 
-        let to_address = parse_eth_address(tx.to.trim_start_matches("0x"));
+        let to_address = parse_eth_address(tx_request.to.trim_start_matches("0x"));
 
         let omni_evm_tx = TransactionBuilder::new::<EVM>()
-            .nonce(tx.nonce)
+            .nonce(tx_request.nonce)
             .to(to_address)
-            .value(tx.value.parse::<u128>().unwrap())
-            .input(tx.data.unwrap_or(vec![]))
-            .max_priority_fee_per_gas(tx.max_priority_fee_per_gas.parse::<u128>().unwrap())
-            .max_fee_per_gas(tx.max_fee_per_gas.parse::<u128>().unwrap()) 
-            .gas_limit(tx.gas_limit.parse::<u128>().unwrap())
-            .chain_id(tx.chain_id)
+            .value(tx_request.value.parse::<u128>().unwrap())
+            .input(tx_request.data.unwrap_or(vec![]))
+            .max_priority_fee_per_gas(tx_request.max_priority_fee_per_gas.parse::<u128>().unwrap())
+            .max_fee_per_gas(tx_request.max_fee_per_gas.parse::<u128>().unwrap()) 
+            .gas_limit(tx_request.gas_limit.parse::<u128>().unwrap())
+            .chain_id(tx_request.chain_id)
             .build();
 
         let encoded_tx = omni_evm_tx.build_for_signing();
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_evm_tx() {
-        let input_tx = EvmTransaction {
+        let tx_request = EvmTransactionRequest {
             to: "0x4174678c78fEaFd778c1ff319D5D326701449b25".to_string(),
             value: "1000000000000".to_string(),
             nonce: 26,
@@ -96,7 +96,7 @@ mod tests {
 
         let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());
 
-        let prepared_evm_transaction = contract.prepare_evm_tx(input_tx);
+        let prepared_evm_transaction = contract.prepare_evm_tx(tx_request);
 
         assert_eq!(prepared_evm_transaction.tx_hash, [50, 172, 153, 187, 22, 209, 9, 234, 4, 113, 24, 3, 39, 17, 96, 234, 218, 104, 205, 240, 26, 39, 255, 75, 99, 21, 218, 76, 158, 98, 60, 244]);
 

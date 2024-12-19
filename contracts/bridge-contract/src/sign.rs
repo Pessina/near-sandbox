@@ -1,6 +1,7 @@
 use crate::*;
 
-use btc::{PreparedBitcoinTransaction, UTXO};
+use btc::{BitcoinTransactionRequest, PreparedBitcoinTransaction};
+use evm::EvmTransactionRequest;
 use near_sdk::{env, log, near, Gas, NearToken, Promise, PromiseError};
 use signer::{SignRequest, SignResult, ext_signer};
 
@@ -23,12 +24,13 @@ impl Contract {
             .sign(sign_request)
     }
 
+    #[private]
     #[payable]
-    pub fn sign_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>, sender_public_key: String) -> Promise {
-        let input_utxos_len = input_utxos.len() as u128;
+    pub fn sign_btc(&mut self, tx_request: BitcoinTransactionRequest) -> Promise {
+        let input_utxos_len = tx_request.inputs.len() as u128;
         let sign_deposit = env::attached_deposit().saturating_div(input_utxos_len);
-        
-        let prepared_bitcoin_transaction = self.prepare_btc_tx(input_utxos, output_utxos);
+
+        let prepared_bitcoin_transaction = self.prepare_btc_tx(tx_request.clone());
         let mut combined_promise = self.promise_sign(prepared_bitcoin_transaction.sighashes[0], sign_deposit);
 
         for sighash in prepared_bitcoin_transaction.sighashes.iter().skip(1) {
@@ -42,7 +44,7 @@ impl Contract {
                 .with_static_gas(SWAP_CALLBACK_GAS.into())
                 .sign_btc_callback(
                     prepared_bitcoin_transaction,
-                    sender_public_key,
+                    tx_request.signer_public_key,
                     promises_len
                 )
         )
@@ -52,7 +54,7 @@ impl Contract {
     pub fn sign_btc_callback(
         &mut self,
         prepared_bitcoin_transaction: PreparedBitcoinTransaction,
-        sender_public_key: String,
+        signer_public_key: String,
         num_signatures: u64,
     ) -> String {
         let mut signatures = Vec::with_capacity(num_signatures as usize);
@@ -78,20 +80,22 @@ impl Contract {
         let tx_hex = self.finalize_btc_tx(
             prepared_bitcoin_transaction.tx,
             signatures,
-            sender_public_key
+            signer_public_key
         );
+
         log!("Finalized BTC transaction hex: {:?}", tx_hex);
         tx_hex
     }
 
+    #[private]
     #[payable]
     pub fn sign_evm(
         &mut self,
-        tx: evm::EvmTransaction,
+        tx_request: EvmTransactionRequest,
     ) -> near_sdk::Promise {
         log!("Starting sign_evm");
 
-        let prepared_evm_transaction = self.prepare_evm_tx(tx);
+        let prepared_evm_transaction = self.prepare_evm_tx(tx_request);
         log!("Prepared EVM transaction with hash: {:?}", prepared_evm_transaction.tx_hash);
 
         self.promise_sign(prepared_evm_transaction.tx_hash, env::attached_deposit())

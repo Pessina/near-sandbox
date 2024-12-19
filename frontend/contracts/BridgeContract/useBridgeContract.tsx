@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { BridgeContract, UTXO, EvmTransaction } from "./types";
+import { BridgeContract, BitcoinTransactionRequest, EvmTransactionRequest } from "./types";
 import { useQuery } from "@tanstack/react-query";
 import { NEAR_MAX_GAS } from "@/constants/near";
 import { ChainSignaturesContract } from "multichain-tools";
@@ -13,19 +13,13 @@ import { createBridgeContract } from "./BridgeContract";
 
 export interface BridgeActions {
   isProcessing: boolean;
-  handleSwapBTC: (args: {
-    inputUtxos: UTXO[];
-    outputUtxos: UTXO[];
-    senderPublicKey: string;
-  }) => Promise<string>;
-  handleSwapEVM: (args: {
-    tx: EvmTransaction;
-  }) => Promise<string>;
+  handleSignBTC: (args: BitcoinTransactionRequest) => Promise<string>;
+  handleSignEVM: (args: EvmTransactionRequest) => Promise<string>;
   handleSwapBTCKrnl: (args: {
     auth: string;
     sender: string;
     recipient: string;
-    kernelResponse: string;
+    kernel_response: string;
   }) => Promise<string>;
   isLoading: boolean;
   error: Error | null;
@@ -89,16 +83,8 @@ export function useBridgeContract(): BridgeActions {
     [isProcessing, toast]
   );
 
-  const handleSwapBTC = useCallback(
-    async ({
-      inputUtxos,
-      outputUtxos,
-      senderPublicKey,
-    }: {
-      inputUtxos: UTXO[];
-      outputUtxos: UTXO[];
-      senderPublicKey: string;
-    }) => {
+  const handleSignBTC = useCallback(
+    async (args: BitcoinTransactionRequest) => {
       if (!bridgeContract) {
         throw new Error("Bridge contract not available");
       }
@@ -110,16 +96,12 @@ export function useBridgeContract(): BridgeActions {
             contract: chainSignatureContract,
           });
 
-          const totalFee = fee?.mul(new BN(inputUtxos.length));
+          const totalFee = fee?.mul(new BN(args.inputs.length));
 
-          const txHex = await bridgeContract.swap_btc({
+          const txHex = await bridgeContract.sign_btc({
             gas: NEAR_MAX_GAS,
             amount: totalFee?.toString() || "0",
-            args: {
-              input_utxos: inputUtxos,
-              output_utxos: outputUtxos,
-              sender_public_key: senderPublicKey,
-            },
+            args,
           });
 
           const response = await axios.post<string>(
@@ -144,12 +126,8 @@ export function useBridgeContract(): BridgeActions {
     [bridgeContract, withErrorHandling]
   );
 
-  const handleSwapEVM = useCallback(
-    async ({
-      tx
-    }: {
-      tx: EvmTransaction;
-    }) => {
+  const handleSignEVM = useCallback(
+    async (tx: EvmTransactionRequest) => {
       if (!bridgeContract) {
         throw new Error("Bridge contract not available");
       }
@@ -161,12 +139,10 @@ export function useBridgeContract(): BridgeActions {
             contract: chainSignatureContract,
           });
 
-          const txHex = await bridgeContract.swap_evm({
+          const txHex = await bridgeContract.sign_evm({
             gas: NEAR_MAX_GAS,
             amount: fee?.toString() || "0",
-            args: {
-              tx
-            },
+            args: tx,
           });
 
           const response = await axios.post<string>(
@@ -196,16 +172,11 @@ export function useBridgeContract(): BridgeActions {
   );
 
   const handleSwapBTCKrnl = useCallback(
-    async ({
-      auth,
-      sender,
-      recipient,
-      kernelResponse
-    }: {
+    async (args: {
       auth: string;
       sender: string;
       recipient: string;
-      kernelResponse: string;
+      kernel_response: string;
     }) => {
       if (!bridgeContract) {
         throw new Error("Bridge contract not available");
@@ -221,12 +192,7 @@ export function useBridgeContract(): BridgeActions {
           const txHex = await bridgeContract.swap_btc_krnl({
             gas: NEAR_MAX_GAS,
             amount: fee?.toString() || "0",
-            args: {
-              auth,
-              sender,
-              recipient,
-              kernel_response: kernelResponse
-            },
+            args,
           });
 
           const response = await axios.post<string>(
@@ -261,8 +227,8 @@ export function useBridgeContract(): BridgeActions {
 
   return {
     isProcessing,
-    handleSwapBTC,
-    handleSwapEVM,
+    handleSignBTC,
+    handleSignEVM,
     handleSwapBTCKrnl,
     isLoading,
     error,

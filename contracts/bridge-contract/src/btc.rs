@@ -6,7 +6,7 @@ use omni_transaction::{
         bitcoin_transaction_builder::BitcoinTransactionBuilder,
         types::{
             Amount, EcdsaSighashType, Hash, LockTime, OutPoint, ScriptBuf, Sequence, TxIn, TxOut,
-            Txid, Version, Witness,
+            Txid, Version, Witness
         },
     },
     transaction_builder::TxBuilder,
@@ -21,15 +21,6 @@ use std::error::Error;
 /// P2WPKH script_pubkey: 0x00 0x14 (20-byte-hash)
 /// Thus total length = 2 + 20 = 22 bytes.
 const P2WPKH_WITNESS_LEN: usize = 22;
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(crate = "near_sdk::serde")]
-pub struct UTXO {
-    pub txid: String,
-    pub vout: u32,
-    pub value: u64,
-    pub script_pubkey: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "near_sdk::serde")]
@@ -85,21 +76,45 @@ pub fn compute_segwit_sighash(
     Ok(double_sha256(&sighash))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(crate = "near_sdk::serde")]
+pub struct BtcInput {
+    pub txid: String,
+    pub vout: u32,
+    pub value: u64,
+    pub script_pubkey: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(crate = "near_sdk::serde")]
+pub struct BtcOutput {
+    pub value: u64,
+    pub script_pubkey: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(crate = "near_sdk::serde")]
+pub struct BitcoinTransactionRequest {
+    pub inputs: Vec<BtcInput>,
+    pub outputs: Vec<BtcOutput>,
+    pub signer_public_key: String,
+}
+
 #[near]
 impl Contract {
     pub fn prepare_btc_tx(
         &mut self,
-        input_utxos: Vec<UTXO>,
-        output_utxos: Vec<UTXO>,
+        tx_request: BitcoinTransactionRequest
     ) -> PreparedBitcoinTransaction {
         log!("Starting prepare_btc_tx");
 
-        let inputs: Vec<_> = input_utxos
+
+        let inputs: Vec<_> = tx_request.inputs
             .iter()
-            .map(|utxo| {
-                let txid = Txid(Hash::from_hex(&utxo.txid).unwrap());
+            .map(|input| {
+                let txid = Txid(Hash::from_hex(&input.txid).unwrap());
                 TxIn {
-                    previous_output: OutPoint { txid, vout: utxo.vout },
+                    previous_output: OutPoint { txid, vout: input.vout },
                     script_sig: ScriptBuf::default(),
                     sequence: Sequence::MAX,
                     witness: Witness::new(),
@@ -107,12 +122,12 @@ impl Contract {
             })
             .collect();
 
-        let outputs: Vec<_> = output_utxos
+        let outputs: Vec<_> = tx_request.outputs
             .iter()
-            .map(|utxo| {
-                let script = ScriptBuf::from_hex(&utxo.script_pubkey).unwrap();
+            .map(|output| {
+                let script = ScriptBuf::from_hex(&output.script_pubkey).unwrap();
                 TxOut {
-                    value: Amount::from_sat(utxo.value),
+                    value: Amount::from_sat(output.value),
                     script_pubkey: script,
                 }
             })
@@ -126,8 +141,8 @@ impl Contract {
             .build();
 
         // Compute sighash for each input
-        let mut sighashes = Vec::with_capacity(input_utxos.len());
-        for (i, utxo) in input_utxos.iter().enumerate() {
+        let mut sighashes = Vec::with_capacity(tx_request.inputs.len());
+        for (i, utxo) in tx_request.inputs.iter().enumerate() {
             let sighash = compute_segwit_sighash(
                 &tx,
                 i,
@@ -148,10 +163,10 @@ impl Contract {
         &self,
         tx: BitcoinTransaction,
         signatures: Vec<SignResult>,
-        public_key_hex: String,
+        signer_public_key: String,
     ) -> String {
         // Decode the public key from hex
-        let public_key = hex::decode(public_key_hex).expect("Invalid public key hex");
+        let public_key = hex::decode(signer_public_key).expect("Invalid public key hex");
 
         // Create witnesses for each input
         let mut final_tx = tx;
@@ -257,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_p2wpkh_sighash() {
-        let input_utxos = vec![UTXO {
+        let input_utxos = vec![BtcInput {
             txid: "b9d3e0a416120f99f178bb3d95a87173bdb51d5e38da04db0179b3124fbc5370".to_string(),
             vout: 1,
             value: 430506,
@@ -265,15 +280,11 @@ mod tests {
         }];
 
         let output_utxos = vec![
-            UTXO {
-                txid: String::new(),
-                vout: 0,
+            BtcOutput {
                 value: 1200,
                 script_pubkey: "0014d3ae5a5de66aa44e7d5723b74e590340b3212f46".to_string(),
             },
-            UTXO {
-                txid: String::new(),
-                vout: 1,
+            BtcOutput {
                 value: 428854,
                 script_pubkey: "00140d7d0223d302b4e8ef37050b5200b1c3306ae7ab".to_string(),
             }
@@ -281,14 +292,16 @@ mod tests {
 
         let mut contract = Contract::new("v1.signer-prod.testnet".parse().unwrap());
 
-        let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos.clone(), output_utxos.clone());
+        let prepared_bitcoin_transaction = contract.prepare_btc_tx(BitcoinTransactionRequest {
+            inputs: input_utxos.clone(),
+            outputs: output_utxos.clone(),
+            signer_public_key: "02b12224ecec8184dbff10316a889ebee9f7871bd6de358c5323fbecce9d84fd24".to_string(),
+        });
 
         assert_eq!(
             prepared_bitcoin_transaction.sighashes[0],
             [224, 73, 126, 48, 217, 94, 79, 58, 71, 74, 219, 119, 243, 197, 183, 197, 103, 2, 227, 119, 154, 47, 20, 175, 240, 168, 89, 60, 152, 92, 190, 186]
         );
-
-        let prepared_bitcoin_transaction = contract.prepare_btc_tx(input_utxos, output_utxos);
 
         // This is a valid signature for the transaction above
         let signature = SignResult {
