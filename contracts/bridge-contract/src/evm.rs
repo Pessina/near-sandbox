@@ -35,7 +35,7 @@ impl Contract {
     pub fn prepare_evm_tx(&mut self, tx: EvmTransaction) -> PreparedEvmTransaction {
         log!("Starting prepare_evm_tx");
 
-        let to_address = parse_eth_address(if tx.to.starts_with("0x") { &tx.to[2..] } else { &tx.to });
+        let to_address = parse_eth_address(tx.to.trim_start_matches("0x"));
 
         let omni_evm_tx = TransactionBuilder::new::<EVM>()
             .nonce(tx.nonce)

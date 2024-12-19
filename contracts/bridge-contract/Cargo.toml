@@ -26,6 +26,7 @@ ethabi = {workspace = true}
 k256 = {workspace = true}
 sha3 = {workspace = true}
 serde_json = {workspace = true}
+bech32 = "0.8.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2.15", features = ["custom"] }
