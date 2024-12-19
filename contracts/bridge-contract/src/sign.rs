@@ -24,7 +24,7 @@ impl Contract {
     }
 
     #[payable]
-    pub fn swap_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>, sender_public_key: String) -> Promise {
+    pub fn sign_btc(&mut self, input_utxos: Vec<UTXO>, output_utxos: Vec<UTXO>, sender_public_key: String) -> Promise {
         let input_utxos_len = input_utxos.len() as u128;
         let sign_deposit = env::attached_deposit().saturating_div(input_utxos_len);
         
@@ -40,7 +40,7 @@ impl Contract {
         combined_promise.then(
             Self::ext(env::current_account_id())
                 .with_static_gas(SWAP_CALLBACK_GAS.into())
-                .swap_btc_callback(
+                .sign_btc_callback(
                     prepared_bitcoin_transaction,
                     sender_public_key,
                     promises_len
@@ -49,7 +49,7 @@ impl Contract {
     }
 
     #[private]
-    pub fn swap_btc_callback(
+    pub fn sign_btc_callback(
         &mut self,
         prepared_bitcoin_transaction: PreparedBitcoinTransaction,
         sender_public_key: String,
@@ -85,11 +85,11 @@ impl Contract {
     }
 
     #[payable]
-    pub fn swap_evm(
+    pub fn sign_evm(
         &mut self,
         tx: evm::EvmTransaction,
     ) -> near_sdk::Promise {
-        log!("Starting swap_evm");
+        log!("Starting sign_evm");
 
         let prepared_evm_transaction = self.prepare_evm_tx(tx);
         log!("Prepared EVM transaction with hash: {:?}", prepared_evm_transaction.tx_hash);
@@ -98,14 +98,14 @@ impl Contract {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(SWAP_CALLBACK_GAS.into())
-                    .swap_evm_callback(
+                    .sign_evm_callback(
                         prepared_evm_transaction.omni_evm_tx
                     )
             )
     }
 
     #[private]
-    pub fn swap_evm_callback(
+    pub fn sign_evm_callback(
         &mut self,
         omni_evm_tx: omni_transaction::evm::evm_transaction::EVMTransaction,
         #[callback_result] result: Result<SignResult, PromiseError>

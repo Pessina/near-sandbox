@@ -1,7 +1,7 @@
 use crate::*;
 
 use btc::UTXO;
-use near_sdk::Promise;
+use near_sdk::{log, Promise};
 
 #[near]
 impl Contract {
@@ -23,14 +23,17 @@ impl Contract {
         }).collect();
 
         let output_utxos: Vec<UTXO> = kernel_response.liquidity.output_utxos.iter().map(|utxo| UTXO {
-            txid: utxo.txid.clone(), 
+            txid: String::new(), 
             vout: utxo.vout as u32,
             value: utxo.value.parse::<u64>().unwrap(),
             script_pubkey: utxo.script_pubkey.clone()
         }).collect();
-
         let sender_public_key = kernel_response.liquidity.lp_pubkey;
 
-        self.swap_btc(input_utxos, output_utxos, sender_public_key)
+        log!("Input UTXOs: {:?}", input_utxos);
+        log!("Output UTXOs: {:?}", output_utxos);
+        log!("Sender Public Key: {:?}", sender_public_key);
+
+        self.sign_btc(input_utxos, output_utxos, sender_public_key)
     }
 }

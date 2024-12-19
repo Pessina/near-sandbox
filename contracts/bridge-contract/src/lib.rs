@@ -5,7 +5,7 @@ pub mod evm;
 pub mod krnl;
 pub mod swap_krnl;
 pub mod signer;
-pub mod swap;
+pub mod sign;
 
 #[derive(Debug, PanicOnDefault)]
 #[near(contract_state)]
