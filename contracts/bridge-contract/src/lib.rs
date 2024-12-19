@@ -3,6 +3,7 @@ use near_sdk::{near, AccountId, PanicOnDefault};
 pub mod btc;
 pub mod evm;
 pub mod krnl;
+pub mod swap_krnl;
 pub mod signer;
 pub mod swap;
 

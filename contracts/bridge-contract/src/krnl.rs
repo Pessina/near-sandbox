@@ -5,140 +5,110 @@ use hex;
 use bech32;
 use sha3::{Digest, Keccak256};
 use serde::Serialize;
-use serde_json::Value;
 
 fn decode_hex(hex_str: &str) -> Vec<u8> {
     hex::decode(hex_str.trim_start_matches("0x")).unwrap()
 }
 
-fn bytes_to_hex(data: &[u8]) -> String {
-    format!("0x{}", hex::encode(data))
+#[derive(Serialize, Debug)]
+pub struct KernelResponse {
+    pub price: String,
+    pub transaction: Transaction,
+    pub premium: String,
+    pub liquidity: Liquidity,
 }
 
-fn big_int_to_string(token: &Token) -> String {
-    match token {
-        Token::Uint(num) => num.to_string(),
-        Token::Int(num) => num.to_string(),
-        _ => panic!("Not a numeric token"),
-    }
+#[derive(Serialize, Debug)]
+pub struct Transaction {
+    pub verified: bool,
+    pub receipt: Receipt,
 }
 
-fn fixed_bytes_to_hex(data: &[u8]) -> Value {
-    match data.len() {
-        20 => {
-            // 20-byte arrays as Ethereum addresses
-            Value::String(bytes_to_hex(data))
-        },
-        32 => {
-            // 32-byte arrays as hashes
-            Value::String(bytes_to_hex(data))
-        },
-        _ => {
-            // Otherwise just hex-encode
-            Value::String(bytes_to_hex(data))
-        }
-    }
+#[derive(Serialize, Debug)]
+pub struct Receipt {
+    pub from: String,
+    pub to: String,
+    pub status: u8,
+    pub block_hash: String,
+    pub block_number: u64,
+    pub transaction_hash: String,
+    pub transaction_index: u64,
+    pub gas_used: u64,
+    pub cumulative_gas_used: u64,
+    pub effective_gas_price: u64,
+    pub type_field: u8,
+    pub root: String,
+    pub logs: Vec<Log>,
 }
 
-#[derive(Serialize)]
-struct KernelResponse {
-    Price: String,
-    Transaction: Transaction,
-    Premium: String,
-    Liquidity: Liquidity,
+#[derive(Serialize, Debug)]
+pub struct Log {
+    pub address: String,
+    pub topics: Vec<String>,
+    pub data: String,
+    pub block_number: u64,
+    pub transaction_hash: String,
+    pub transaction_index: u64,
+    pub block_hash: String,
+    pub log_index: u64,
+    pub removed: bool,
 }
 
-#[derive(Serialize)]
-struct Transaction {
-    Verified: bool,
-    Receipt: Receipt,
+#[derive(Serialize, Debug)]
+pub struct Liquidity {
+    pub balance: String,
+    pub total_input_amount: String,
+    pub required_amount: String,
+    pub change_amount: String,
+    pub estimated_fee: String,
+    pub actual_fee: String,
+    pub sufficient: bool,
+    pub utxos: Vec<Utxo>,
+    pub fees: Fees,
+    pub input_utxos: Vec<InputUtxo>,
+    pub output_utxos: Vec<OutputUtxo>,
+    pub lp_pubkey: String,
 }
 
-#[derive(Serialize)]
-struct Receipt {
-    From: String,
-    To: String,
-    Status: u8,
-    BlockHash: String,
-    BlockNumber: u64,
-    TransactionHash: String,
-    TransactionIndex: u64,
-    GasUsed: u64,
-    CumulativeGasUsed: u64,
-    EffectiveGasPrice: u64,
-    Type: u8,
-    Root: String,
-    Logs: Vec<Log>,
+#[derive(Serialize, Debug)]
+pub struct Fees {
+    pub fastest_fee: u64,
+    pub half_hour_fee: u64,
+    pub hour_fee: u64,
+    pub economy_fee: u64,
+    pub minimum_fee: u64,
 }
 
-#[derive(Serialize)]
-struct Log {
-    Address: String,
-    Topics: Vec<String>,
-    Data: String,
-    BlockNumber: u64,
-    TransactionHash: String,
-    TransactionIndex: u64,
-    BlockHash: String,
-    LogIndex: u64,
-    Removed: bool,
+#[derive(Serialize, Debug)]
+pub struct Status {
+    pub confirmed: bool,
+    pub block_hash: String,
+    pub block_height: u64,
+    pub block_time: u64,
 }
 
-#[derive(Serialize)]
-struct Liquidity {
-    Balance: String,
-    TotalInputAmount: String,
-    RequiredAmount: String,
-    ChangeAmount: String,
-    EstimatedFee: String,
-    ActualFee: String,
-    Sufficient: bool,
-    Utxos: Vec<Utxo>,
-    Fees: Fees,
-    InputUtxos: Vec<InputUtxo>,
-    OutputUtxos: Vec<OutputUtxo>,
-    LpPubkey: String,
+#[derive(Serialize, Debug)]
+pub struct Utxo {
+    pub txid: String,
+    pub vout: u64,
+    pub status: Status,
+    pub value: String,
 }
 
-#[derive(Serialize)]
-struct Fees {
-    FastestFee: u64,
-    HalfHourFee: u64,
-    HourFee: u64,
-    EconomyFee: u64,
-    MinimumFee: u64,
+#[derive(Serialize, Debug)]
+pub struct InputUtxo {
+    pub txid: String,
+    pub vout: u64,
+    pub value: String,
+    pub script_pubkey: String,
 }
 
-#[derive(Serialize)]
-struct Status {
-    Confirmed: bool,
-    BlockHash: String,
-    BlockHeight: u64,
-    BlockTime: u64,
-}
-
-#[derive(Serialize)]
-struct Utxo {
-    Txid: String,
-    Vout: u64,
-    Status: Status,
-    Value: String,
-}
-
-#[derive(Serialize)]
-struct InputUtxo {
-    Txid: String,
-    Vout: u64,
-    Value: String,
-    ScriptPubkey: String,
-}
-
-#[derive(Serialize)]
-struct OutputUtxo {
-    Txid: String,
-    Vout: u64,
-    Value: String,
-    ScriptPubkey: String,
+#[derive(Serialize, Debug)]
+pub struct OutputUtxo {
+    pub txid: String,
+    pub vout: u64,
+    pub value: String,
+    pub script_pubkey: String,
 }
 
 fn decode_bech32_address(addr: &str) -> Vec<u8> {
@@ -293,518 +263,217 @@ impl Contract {
         }
     }
 
-    pub fn decode_krnl_response(&self, kernel_response: String) -> String {
+    pub fn decode_krnl_response(&self, kernel_response: String) -> KernelResponse {
         let kernel_response = decode_hex(&kernel_response);
 
-        // Decode tokens
-        // kernelResp tuple: (String, (Bool, receipt), String, liquidity)
-        // We'll decode using ethabi::decode with the ParamTypes you defined earlier.
-        let tokens = {
+        // Define the complete ABI structure once
+        let kernel_resp_type = {
             use ethabi::ParamType;
 
-            // Define all ParamTypes as before (omitted for brevity, assume same as your initial code).
-            // Here we only decode once since we already know the structure is correct.
-
-            // logs[]: each log is a tuple
+            // Log tuple
             let log_type = ParamType::Tuple(vec![
-                ParamType::Address,
-                ParamType::Array(Box::new(ParamType::FixedBytes(32))),
-                ParamType::Bytes,
-                ParamType::Uint(64),
-                ParamType::FixedBytes(32),
-                ParamType::Uint(64),
-                ParamType::FixedBytes(32),
-                ParamType::Uint(64),
-                ParamType::Bool,
+                ParamType::Address,                                    // address
+                ParamType::Array(Box::new(ParamType::FixedBytes(32))), // topics[]
+                ParamType::Bytes,                                     // data
+                ParamType::Uint(64),                                 // blockNumber
+                ParamType::FixedBytes(32),                           // transactionHash
+                ParamType::Uint(64),                                 // transactionIndex
+                ParamType::FixedBytes(32),                           // blockHash
+                ParamType::Uint(64),                                 // logIndex
+                ParamType::Bool,                                     // removed
             ]);
 
-            // receipt: a tuple
+            // Receipt tuple
             let receipt_type = ParamType::Tuple(vec![
-                ParamType::Address,
-                ParamType::Address,
-                ParamType::Uint(8),
-                ParamType::FixedBytes(32),
-                ParamType::Uint(64),
-                ParamType::FixedBytes(32),
-                ParamType::Uint(64),
-                ParamType::Uint(64),
-                ParamType::Uint(64),
-                ParamType::Uint(64),
-                ParamType::Uint(8),
-                ParamType::FixedBytes(32),
-                ParamType::Array(Box::new(log_type)),
+                ParamType::Address,                                  // from
+                ParamType::Address,                                  // to
+                ParamType::Uint(8),                                 // status
+                ParamType::FixedBytes(32),                          // blockHash
+                ParamType::Uint(64),                                // blockNumber
+                ParamType::FixedBytes(32),                          // transactionHash
+                ParamType::Uint(64),                                // transactionIndex
+                ParamType::Uint(64),                                // gasUsed
+                ParamType::Uint(64),                                // cumulativeGasUsed
+                ParamType::Uint(64),                                // effectiveGasPrice
+                ParamType::Uint(8),                                 // type
+                ParamType::FixedBytes(32),                          // root
+                ParamType::Array(Box::new(log_type)),               // logs[]
             ]);
 
-            // transaction: tuple(verified:bool, receipt:receipt_type)
+            // Transaction tuple
             let transaction_type = ParamType::Tuple(vec![
-                ParamType::Bool,
-                receipt_type,
+                ParamType::Bool,                                    // verified
+                receipt_type,                                       // receipt
             ]);
 
-            // utxos[]: each utxo is (string, uint64, (bool,string,uint64,uint64), uint256)
+            // UTXO status tuple
             let utxo_status_type = ParamType::Tuple(vec![
-                ParamType::Bool,
-                ParamType::String,
-                ParamType::Uint(64),
-                ParamType::Uint(64),
+                ParamType::Bool,                                    // confirmed
+                ParamType::String,                                  // blockHash
+                ParamType::Uint(64),                               // blockHeight
+                ParamType::Uint(64),                               // blockTime
             ]);
 
+            // UTXO tuple
             let utxo_type = ParamType::Tuple(vec![
-                ParamType::String,
-                ParamType::Uint(64),
-                utxo_status_type,
-                ParamType::Uint(256),
+                ParamType::String,                                  // txid
+                ParamType::Uint(64),                               // vout
+                utxo_status_type,                                  // status
+                ParamType::Uint(256),                              // value
             ]);
 
-            // fees tuple
+            // Fees tuple
             let fees_type = ParamType::Tuple(vec![
-                ParamType::Uint(64),
-                ParamType::Uint(64),
-                ParamType::Uint(64),
-                ParamType::Uint(64),
-                ParamType::Uint(64),
+                ParamType::Uint(64),                               // fastestFee
+                ParamType::Uint(64),                               // halfHourFee
+                ParamType::Uint(64),                               // hourFee
+                ParamType::Uint(64),                               // economyFee
+                ParamType::Uint(64),                               // minimumFee
             ]);
 
-            // input_utxos[]: each (txid:string, vout:uint64, value:uint256, script_pubkey:string)
-            let input_utxo_type = ParamType::Tuple(vec![
-                ParamType::String,
-                ParamType::Uint(64),
-                ParamType::Uint(256),
-                ParamType::String,
+            // Input/Output UTXO tuple
+            let io_utxo_type = ParamType::Tuple(vec![
+                ParamType::String,                                  // txid
+                ParamType::Uint(64),                               // vout
+                ParamType::Uint(256),                              // value
+                ParamType::String,                                 // scriptPubkey
             ]);
 
-            // output_utxos[]: same structure as input_utxos
-            let output_utxo_type = input_utxo_type.clone();
-
-            // liquidity tuple
+            // Liquidity tuple
             let liquidity_type = ParamType::Tuple(vec![
-                ParamType::String,                     // balance
-                ParamType::String,                     // total_input_amount
-                ParamType::String,                     // required_amount
-                ParamType::String,                     // change_amount
-                ParamType::String,                     // estimated_fee
-                ParamType::String,                     // actual_fee
-                ParamType::Bool,                       // sufficient
-                ParamType::Array(Box::new(utxo_type)), // utxos
-                fees_type,                             // fees
-                ParamType::Array(Box::new(input_utxo_type)),  // input_utxos
-                ParamType::Array(Box::new(output_utxo_type)), // output_utxos
-                ParamType::String,                     // lp_pubkey
+                ParamType::String,                                  // balance
+                ParamType::String,                                  // totalInputAmount
+                ParamType::String,                                  // requiredAmount
+                ParamType::String,                                  // changeAmount
+                ParamType::String,                                  // estimatedFee
+                ParamType::String,                                  // actualFee
+                ParamType::Bool,                                    // sufficient
+                ParamType::Array(Box::new(utxo_type)),             // utxos[]
+                fees_type,                                          // fees
+                ParamType::Array(Box::new(io_utxo_type.clone())),   // inputUtxos[]
+                ParamType::Array(Box::new(io_utxo_type.clone())),   // outputUtxos[]
+                ParamType::String,                                  // lpPubkey
             ]);
 
-            // kernelResp tuple
-            let kernel_resp_type = ParamType::Tuple(vec![
-                ParamType::String,      // price
-                transaction_type,       // transaction
-                ParamType::String,      // premium
-                liquidity_type,         // liquidity
-            ]);
-
-            let params = vec![kernel_resp_type];
-            decode(&params, &kernel_response).unwrap()
+            // Complete kernel response tuple
+            ParamType::Tuple(vec![
+                ParamType::String,                                  // price
+                transaction_type,                                   // transaction
+                ParamType::String,                                  // premium
+                liquidity_type,                                     // liquidity
+            ])
         };
 
-        // tokens[0] is the kernelResp tuple
-        let kernel_resp_tuple = match &tokens[0] {
-            Token::Tuple(t) => t,
-            _ => panic!("Expected kernelResp as a tuple"),
-        };
+        // Decode the response using the defined ABI
+        let tokens = decode(&[kernel_resp_type], &kernel_response).unwrap();
+        let kernel_resp_tuple = tokens[0].clone().into_tuple().unwrap();
 
-        let price = match &kernel_resp_tuple[0] {
-            Token::String(s) => s.clone(),
-            _ => panic!("Price must be a string"),
-        };
+        // Convert decoded tokens into KernelResponse struct
+        let price = kernel_resp_tuple[0].clone().into_string().unwrap();
+        let transaction_tuple = kernel_resp_tuple[1].clone().into_tuple().unwrap();
+        let premium = kernel_resp_tuple[2].clone().into_string().unwrap();
+        let liquidity_tuple = kernel_resp_tuple[3].clone().into_tuple().unwrap();
 
-        // transaction tuple: (bool verified, receipt)
-        let transaction_tuple = match &kernel_resp_tuple[1] {
-            Token::Tuple(t) => t,
-            _ => panic!("Transaction must be a tuple"),
-        };
+        // Build Transaction
+        let verified = transaction_tuple[0].clone().into_bool().unwrap();
+        let receipt_tuple = transaction_tuple[1].clone().into_tuple().unwrap();
 
-        let verified = match &transaction_tuple[0] {
-            Token::Bool(b) => *b,
-            _ => panic!("Verified must be bool"),
-        };
-
-        let receipt_tuple = match &transaction_tuple[1] {
-            Token::Tuple(t) => t,
-            _ => panic!("Receipt must be a tuple"),
-        };
-
-        let from_addr = match &receipt_tuple[0] {
-            Token::Address(a) => format!("0x{:x}", a),
-            _ => panic!("From must be address"),
-        };
-        let to_addr = match &receipt_tuple[1] {
-            Token::Address(a) => format!("0x{:x}", a),
-            _ => panic!("To must be address"),
-        };
-        let status = match &receipt_tuple[2] {
-            Token::Uint(u) => u.as_u64() as u8,
-            _ => panic!("Status must be uint8"),
-        };
-        let block_hash = match &receipt_tuple[3] {
-            Token::FixedBytes(b) => format!("0x{}", hex::encode(b)),
-            _ => panic!("BlockHash must be bytes32"),
-        };
-        let block_number = match &receipt_tuple[4] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("BlockNumber must be uint64"),
-        };
-        let tx_hash = match &receipt_tuple[5] {
-            Token::FixedBytes(b) => format!("0x{}", hex::encode(b)),
-            _ => panic!("TransactionHash must be bytes32"),
-        };
-        let tx_index = match &receipt_tuple[6] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("TransactionIndex must be uint64"),
-        };
-        let gas_used = match &receipt_tuple[7] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("GasUsed must be uint64"),
-        };
-        let cumulative_gas_used = match &receipt_tuple[8] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("CumulativeGasUsed must be uint64"),
-        };
-        let effective_gas_price = match &receipt_tuple[9] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("EffectiveGasPrice must be uint64"),
-        };
-        let r#type = match &receipt_tuple[10] {
-            Token::Uint(u) => u.as_u64() as u8,
-            _ => panic!("Type must be uint8"),
-        };
-        let root = match &receipt_tuple[11] {
-            Token::FixedBytes(b) => format!("0x{}", hex::encode(b)),
-            _ => panic!("Root must be bytes32"),
-        };
-
-        let logs_array = match &receipt_tuple[12] {
-            Token::Array(arr) => arr,
-            _ => panic!("Logs must be an array"),
-        };
-
-        let mut logs = Vec::new();
-        for log_token in logs_array {
-            let log_tuple = match log_token {
-                Token::Tuple(t) => t,
-                _ => panic!("Each log must be a tuple"),
-            };
-
-            // log fields:
-            let address = match &log_tuple[0] {
-                Token::Address(a) => format!("0x{:x}", a),
-                _ => panic!("Log address must be address"),
-            };
-            let topics_array = match &log_tuple[1] {
-                Token::Array(arr) => arr,
-                _ => panic!("Log topics must be array"),
-            };
-            let mut topics = Vec::new();
-            for t in topics_array {
-                match t {
-                    Token::FixedBytes(b) => topics.push(format!("0x{}", hex::encode(b))),
-                    _ => panic!("Topic must be bytes32"),
-                }
-            }
-            let data = match &log_tuple[2] {
-                Token::Bytes(b) => format!("0x{}", hex::encode(b)),
-                _ => panic!("Log data must be bytes"),
-            };
-            let block_number = match &log_tuple[3] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("Log blockNumber must be uint64"),
-            };
-            let t_hash = match &log_tuple[4] {
-                Token::FixedBytes(b) => format!("0x{}", hex::encode(b)),
-                _ => panic!("Log transactionHash must be bytes32"),
-            };
-            let t_index = match &log_tuple[5] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("Log transactionIndex must be uint64"),
-            };
-            let b_hash = match &log_tuple[6] {
-                Token::FixedBytes(b) => format!("0x{}", hex::encode(b)),
-                _ => panic!("Log blockHash must be bytes32"),
-            };
-            let log_index = match &log_tuple[7] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("Log logIndex must be uint64"),
-            };
-            let removed = match &log_tuple[8] {
-                Token::Bool(b) => *b,
-                _ => panic!("Log removed must be bool"),
-            };
-
-            logs.push(Log {
-                Address: address,
-                Topics: topics,
-                Data: data,
-                BlockNumber: block_number,
-                TransactionHash: t_hash,
-                TransactionIndex: t_index,
-                BlockHash: b_hash,
-                LogIndex: log_index,
-                Removed: removed,
-            });
-        }
-
+        // Build Receipt
         let receipt = Receipt {
-            From: from_addr,
-            To: to_addr,
-            Status: status,
-            BlockHash: block_hash,
-            BlockNumber: block_number,
-            TransactionHash: tx_hash,
-            TransactionIndex: tx_index,
-            GasUsed: gas_used,
-            CumulativeGasUsed: cumulative_gas_used,
-            EffectiveGasPrice: effective_gas_price,
-            Type: r#type,
-            Root: root,
-            Logs: logs,
+            from: format!("0x{:x}", receipt_tuple[0].clone().into_address().unwrap()),
+            to: format!("0x{:x}", receipt_tuple[1].clone().into_address().unwrap()),
+            status: receipt_tuple[2].clone().into_uint().unwrap().as_u64() as u8,
+            block_hash: format!("0x{}", hex::encode(receipt_tuple[3].clone().into_fixed_bytes().unwrap())),
+            block_number: receipt_tuple[4].clone().into_uint().unwrap().as_u64(),
+            transaction_hash: format!("0x{}", hex::encode(receipt_tuple[5].clone().into_fixed_bytes().unwrap())),
+            transaction_index: receipt_tuple[6].clone().into_uint().unwrap().as_u64(),
+            gas_used: receipt_tuple[7].clone().into_uint().unwrap().as_u64(),
+            cumulative_gas_used: receipt_tuple[8].clone().into_uint().unwrap().as_u64(),
+            effective_gas_price: receipt_tuple[9].clone().into_uint().unwrap().as_u64(),
+            type_field: receipt_tuple[10].clone().into_uint().unwrap().as_u64() as u8,
+            root: format!("0x{}", hex::encode(receipt_tuple[11].clone().into_fixed_bytes().unwrap())),
+            logs: receipt_tuple[12].clone().into_array().unwrap().into_iter().map(|log_token| {
+                let log_tuple = log_token.into_tuple().unwrap();
+                Log {
+                    address: format!("0x{:x}", log_tuple[0].clone().into_address().unwrap()),
+                    topics: log_tuple[1].clone().into_array().unwrap().into_iter()
+                        .map(|t| format!("0x{}", hex::encode(t.into_fixed_bytes().unwrap())))
+                        .collect(),
+                    data: format!("0x{}", hex::encode(log_tuple[2].clone().into_bytes().unwrap())),
+                    block_number: log_tuple[3].clone().into_uint().unwrap().as_u64(),
+                    transaction_hash: format!("0x{}", hex::encode(log_tuple[4].clone().into_fixed_bytes().unwrap())),
+                    transaction_index: log_tuple[5].clone().into_uint().unwrap().as_u64(),
+                    block_hash: format!("0x{}", hex::encode(log_tuple[6].clone().into_fixed_bytes().unwrap())),
+                    log_index: log_tuple[7].clone().into_uint().unwrap().as_u64(),
+                    removed: log_tuple[8].clone().into_bool().unwrap(),
+                }
+            }).collect(),
         };
 
-        let transaction = Transaction {
-            Verified: verified,
-            Receipt: receipt,
-        };
-
-        let premium = match &kernel_resp_tuple[2] {
-            Token::String(s) => s.clone(),
-            _ => panic!("Premium must be a string"),
-        };
-
-        let liquidity_tuple = match &kernel_resp_tuple[3] {
-            Token::Tuple(t) => t,
-            _ => panic!("Liquidity must be tuple"),
-        };
-
-        // liquidity fields:
-        let balance = match &liquidity_tuple[0] {
-            Token::String(s) => s.clone(),
-            _ => panic!("Balance must be string"),
-        };
-        let total_input_amount = match &liquidity_tuple[1] {
-            Token::String(s) => s.clone(),
-            _ => panic!("TotalInputAmount must be string"),
-        };
-        let required_amount = match &liquidity_tuple[2] {
-            Token::String(s) => s.clone(),
-            _ => panic!("RequiredAmount must be string"),
-        };
-        let change_amount = match &liquidity_tuple[3] {
-            Token::String(s) => s.clone(),
-            _ => panic!("ChangeAmount must be string"),
-        };
-        let estimated_fee = match &liquidity_tuple[4] {
-            Token::String(s) => s.clone(),
-            _ => panic!("EstimatedFee must be string"),
-        };
-        let actual_fee = match &liquidity_tuple[5] {
-            Token::String(s) => s.clone(),
-            _ => panic!("ActualFee must be string"),
-        };
-        let sufficient = match &liquidity_tuple[6] {
-            Token::Bool(b) => *b,
-            _ => panic!("Sufficient must be bool"),
-        };
-        let utxos_array = match &liquidity_tuple[7] {
-            Token::Array(arr) => arr,
-            _ => panic!("Utxos must be array"),
-        };
-
-        let mut utxos = Vec::new();
-        for u in utxos_array {
-            let u_tuple = match u {
-                Token::Tuple(tt) => tt,
-                _ => panic!("Utxo must be tuple"),
-            };
-            let txid = match &u_tuple[0] {
-                Token::String(s) => s.clone(),
-                _ => panic!("Utxo txid must be string"),
-            };
-            let vout = match &u_tuple[1] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("Utxo vout must be uint64"),
-            };
-            let status_tuple = match &u_tuple[2] {
-                Token::Tuple(st) => st,
-                _ => panic!("Utxo status must be tuple"),
-            };
-            let confirmed = match &status_tuple[0] {
-                Token::Bool(b) => *b,
-                _ => panic!("Status confirmed must be bool"),
-            };
-            let block_hash_str = match &status_tuple[1] {
-                Token::String(s) => s.clone(),
-                _ => panic!("Status block_hash must be string"),
-            };
-            let block_height = match &status_tuple[2] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("Status block_height must be uint64"),
-            };
-            let block_time = match &status_tuple[3] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("Status block_time must be uint64"),
-            };
-            let value = match &u_tuple[3] {
-                Token::Uint(u) => u.to_string(),
-                _ => panic!("Utxo value must be uint256"),
-            };
-
-            let status = Status {
-                Confirmed: confirmed,
-                BlockHash: block_hash_str,
-                BlockHeight: block_height,
-                BlockTime: block_time,
-            };
-
-            utxos.push(Utxo {
-                Txid: txid,
-                Vout: vout,
-                Status: status,
-                Value: value,
-            });
-        }
-
-        let fees_tuple = match &liquidity_tuple[8] {
-            Token::Tuple(ft) => ft,
-            _ => panic!("Fees must be tuple"),
-        };
-
-        let fastest_fee = match &fees_tuple[0] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("FastestFee must be uint64"),
-        };
-        let half_hour_fee = match &fees_tuple[1] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("HalfHourFee must be uint64"),
-        };
-        let hour_fee = match &fees_tuple[2] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("HourFee must be uint64"),
-        };
-        let economy_fee = match &fees_tuple[3] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("EconomyFee must be uint64"),
-        };
-        let minimum_fee = match &fees_tuple[4] {
-            Token::Uint(u) => u.as_u64(),
-            _ => panic!("MinimumFee must be uint64"),
-        };
-
-        let fees = Fees {
-            FastestFee: fastest_fee,
-            HalfHourFee: half_hour_fee,
-            HourFee: hour_fee,
-            EconomyFee: economy_fee,
-            MinimumFee: minimum_fee,
-        };
-
-        let input_utxos_array = match &liquidity_tuple[9] {
-            Token::Array(arr) => arr,
-            _ => panic!("InputUtxos must be array"),
-        };
-
-        let mut input_utxos = Vec::new();
-        for iu in input_utxos_array {
-            let iu_tuple = match iu {
-                Token::Tuple(it) => it,
-                _ => panic!("InputUtxo must be tuple"),
-            };
-            let txid = match &iu_tuple[0] {
-                Token::String(s) => s.clone(),
-                _ => panic!("InputUtxo txid must be string"),
-            };
-            let vout = match &iu_tuple[1] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("InputUtxo vout must be uint64"),
-            };
-            let value = match &iu_tuple[2] {
-                Token::Uint(u) => u.to_string(),
-                _ => panic!("InputUtxo value must be uint256"),
-            };
-            let script_pubkey = match &iu_tuple[3] {
-                Token::String(s) => s.clone(),
-                _ => panic!("InputUtxo script_pubkey must be string"),
-            };
-
-            input_utxos.push(InputUtxo {
-                Txid: txid,
-                Vout: vout,
-                Value: value,
-                ScriptPubkey: script_pubkey,
-            });
-        }
-
-        let output_utxos_array = match &liquidity_tuple[10] {
-            Token::Array(arr) => arr,
-            _ => panic!("OutputUtxos must be array"),
-        };
-
-        let mut output_utxos = Vec::new();
-        for ou in output_utxos_array {
-            let ot = match ou {
-                Token::Tuple(ot) => ot,
-                _ => panic!("OutputUtxo must be tuple"),
-            };
-            let txid = match &ot[0] {
-                Token::String(s) => s.clone(),
-                _ => panic!("OutputUtxo txid must be string"),
-            };
-            let vout = match &ot[1] {
-                Token::Uint(u) => u.as_u64(),
-                _ => panic!("OutputUtxo vout must be uint64"),
-            };
-            let value = match &ot[2] {
-                Token::Uint(u) => u.to_string(),
-                _ => panic!("OutputUtxo value must be uint256"),
-            };
-            let script_pubkey = match &ot[3] {
-                Token::String(s) => s.clone(),
-                _ => panic!("OutputUtxo script_pubkey must be string"),
-            };
-
-            output_utxos.push(OutputUtxo {
-                Txid: txid,
-                Vout: vout,
-                Value: value,
-                ScriptPubkey: script_pubkey,
-            });
-        }
-
-        let lp_pubkey = match &liquidity_tuple[11] {
-            Token::String(s) => s.clone(),
-            _ => panic!("LpPubkey must be string"),
-        };
-
+        // Build Liquidity
         let liquidity = Liquidity {
-            Balance: balance,
-            TotalInputAmount: total_input_amount,
-            RequiredAmount: required_amount,
-            ChangeAmount: change_amount,
-            EstimatedFee: estimated_fee,
-            ActualFee: actual_fee,
-            Sufficient: sufficient,
-            Utxos: utxos,
-            Fees: fees,
-            InputUtxos: input_utxos,
-            OutputUtxos: output_utxos,
-            LpPubkey: lp_pubkey,
+            balance: liquidity_tuple[0].clone().into_string().unwrap(),
+            total_input_amount: liquidity_tuple[1].clone().into_string().unwrap(),
+            required_amount: liquidity_tuple[2].clone().into_string().unwrap(),
+            change_amount: liquidity_tuple[3].clone().into_string().unwrap(),
+            estimated_fee: liquidity_tuple[4].clone().into_string().unwrap(),
+            actual_fee: liquidity_tuple[5].clone().into_string().unwrap(),
+            sufficient: liquidity_tuple[6].clone().into_bool().unwrap(),
+            utxos: liquidity_tuple[7].clone().into_array().unwrap().into_iter().map(|utxo_token| {
+                let utxo_tuple = utxo_token.into_tuple().unwrap();
+                let status_tuple = utxo_tuple[2].clone().into_tuple().unwrap();
+                Utxo {
+                    txid: utxo_tuple[0].clone().into_string().unwrap(),
+                    vout: utxo_tuple[1].clone().into_uint().unwrap().as_u64(),
+                    status: Status {
+                        confirmed: status_tuple[0].clone().into_bool().unwrap(),
+                        block_hash: status_tuple[1].clone().into_string().unwrap(),
+                        block_height: status_tuple[2].clone().into_uint().unwrap().as_u64(),
+                        block_time: status_tuple[3].clone().into_uint().unwrap().as_u64(),
+                    },
+                    value: utxo_tuple[3].clone().into_uint().unwrap().to_string(),
+                }
+            }).collect(),
+            fees: {
+                let fees_tuple = liquidity_tuple[8].clone().into_tuple().unwrap();
+                Fees {
+                    fastest_fee: fees_tuple[0].clone().into_uint().unwrap().as_u64(),
+                    half_hour_fee: fees_tuple[1].clone().into_uint().unwrap().as_u64(),
+                    hour_fee: fees_tuple[2].clone().into_uint().unwrap().as_u64(),
+                    economy_fee: fees_tuple[3].clone().into_uint().unwrap().as_u64(),
+                    minimum_fee: fees_tuple[4].clone().into_uint().unwrap().as_u64(),
+                }
+            },
+            input_utxos: liquidity_tuple[9].clone().into_array().unwrap().into_iter().map(|iu_token| {
+                let iu_tuple = iu_token.into_tuple().unwrap();
+                InputUtxo {
+                    txid: iu_tuple[0].clone().into_string().unwrap(),
+                    vout: iu_tuple[1].clone().into_uint().unwrap().as_u64(),
+                    value: iu_tuple[2].clone().into_uint().unwrap().to_string(),
+                    script_pubkey: iu_tuple[3].clone().into_string().unwrap(),
+                }
+            }).collect(),
+            output_utxos: liquidity_tuple[10].clone().into_array().unwrap().into_iter().map(|ou_token| {
+                let ou_tuple = ou_token.into_tuple().unwrap();
+                OutputUtxo {
+                    txid: ou_tuple[0].clone().into_string().unwrap(),
+                    vout: ou_tuple[1].clone().into_uint().unwrap().as_u64(),
+                    value: ou_tuple[2].clone().into_uint().unwrap().to_string(),
+                    script_pubkey: ou_tuple[3].clone().into_string().unwrap(),
+                }
+            }).collect(),
+            lp_pubkey: liquidity_tuple[11].clone().into_string().unwrap(),
         };
 
-        let resp = KernelResponse {
-            Price: price,
-            Transaction: transaction,
-            Premium: premium,
-            Liquidity: liquidity,
-        };
-
-        let val = serde_json::to_string_pretty(&vec![resp]).unwrap();
-        println!("Decoded kernel response:\n{}", val);
-        val
+        KernelResponse {
+            price,
+            transaction: Transaction {
+                verified,
+                receipt,
+            },
+            premium,
+            liquidity,
+        }
     }
 }
 
@@ -821,15 +490,17 @@ mod tests {
         let kernel_response ="0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000002c00000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000a302e30303033363834330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000040000000000000000000000000889e6a9d863373a7a735ab71cd481e63ef8d64a4000000000000000000000000889e6a9d863373a7a735ab71cd481e63ef8d64a400000000000000000000000000000000000000000000000000000000000000019f450d2b17ba679992e662a246056050c312893019a6d7ccc48ac6d11eee1fb700000000000000000000000000000000000000000000000000000000006f765cfe7d12888b2bffa36869689673b02b65911f1a1e30035f6050ed445ca21b6334000000000000000000000000000000000000000000000000000000000000006e00000000000000000000000000000000000000000000000000000000000052080000000000000000000000000000000000000000000000000000000000d8a19c000000000000000000000000000000000000000000000000000000400d539aac0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a302e30313031303230300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000240000000000000000000000000000000000000000000000000000000000000028000000000000000000000000000000000000000000000000000000000000002c0000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000003400000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000076000000000000000000000000000000000000000000000000000000000000008e00000000000000000000000000000000000000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000000a302e303035313733343700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a302e303035303030303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a302e303030333731303800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a302e303034363238393200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a302e303030303033303800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a302e3030303030333038000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000043c300000000000000000000000000000000000000000000000000000000000000406464663831303163343634383435643463303235613235653036336437303137313333386337643132643930646631323637376465653566306231386237373500000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000e35f000000000000000000000000000000000000000000000000000000006760365e0000000000000000000000000000000000000000000000000000000000000040303030303030303036663838366661636131363362356433316633663361373734396136363662366433336638393739363130633063613739633236626439610000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000007a12000000000000000000000000000000000000000000000000000000000000000403065666434363237643363393735613564353833636232326663333664643538653533383163386136633930636238366364356539643566306138316630643000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000e35f000000000000000000000000000000000000000000000000000000006760365e0000000000000000000000000000000000000000000000000000000000000040303030303030303036663838366661636131363362356433316633663361373734396136363662366433336638393739363130633063613739633236626439610000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000007a12000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000004030656664343632376433633937356135643538336362323266633336646435386535333831633861366339306362383663643565396435663061383166306430000000000000000000000000000000000000000000000000000000000000002c303031346264353733626436386361663365313161646533653133306264303633316363613362626138663200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000002e0000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008fc000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000403461623333303839636363616463303133656664653633323136353331303263666466656466663566616631653561353932396162613463333632393537616300000000000000000000000000000000000000000000000000000000000000286264353733626436386361663365313161646533653133306264303633316363613362626138663200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000007102c00000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000403461623333303839636363616463303133656664653633323136353331303263666466656466663566616631653561353932396162613463333632393537616300000000000000000000000000000000000000000000000000000000000000286264353733626436386361663365313161646533653133306264303633316363613362626138663200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000403461623333303839636363616463303133656664653633323136353331303263666466656466663566616631653561353932396162613463333632393537616300000000000000000000000000000000000000000000000000000000000000143661303836386635326266636263386566353134000000000000000000000000000000000000000000000000000000000000000000000000000000000000002862643537336264363863616633653131616465336531333062643036333163636133626261386632000000000000000000000000000000000000000000000000";
 
         let contract = Contract::new("example.testnet".parse().unwrap());
-        // let is_authorized = contract.is_krnl_authorized(
-        //     auth.to_string(),
-        //     sender.to_string(),
-        //     recipient.to_string(),
-        //     kernel_response.to_string(),
-        // );
+        let is_authorized = contract.is_krnl_authorized(
+            auth.to_string(),
+            sender.to_string(),
+            recipient.to_string(),
+            kernel_response.to_string(),
+        );
 
-        // assert!(is_authorized);
+        assert!(is_authorized);
 
-        let _decoded_response = contract.decode_krnl_response(kernel_response.to_string());
+        let decoded_response = contract.decode_krnl_response(kernel_response.to_string());
+
+        println!("Decoded response: {:?}", decoded_response);
     }
 }

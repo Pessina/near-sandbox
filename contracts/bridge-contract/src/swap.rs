@@ -9,10 +9,10 @@ const SWAP_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 
 #[near]
 impl Contract {
-    fn promise_sign(&self, sighash: [u8; 32], deposit: NearToken) -> Promise {
+    fn promise_sign(&self, hash: [u8; 32], deposit: NearToken) -> Promise {
         // TODO: Should be customizable by the caller
         let sign_request = SignRequest::new(
-            sighash,
+            hash,
             "".to_string(),
             0
         );
@@ -94,16 +94,7 @@ impl Contract {
         let prepared_evm_transaction = self.prepare_evm_tx(tx);
         log!("Prepared EVM transaction with hash: {:?}", prepared_evm_transaction.tx_hash);
 
-        let request = SignRequest::new(
-            prepared_evm_transaction.tx_hash,
-            "".to_string(),
-            0
-        );
-
-        ext_signer::ext(self.signer_account.clone())
-            .with_attached_deposit(env::attached_deposit())
-            .with_static_gas(SIGN_GAS)
-            .sign(request)
+        self.promise_sign(prepared_evm_transaction.tx_hash, env::attached_deposit())
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(SWAP_CALLBACK_GAS.into())
