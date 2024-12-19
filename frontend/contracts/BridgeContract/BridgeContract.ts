@@ -7,7 +7,7 @@ const createBridgeContract = (args: {
 }) => {
   return new Contract(args.account, args.contractId, {
     viewMethods: [],
-    changeMethods: ["swap_btc", "swap_evm"],
+    changeMethods: ["swap_btc", "swap_evm", "swap_btc_krnl"],
     useLocalViewExecution: false,
   }) as unknown as BridgeContract;
 };

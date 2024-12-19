@@ -21,6 +21,12 @@ export interface BridgeActions {
   handleSwapEVM: (args: {
     tx: EvmTransaction;
   }) => Promise<string>;
+  handleSwapBTCKrnl: (args: {
+    auth: string;
+    sender: string;
+    recipient: string;
+    kernelResponse: string;
+  }) => Promise<string>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -189,6 +195,61 @@ export function useBridgeContract(): BridgeActions {
     [bridgeContract, withErrorHandling]
   );
 
+  const handleSwapBTCKrnl = useCallback(
+    async ({
+      auth,
+      sender,
+      recipient,
+      kernelResponse
+    }: {
+      auth: string;
+      sender: string;
+      recipient: string;
+      kernelResponse: string;
+    }) => {
+      if (!bridgeContract) {
+        throw new Error("Bridge contract not available");
+      }
+
+      return await withErrorHandling(
+        async () => {
+          const fee = await ChainSignaturesContract.getCurrentFee({
+            networkId: nearNetworkId,
+            contract: chainSignatureContract,
+          });
+
+          const txHex = await bridgeContract.swap_btc_krnl({
+            gas: NEAR_MAX_GAS,
+            amount: fee?.toString() || "0",
+            args: {
+              auth,
+              sender,
+              recipient,
+              kernel_response: kernelResponse
+            },
+          });
+
+          const response = await axios.post<string>(
+            `${CHAINS[Chain.BTC].rpcEndpoint}/tx`,
+            txHex
+          );
+
+          if (response.status === 200 && response.data) {
+            const explorerUrl = `${CHAINS[Chain.BTC].explorerUrl}/tx/${response.data}`;
+            return {
+              txHash: response.data,
+              explorerUrl,
+            };
+          }
+
+          throw new Error(`Failed to broadcast transaction: ${response.data || 'Unknown error'}`);
+        },
+        "Failed to initiate BTC Kernel swap"
+      );
+    },
+    [bridgeContract, withErrorHandling]
+  );
+
   const { isLoading, error } = useQuery({
     queryKey: ["bridge"],
     queryFn: async () => {
@@ -202,6 +263,7 @@ export function useBridgeContract(): BridgeActions {
     isProcessing,
     handleSwapBTC,
     handleSwapEVM,
+    handleSwapBTCKrnl,
     isLoading,
     error,
   };

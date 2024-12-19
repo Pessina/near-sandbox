@@ -5,6 +5,8 @@ use near_sdk::Promise;
 
 #[near]
 impl Contract {
+
+    #[payable]
     pub fn swap_btc_krnl(&mut self, auth: String, sender: String, recipient: String, kernel_response: String) -> Promise {
         let is_authorized = self.is_krnl_authorized(auth, sender, recipient, kernel_response.clone());
         let kernel_response = self.decode_krnl_response(kernel_response);

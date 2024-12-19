@@ -54,4 +54,13 @@ export type BridgeContract = Contract & {
       tx: EvmTransaction;
     }>
   ) => Promise<string>;
+
+  swap_btc_krnl: (
+    args: ContractChangeMethodArgs<{
+      auth: string;
+      sender: string;
+      recipient: string;
+      kernel_response: string;
+    }>
+  ) => Promise<string>;
 };
