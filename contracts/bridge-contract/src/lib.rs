@@ -13,6 +13,7 @@ pub struct Contract {
     pub signer_account: AccountId,
     // transaction_list: String, // Type is wrong, should be a list of transaction and corresponding status (pending, signed...)
     // balance: String, // Type is wrong, should be the balance of each pool
+    // lp_list: String, // Type is wrong, should be a list of lp and corresponding status (pending, signed...) {risk, addresses, ...}
 }
 
 #[near]
