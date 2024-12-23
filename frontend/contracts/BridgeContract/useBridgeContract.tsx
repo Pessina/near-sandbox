@@ -3,13 +3,14 @@ import { useToast } from "@/hooks/use-toast";
 import { BridgeContract, BitcoinTransactionRequest, EvmTransactionRequest } from "./types";
 import { useQuery } from "@tanstack/react-query";
 import { NEAR_MAX_GAS } from "@/constants/near";
-import { ChainSignaturesContract } from "multichain-tools";
+import { near } from "multichain-tools";
 import { useEnv } from "@/hooks/useEnv";
 import { BN } from "bn.js";
 import axios from "axios";
 import { Chain, CHAINS } from "@/constants/chains";
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
 import { createBridgeContract } from "./BridgeContract";
+import { useChainSignaturesContract } from "@/hooks/useChainSignaturesContracts";
 
 export interface BridgeActions {
   isProcessing: boolean;
@@ -29,6 +30,7 @@ export function useBridgeContract(): BridgeActions {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const { nearNetworkId, chainSignatureContract } = useEnv();
+  const chainSignaturesContract = useChainSignaturesContract();
 
   const [bridgeContract, setBridgeContract] = useState<BridgeContract>()
   const { selectedAccount } = useKeyPairAuth()
@@ -91,11 +93,7 @@ export function useBridgeContract(): BridgeActions {
 
       return await withErrorHandling(
         async () => {
-          const fee = await ChainSignaturesContract.getCurrentFee({
-            networkId: nearNetworkId,
-            contract: chainSignatureContract,
-          });
-
+          const fee = await chainSignaturesContract.getCurrentSignatureDeposit();
           const totalFee = fee?.mul(new BN(args.inputs.length));
 
           const txHex = await bridgeContract.sign_btc({
@@ -134,10 +132,7 @@ export function useBridgeContract(): BridgeActions {
 
       return await withErrorHandling(
         async () => {
-          const fee = await ChainSignaturesContract.getCurrentFee({
-            networkId: nearNetworkId,
-            contract: chainSignatureContract,
-          });
+          const fee = await chainSignaturesContract.getCurrentSignatureDeposit();
 
           const txHex = await bridgeContract.sign_evm({
             gas: NEAR_MAX_GAS,
@@ -184,10 +179,7 @@ export function useBridgeContract(): BridgeActions {
 
       return await withErrorHandling(
         async () => {
-          const fee = await ChainSignaturesContract.getCurrentFee({
-            networkId: nearNetworkId,
-            contract: chainSignatureContract,
-          });
+          const fee = await chainSignaturesContract.getCurrentSignatureDeposit();
 
           const txHex = await bridgeContract.swap_btc_krnl({
             gas: NEAR_MAX_GAS,

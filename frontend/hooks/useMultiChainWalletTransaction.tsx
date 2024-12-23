@@ -4,7 +4,7 @@ import { useEnv } from "@/hooks/useEnv";
 import { useWalletAuth } from "@/providers/WalletAuthProvider";
 import {
     KeyDerivationPath,
-    transactionBuilder,
+    near,
     CosmosTransactionRequest,
     CosmosUnsignedTransaction,
     BTCTransactionRequest,
@@ -60,7 +60,7 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
         if (tokenId) {
             // NFT Keys flow
             return wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToNFTKeysTransaction({
+                ...(await near.transactionBuilder.mpcPayloadsToNFTKeysTransaction({
                     networkId: nearNetworkId,
                     chainSigContract: chainSignatureContract,
                     nftKeysContract,
@@ -72,7 +72,7 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
         } else {
             // Chain Signature flow
             return wallet.signAndSendTransaction({
-                ...(await transactionBuilder.near.mpcPayloadsToChainSigTransaction({
+                ...(await near.transactionBuilder.mpcPayloadsToChainSigTransaction({
                     networkId: nearNetworkId,
                     contractId: chainSignatureContract,
                     mpcPayloads,
@@ -87,7 +87,7 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
         transaction: TUnsigned,
         txOutcome: FinalExecutionOutcome
     ): Promise<string> => {
-        const mpcSignature = transactionBuilder.near.responseToMpcSignature({
+        const mpcSignature = near.transactionBuilder.responseToMpcSignature({
             response: txOutcome,
         });
 

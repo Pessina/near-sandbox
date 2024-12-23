@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { Bitcoin, EVM, Cosmos } from "multichain-tools";
-import { useEnv } from "@/hooks/useEnv";
 import { CHAINS } from "@/constants/chains";
+import { useChainSignaturesContract } from "./useChainSignaturesContracts";
 
 interface ChainInstances {
     btc: Bitcoin;
@@ -12,37 +12,34 @@ interface ChainInstances {
 }
 
 export const useChains = (): ChainInstances => {
-    const { nearNetworkId, chainSignatureContract } = useEnv();
+    const chainSignaturesContract = useChainSignaturesContract();
 
     const btc = useMemo(
         () =>
             new Bitcoin({
                 providerUrl: CHAINS.BTC.rpcEndpoint,
                 network: CHAINS.BTC.networkType,
-                nearNetworkId,
-                contract: chainSignatureContract,
+                contract: chainSignaturesContract,
             }),
-        [nearNetworkId, chainSignatureContract]
+        [chainSignaturesContract]
     );
 
     const evm = useMemo(
         () =>
             new EVM({
-                ...CHAINS.ETH,
-                nearNetworkId,
-                contract: chainSignatureContract,
+                providerUrl: CHAINS.ETH.providerUrl,
+                contract: chainSignaturesContract,
             }),
-        [nearNetworkId, chainSignatureContract]
+        [chainSignaturesContract]
     );
 
     const cosmos = useMemo(
         () =>
             new Cosmos({
                 chainId: CHAINS.OSMOSIS.chainId,
-                nearNetworkId,
-                contract: chainSignatureContract,
+                contract: chainSignaturesContract,
             }),
-        [nearNetworkId, chainSignatureContract]
+        [chainSignaturesContract]
     );
 
     return {
