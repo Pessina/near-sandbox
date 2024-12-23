@@ -95,11 +95,12 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
             throw new Error("MPC signatures not found");
         }
 
-        return chain.addSignatureAndBroadcast({
+        const transactionSerialized = chain.addSignature({
             transaction,
             mpcSignatures: [mpcSignature],
-            publicKey: '' // TODO: Get public key from somewhere
         });
+
+        return chain.broadcast(transactionSerialized);
     }, []);
 
     const signEvmTransaction = useCallback((
