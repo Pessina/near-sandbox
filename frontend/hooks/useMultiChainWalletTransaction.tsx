@@ -100,7 +100,7 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
             mpcSignatures: [mpcSignature],
         });
 
-        return chain.broadcast(transactionSerialized);
+        return chain.broadcastTx(transactionSerialized);
     }, []);
 
     const signEvmTransaction = useCallback((
