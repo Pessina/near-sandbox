@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Bitcoin, EVM, Cosmos } from "multichain-tools";
+import { Bitcoin, EVM, Cosmos, BTCRpcAdapters } from "multichain-tools";
 import { CHAINS } from "@/constants/chains";
 import { useChainSignaturesContract } from "./useChainSignaturesContracts";
 
@@ -17,9 +17,9 @@ export const useChains = (): ChainInstances => {
     const btc = useMemo(
         () =>
             new Bitcoin({
-                providerUrl: CHAINS.BTC.rpcEndpoint,
                 network: CHAINS.BTC.networkType,
                 contract: chainSignaturesContract,
+                btcRpcAdapter: new BTCRpcAdapters.Mempool(CHAINS.BTC.rpcEndpoint),
             }),
         [chainSignaturesContract]
     );
