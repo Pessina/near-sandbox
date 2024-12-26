@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Bitcoin, EVM, Cosmos, BTCRpcAdapters } from "multichain-tools";
+import { Bitcoin, EVM, Cosmos, BTCRpcAdapters } from "signet.js"
 import { CHAINS } from "@/constants/chains";
 import { useChainSignaturesContract } from "./useChainSignaturesContracts";
 
@@ -27,7 +27,7 @@ export const useChains = (): ChainInstances => {
     const evm = useMemo(
         () =>
             new EVM({
-                providerUrl: CHAINS.ETH.providerUrl,
+                rpcUrl: CHAINS.ETH.providerUrl,
                 contract: chainSignaturesContract,
             }),
         [chainSignaturesContract]

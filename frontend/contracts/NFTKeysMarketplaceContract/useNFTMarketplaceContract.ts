@@ -16,7 +16,7 @@ import {
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 import { createMarketplaceContract, NFTKeysMarketplaceContract } from ".";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bitcoin } from "multichain-tools";
+import { Bitcoin } from "signet.js";
 import { useKeyPairAuth } from "@/providers/KeyPairAuthProvider";
 import { createNFTContract } from "../NFTKeysContract";
 

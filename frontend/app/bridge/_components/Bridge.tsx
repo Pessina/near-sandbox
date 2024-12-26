@@ -18,7 +18,7 @@ import type { Config } from '@wagmi/core'
 import { useBridgeContract } from "../../../contracts/BridgeContract/useBridgeContract"
 import { useDeriveAddressAndPublicKey } from "@/hooks/useDeriveAddressAndPublicKey"
 import { useChains } from "@/hooks/useChains"
-import { Bitcoin } from "multichain-tools"
+import { Bitcoin } from signet.js
 import { EvmTransactionRequest } from "@/contracts/BridgeContract"
 
 type FormData = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { near } from "multichain-tools";
+import { near } from "signet.js";
 import { useEnv } from "@/hooks/useEnv";
 
 export const useChainSignaturesContract = () => {

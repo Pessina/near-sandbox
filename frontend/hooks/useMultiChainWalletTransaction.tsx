@@ -12,7 +12,7 @@ import {
     Chain,
     EVMTransactionRequest,
     EVMUnsignedTransaction
-} from "multichain-tools";
+} from "signet.js"
 import { useCallback, useEffect } from "react";
 import { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import { useChains } from "./useChains";

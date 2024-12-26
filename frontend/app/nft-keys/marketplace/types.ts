@@ -1,5 +1,5 @@
 import { Chain } from "@/constants/chains";
-import { KeyDerivationPath } from "multichain-tools";
+import { KeyDerivationPath } from "signet.js";
 import { NFT } from "../../../contracts/NFTKeysContract";
 
 interface SaleConditions {

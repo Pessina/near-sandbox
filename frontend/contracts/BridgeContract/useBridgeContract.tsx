@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BridgeContract, BitcoinTransactionRequest, EvmTransactionRequest } from "./types";
 import { useQuery } from "@tanstack/react-query";
 import { NEAR_MAX_GAS } from "@/constants/near";
-import { near } from "multichain-tools";
+import { near } from "signet.js"
 import { useEnv } from "@/hooks/useEnv";
 import { BN } from "bn.js";
 import axios from "axios";

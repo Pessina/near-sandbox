@@ -14,7 +14,7 @@ import { getCanonicalizedDerivationPath } from '@/lib/canonicalize';
 import { useDeriveAddressAndPublicKey } from '../../../hooks/useDeriveAddressAndPublicKey';
 import { useWalletAuth } from '@/providers/WalletAuthProvider';
 import { getPath } from '../_utils/getPath';
-import { Bitcoin } from 'multichain-tools';
+import { Bitcoin } from 'signet.js';
 
 interface TransactionFormProps {
     chain: Chain;
