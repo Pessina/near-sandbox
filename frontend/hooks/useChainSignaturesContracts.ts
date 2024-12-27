@@ -9,7 +9,7 @@ export const useChainSignaturesContract = () => {
 
   const contract = useMemo(
     () =>
-      new utils.chains.near.contract.NearChainSignatureContract({
+      new utils.chains.near.ChainSignatureContract({
         networkId: nearNetworkId,
         contractId: chainSignatureContract,
       }),
