@@ -336,9 +336,9 @@ export function useNFTMarketplaceContract({
           case Chain.ETH:
             res = await signEvmTransaction(
               {
-                from: derivedAddressAndPublicKey.address,
-                to: data.to,
-                value: ethers.parseEther(data.value).toString(),
+                from: derivedAddressAndPublicKey.address as `0x${string}`,
+                to: data.to as `0x${string}`,
+                value: ethers.parseEther(data.value),
               },
               "",
               nft.token_id

@@ -49,10 +49,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ chain, derived
                 case Chain.ETH:
                     res = await signEvmTransaction(
                         {
-                            from: addressAndPublicKey.address,
-                            to: data.to,
-                            value: ethers.parseEther(data.value).toString(),
-                            ...(data.data && { data: data.data })
+                            from: addressAndPublicKey.address as `0x${string}`,
+                            to: data.to as `0x${string}`,
+                            value: ethers.parseEther(data.value),
+                            ...(data.data && { data: data.data as `0x${string}` })
                         },
                         getCanonicalizedDerivationPath({
                             chain: 60,

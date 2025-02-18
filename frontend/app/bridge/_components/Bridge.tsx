@@ -125,9 +125,9 @@ export default function Bridge({ onSuccess, onError }: BridgeProps) {
         e.preventDefault()
         if (!evmBridgeAddressAndPk) return
 
-        const { transaction, mpcPayloads } = await evm.getMPCPayloadAndTransaction({
+        const { transaction, mpcPayloads } = await evm.prepareTransactionForSigning({
             to: "0x4174678c78fEaFd778c1ff319D5D326701449b25",
-            from: evmBridgeAddressAndPk.address,
+            from: evmBridgeAddressAndPk.address as `0x${string}`,
             value: BigInt("10000"),
         })
 

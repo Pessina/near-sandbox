@@ -48,9 +48,9 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
             throw new Error("Account ID not found");
         }
 
-        const { transaction, mpcPayloads } = await chain.getMPCPayloadAndTransaction(transactionRequest);
+        const { transaction, mpcPayloads } = await chain.prepareTransactionForSigning(transactionRequest);
 
-        chain.setTransaction(transaction, storageKey);
+        window.localStorage.setItem(storageKey, chain.serializeTransaction(transaction));
 
         const wallet = await walletSelector?.wallet('my-near-wallet');
         if (!wallet) {
@@ -59,16 +59,16 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
 
         if (tokenId) {
             // NFT Keys flow
-            return wallet.signAndSendTransaction({
-                ...(await utils.chains.near.transactionBuilder.mpcPayloadsToNFTKeysTransaction({
-                    networkId: nearNetworkId,
-                    chainSigContract: chainSignatureContract,
-                    nftKeysContract,
-                    mpcPayloads,
-                    path,
-                    tokenId
-                })),
-            });
+            // return wallet.signAndSendTransaction({
+            //     ...(await utils.chains.near.transactionBuilder.mpcPayloadsToNFTKeysTransaction({
+            //         networkId: nearNetworkId,
+            //         chainSigContract: chainSignatureContract,
+            //         nftKeysContract,
+            //         mpcPayloads,
+            //         path,
+            //         tokenId
+            //     })),
+            // });
         } else {
             // Chain Signature flow
             return wallet.signAndSendTransaction({
@@ -95,7 +95,7 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
             throw new Error("MPC signatures not found");
         }
 
-        const transactionSerialized = chain.addSignature({
+        const transactionSerialized = chain.attachTransactionSignature({
             transaction,
             mpcSignatures: [mpcSignature],
         });
@@ -160,31 +160,32 @@ export const useMultiChainWalletTransaction = (): MultiChainTransactionHook => {
                     throw new Error("Transaction not found");
                 }
 
-                const evmTransaction = evm.getTransaction('evm-transaction', { remove: true });
-                const btcTransaction = btc.getTransaction('btc-transaction', { remove: true });
-                const cosmosTransaction = cosmos.getTransaction('cosmos-transaction', { remove: true });
+                const evmTx = window.localStorage.getItem('evm-transaction');
+                const btcTx = window.localStorage.getItem('btc-transaction');
+                const cosmosTx = window.localStorage.getItem('cosmos-transaction');
 
-                let foreignerChainTxHash: string | undefined;
-
-                if (evmTransaction) {
-                    foreignerChainTxHash = await sendEvmTransaction(evmTransaction, txOutcome);
-                } else if (btcTransaction) {
-                    foreignerChainTxHash = await sendBtcTransaction(btcTransaction, txOutcome);
-                } else if (cosmosTransaction) {
-                    foreignerChainTxHash = await sendCosmosTransaction(cosmosTransaction, txOutcome);
+                let explorerUrl = '';
+                if (evmTx) {
+                    const evmTransaction = evm.deserializeTransaction(evmTx as `0x${string}`);
+                    const foreignerChainTxHash = await sendEvmTransaction(evmTransaction, txOutcome);
+                    explorerUrl = `${CHAINS.ETH.explorerUrl}/tx/${foreignerChainTxHash}`;
+                    window.localStorage.removeItem('evm-transaction');
+                } else if (btcTx) {
+                    const btcTransaction = btc.deserializeTransaction(btcTx);
+                    const foreignerChainTxHash = await sendBtcTransaction(btcTransaction, txOutcome);
+                    explorerUrl = `${CHAINS.BTC.explorerUrl}/tx/${foreignerChainTxHash}`;
+                    window.localStorage.removeItem('btc-transaction');
+                } else if (cosmosTx) {
+                    const cosmosTransaction = cosmos.deserializeTransaction(cosmosTx);
+                    const foreignerChainTxHash = await sendCosmosTransaction(cosmosTransaction, txOutcome);
+                    explorerUrl = `${CHAINS.OSMOSIS.explorerUrl}/tx/${foreignerChainTxHash}`;
+                    window.localStorage.removeItem('cosmos-transaction');
                 } else {
                     throw new Error("Transaction not found");
                 }
 
                 window.history.replaceState({}, '', window.location.pathname);
-                let explorerUrl = '';
-                if (evmTransaction) {
-                    explorerUrl = `${CHAINS.ETH.explorerUrl}/tx/${foreignerChainTxHash}`;
-                } else if (btcTransaction) {
-                    explorerUrl = `${CHAINS.BTC.explorerUrl}/tx/${foreignerChainTxHash}`;
-                } else if (cosmosTransaction) {
-                    explorerUrl = `${CHAINS.OSMOSIS.explorerUrl}/tx/${foreignerChainTxHash}`;
-                }
+
                 toast({
                     title: "Transaction sent!",
                     description: (
